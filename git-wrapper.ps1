@@ -30,9 +30,32 @@ function Invoke-GitCommand {
     return $result, $exitCode
 }
 
+function Deny-NoVerify {
+    Write-Host "------------------------------------------------------------------" -ForegroundColor Red
+    Write-Host "ERROR: Commit Rejected." -ForegroundColor Red
+    Write-Host "------------------------------------------------------------------" -ForegroundColor Red
+    Write-Host ""
+    Write-Host "GUIDANCE FOR THE AI AGENT:" -ForegroundColor Yellow
+    Write-Host "You have attempted to bypass the required pre-commit verification."
+    Write-Host "All code must pass quality checks before it can be committed."
+    Write-Host ""
+    Write-Host "DO NOT BYPASS THE CHECKS. YOU MUST FIX THE UNDERLYING ERRORS." -ForegroundColor Cyan
+    Write-Host ""
+    Write-Host "The pre-commit hook is likely failing. Diagnose and fix the issues."
+    Write-Host "After all commands complete successfully, attempt your commit again"
+    Write-Host "*without* the '--no-verify' flag."
+    Write-Log "Blocked attempt to use --no-verify"
+    exit 1
+}
+
 if ($GitArgs.Count -eq 0) {
     & git
     exit
+}
+
+$argString = $GitArgs -join ' '
+if ($argString -match '--no-verify' -or $argString -match '(^|\s)-n(\s|$)') {
+    Deny-NoVerify
 }
 
 $action = $GitArgs[0].ToLower()
