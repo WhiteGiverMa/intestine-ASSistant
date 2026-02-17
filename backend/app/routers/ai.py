@@ -2,10 +2,12 @@
 AI分析路由模块
 
 本模块实现了排便健康数据的AI分析功能，包含以下核心功能：
-1. 调用外部AI API进行智能分析（需要用户自行配置API�?2. 本地规则分析作为降级方案
+1. 调用外部AI API进行智能分析（需要用户自行配置API）
+2. 本地规则分析作为降级方案
 3. 分析历史记录查询
 
-降级机制说明�?- 如果用户在设置页面配置了AI API，则调用用户配置的API进行智能分析
+降级机制说明：
+- 如果用户在设置页面配置了AI API，则调用用户配置的API进行智能分析
 - 如果用户未配置或API调用失败，自动降级到本地规则分析
 - 本地分析基于布里斯托粪便分类和医学常识进行评分和建议生成
 - 系统不提供默认API配置，用户需要自行配置才能使用AI分析功能
@@ -38,11 +40,18 @@ async def analyze(
     """
     执行排便健康分析
 
-    分析流程�?    1. 根据分析类型（周/月）确定时间范围
-    2. 查询用户的排便记�?    3. 计算统计数据
+    分析流程：
+    1. 根据分析类型（周/月）确定时间范围
+    2. 查询用户的排便记录
+    3. 计算统计数据
     4. 尝试调用用户配置的AI API进行分析
-    5. 如果用户未配置API或调用失败，降级到本地规则分�?    6. 保存分析结果并返�?
-    降级机制�?    - 仅使用用户在设置页面配置的API密钥、URL和模�?    - 如果用户未配置或调用失败，使用本地分�?    """
+    5. 如果用户未配置API或调用失败，降级到本地规则分析
+    6. 保存分析结果并返回
+
+    降级机制：
+    - 仅使用用户在设置页面配置的API密钥、URL和模型
+    - 如果用户未配置或调用失败，使用本地分析
+    """
     from datetime import datetime, timedelta
 
     today = datetime.now().date()
@@ -73,7 +82,7 @@ async def analyze(
                 "health_score": 0,
                 "insights": [],
                 "suggestions": [],
-                "warnings": [{"type": "no_data", "message": "暂无数据，请先记录排便情�?}],
+                "warnings": [{"type": "no_data", "message": "暂无数据，请先记录排便情况"}],
                 "analysis_source": "none"
             }
         }
@@ -140,8 +149,8 @@ async def get_analyses(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    获取用户的历史分析记�?
-    返回最�?0条分析记录，按创建时间倒序排列
+    获取用户的历史分析记录
+    返回最近10条分析记录，按创建时间倒序排列
     """
     result = await db.execute(
         select(AIAnalysis).where(AIAnalysis.user_id == current_user.id)
@@ -171,18 +180,23 @@ async def get_analyses(
 
 def calculate_stats(records, start_date, end_date) -> dict:
     """
-    计算排便记录的统计数�?
-    参数�?        records: 排便记录列表
-        start_date: 开始日�?        end_date: 结束日期
+    计算排便记录的统计数据
 
-    返回�?        包含以下统计数据的字典：
+    参数：
+        records: 排便记录列表
+        start_date: 开始日期
+        end_date: 结束日期
+
+    返回：
+        包含以下统计数据的字典：
         - total_records: 总记录数
         - days: 分析天数
         - avg_frequency: 平均每日排便次数
         - avg_duration: 平均排便时长（分钟）
         - type_dist: 粪便类型分布
         - feeling_dist: 排便感受分布
-        - time_dist: 时间段分�?    """
+        - time_dist: 时间段分布
+    """
     from collections import Counter
     from datetime import datetime
 
@@ -229,10 +243,14 @@ async def perform_local_analysis(records, start_date, end_date) -> dict:
     3. 生成健康建议
     4. 生成健康警告
 
-    参数�?        records: 排便记录列表
-        start_date: 开始日�?        end_date: 结束日期
+    参数：
+        records: 排便记录列表
+        start_date: 开始日期
+        end_date: 结束日期
 
-    返回�?        包含 health_score, insights, suggestions, warnings 的字�?    """
+    返回：
+        包含 health_score, insights, suggestions, warnings 的字典
+    """
     stats = calculate_stats(records, start_date, end_date)
 
     health_score = calculate_health_score(
@@ -273,18 +291,29 @@ def calculate_health_score(avg_frequency, avg_duration, type_dist, feeling_dist)
     """
     计算肠道健康评分
 
-    评分规则（满�?00分，基础�?0分）�?    1. 排便频率评分（�?5分）�?       - 正常范围(0.8-2.5�?�?: +15�?       - 轻度异常(0.5-0.8�?.5-3�?�?: +5�?       - 明显异常: -10�?
-    2. 排便时长评分（�?0分）�?       - 正常范围(3-15分钟): +10�?       - 轻度异常(1-3�?5-20分钟): +5�?       - 明显异常: -5�?
-    3. 粪便形态评分（+15分）�?       - 根据健康形�?类型3�?)占比加分
+    评分规则（满分100分，基础60分）：
+    1. 排便频率评分（+15分）：
+       - 正常范围(0.8-2.5次/天): +15分
+       - 轻度异常(0.5-0.8或2.5-3次/天): +5分
+       - 明显异常: -10分
+    2. 排便时长评分（+10分）：
+       - 正常范围(3-15分钟): +10分
+       - 轻度异常(1-3或15-20分钟): +5分
+       - 明显异常: -5分
+    3. 粪便形态评分（+15分）：
+       - 根据健康形态（类型3-4）占比加分
+    4. 排便感受评分（+10分）：
+       - 根据顺畅感受占比加分
 
-    4. 排便感受评分�?10分）�?       - 根据顺畅感受占比加分
-
-    参数�?        avg_frequency: 平均每日排便次数
+    参数：
+        avg_frequency: 平均每日排便次数
         avg_duration: 平均排便时长
         type_dist: 粪便类型分布
         feeling_dist: 排便感受分布
 
-    返回�?        0-100的健康评�?    """
+    返回：
+        0-100的健康评分
+    """
     score = 60
 
     if 0.8 <= avg_frequency <= 2.5:
@@ -317,14 +346,18 @@ def generate_insights(avg_frequency, avg_duration, type_dist, time_dist, feeling
 
     基于统计数据生成有价值的健康洞察，包括：
     - 排便时间规律
-    - 粪便形态分�?    - 排便频率分析
+    - 粪便形态分析
+    - 排便频率分析
 
-    参数�?        avg_frequency: 平均每日排便次数
+    参数：
+        avg_frequency: 平均每日排便次数
         avg_duration: 平均排便时长
         type_dist: 粪便类型分布
-        time_dist: 时间段分�?        feeling_dist: 排便感受分布
+        time_dist: 时间段分布
+        feeling_dist: 排便感受分布
 
-    返回�?        洞察列表，每个洞察包�?type, title, description
+    返回：
+        洞察列表，每个洞察包含 type, title, description
     """
     insights = []
 
@@ -333,24 +366,24 @@ def generate_insights(avg_frequency, avg_duration, type_dist, time_dist, feeling
     insights.append({
         "type": "pattern",
         "title": "排便时间规律",
-        "description": f"您的排便时间主要集中在{time_names[peak_time]}，这是{'健康�? if peak_time == 'morning' else '正常�?}排便习惯�?
+        "description": f"您的排便时间主要集中在{time_names[peak_time]}，这是{'健康' if peak_time == 'morning' else '正常'}的排便习惯"
     })
 
     if type_dist:
         most_common_type = max(type_dist, key=type_dist.get)
         type_descriptions = {
-            1: "便秘倾向（硬块状�?,
-            2: "轻度便秘（结块状�?,
-            3: "正常（有裂纹�?,
-            4: "理想状态（光滑柔软�?,
-            5: "缺乏纤维（断块状�?,
+            1: "便秘倾向（硬块状）",
+            2: "轻度便秘（结块状）",
+            3: "正常（有裂纹）",
+            4: "理想状态（光滑柔软）",
+            5: "缺乏纤维（断块状）",
             6: "轻度腹泻（糊状）",
-            7: "腹泻（液体状�?
+            7: "腹泻（液体状）"
         }
         insights.append({
             "type": "stool_type",
-            "title": "粪便形态分�?,
-            "description": f"您最常见的粪便形态为类型{most_common_type}（{type_descriptions.get(most_common_type, '未知')}）�?
+            "title": "粪便形态分析",
+            "description": f"您最常见的粪便形态为类型{most_common_type}（{type_descriptions.get(most_common_type, '未知')}）"
         })
 
     if avg_frequency:
@@ -363,7 +396,7 @@ def generate_insights(avg_frequency, avg_duration, type_dist, time_dist, feeling
         insights.append({
             "type": "frequency",
             "title": "排便频率",
-            "description": f"您平均每日排便{avg_frequency}次，{freq_status}�?
+            "description": f"您平均每日排便{avg_frequency}次，{freq_status}"
         })
 
     return insights
@@ -372,17 +405,20 @@ def generate_suggestions(avg_frequency, avg_duration, type_dist, feeling_dist) -
     """
     生成健康建议
 
-    根据分析结果生成个性化的健康改善建议，包括�?    - 饮食建议
+    根据分析结果生成个性化的健康改善建议，包括：
+    - 饮食建议
     - 习惯建议
     - 生活方式建议
     - 健康建议
 
-    参数�?        avg_frequency: 平均每日排便次数
+    参数：
+        avg_frequency: 平均每日排便次数
         avg_duration: 平均排便时长
         type_dist: 粪便类型分布
         feeling_dist: 排便感受分布
 
-    返回�?        建议列表，每个建议包�?category, suggestion
+    返回：
+        建议列表，每个建议包含 category, suggestion
     """
     suggestions = []
 
@@ -391,32 +427,32 @@ def generate_suggestions(avg_frequency, avg_duration, type_dist, feeling_dist) -
     if healthy_types / total_types < 0.5:
         suggestions.append({
             "category": "diet",
-            "suggestion": "建议增加膳食纤维摄入，多吃蔬菜、水果和全谷物，有助于改善粪便形态�?
+            "suggestion": "建议增加膳食纤维摄入，多吃蔬菜、水果和全谷物，有助于改善粪便形态"
         })
 
     if avg_duration and avg_duration > 15:
         suggestions.append({
             "category": "habit",
-            "suggestion": "排便时间较长可能提示便秘倾向，建议多喝水、适当运动，避免如厕时使用手机�?
+            "suggestion": "排便时间较长可能提示便秘倾向，建议多喝水、适当运动，避免如厕时使用手机"
         })
 
     if avg_frequency and avg_frequency < 0.8:
         suggestions.append({
             "category": "lifestyle",
-            "suggestion": "排便频率较低，建议增加日常活动量，保持规律作息，必要时咨询医生�?
+            "suggestion": "排便频率较低，建议增加日常活动量，保持规律作息，必要时咨询医生"
         })
 
     difficult_ratio = (feeling_dist.get("difficult", 0) + feeling_dist.get("painful", 0)) / (sum(feeling_dist.values()) or 1)
     if difficult_ratio > 0.3:
         suggestions.append({
             "category": "health",
-            "suggestion": "排便困难或疼痛的情况较多，建议增加水分摄入，如症状持续请咨询医生�?
+            "suggestion": "排便困难或疼痛的情况较多，建议增加水分摄入，如症状持续请咨询医生"
         })
 
     if not suggestions:
         suggestions.append({
             "category": "general",
-            "suggestion": "您的肠道健康状况良好，请继续保持健康的生活习惯�?
+            "suggestion": "您的肠道健康状况良好，请继续保持健康的生活习惯"
         })
 
     return suggestions
@@ -427,26 +463,29 @@ def generate_warnings(avg_frequency, avg_duration, type_dist, feeling_dist) -> l
 
     当检测到明显的健康问题时生成警告信息，包括：
     - 排便频率异常警告
-    - 粪便形态异常警�?
-    参数�?        avg_frequency: 平均每日排便次数
+    - 粪便形态异常警告
+
+    参数：
+        avg_frequency: 平均每日排便次数
         avg_duration: 平均排便时长
         type_dist: 粪便类型分布
         feeling_dist: 排便感受分布
 
-    返回�?        警告列表，每个警告包�?type, message
+    返回：
+        警告列表，每个警告包含 type, message
     """
     warnings = []
 
     if avg_frequency and avg_frequency > 4:
         warnings.append({
             "type": "high_frequency",
-            "message": "排便频率异常高，可能存在腹泻问题，建议关注饮食并咨询医生�?
+            "message": "排便频率异常高，可能存在腹泻问题，建议关注饮食并咨询医生"
         })
 
     if avg_frequency and avg_frequency < 0.3:
         warnings.append({
             "type": "low_frequency",
-            "message": "排便频率过低，可能存在便秘问题，建议增加膳食纤维和水分摄入�?
+            "message": "排便频率过低，可能存在便秘问题，建议增加膳食纤维和水分摄入"
         })
 
     unhealthy_types = type_dist.get(1, 0) + type_dist.get(7, 0)
@@ -454,7 +493,7 @@ def generate_warnings(avg_frequency, avg_duration, type_dist, feeling_dist) -> l
     if unhealthy_types / total_types > 0.3:
         warnings.append({
             "type": "abnormal_stool",
-            "message": "粪便形态异常比例较高，建议关注饮食健康，如持续异常请咨询医生�?
+            "message": "粪便形态异常比例较高，建议关注饮食健康，如持续异常请咨询医生"
         })
 
     return warnings

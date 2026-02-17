@@ -39,7 +39,6 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
 
 def get_password_hash(password: str) -> str:
-    # 截断密码�?2字节以防止bcrypt错误
     if len(password.encode('utf-8')) > 72:
         password = password.encode('utf-8')[:72].decode('utf-8', errors='ignore')
     return pwd_context.hash(password)
@@ -77,7 +76,7 @@ async def register(user_data: UserCreate, db: AsyncSession = Depends(get_db)):
         import traceback
         print(f"注册错误: {e}")
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"服务器内部错�? {str(e)}")
+        raise HTTPException(status_code=500, detail=f"服务器内部错误: {str(e)}")
 
 @router.post("/login", response_model=UserResponse)
 async def login(user_data: UserLogin, db: AsyncSession = Depends(get_db)):
@@ -85,7 +84,7 @@ async def login(user_data: UserLogin, db: AsyncSession = Depends(get_db)):
     user = result.scalar_one_or_none()
 
     if not user or not verify_password(user_data.password, user.password_hash):
-        raise HTTPException(status_code=401, detail="邮箱或密码错�?)
+        raise HTTPException(status_code=401, detail="邮箱或密码错误")
 
     token = create_access_token({"sub": user.id})
     return UserResponse(
@@ -101,7 +100,7 @@ async def login_for_token(form_data: OAuth2PasswordRequestForm = Depends(), db: 
     user = result.scalar_one_or_none()
 
     if not user or not verify_password(form_data.password, user.password_hash):
-        raise HTTPException(status_code=401, detail="邮箱或密码错�?)
+        raise HTTPException(status_code=401, detail="邮箱或密码错误")
 
     token = create_access_token({"sub": user.id})
     return Token(access_token=token)
@@ -114,14 +113,14 @@ async def get_current_user(
         payload = jwt.decode(credentials.credentials, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         user_id = payload.get("sub")
         if not user_id:
-            raise HTTPException(status_code=401, detail="无效的认证令�?)
+            raise HTTPException(status_code=401, detail="无效的认证令牌")
     except JWTError:
-        raise HTTPException(status_code=401, detail="无效的认证令�?)
+        raise HTTPException(status_code=401, detail="无效的认证令牌")
 
     result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
     if not user:
-        raise HTTPException(status_code=401, detail="用户不存�?)
+        raise HTTPException(status_code=401, detail="用户不存在")
     return user
 
 class UserSettingsResponse(BaseModel):
