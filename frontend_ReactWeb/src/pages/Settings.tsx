@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { createRecord } from '../api'
+import { createRecord, getUserSettings, updateUserSettings } from '../api'
 
 const COLORS = [
   { value: 'brown', label: '棕色' },
@@ -35,7 +35,7 @@ function generateRandomRecords(count: number, startDate: Date) {
   for (let i = 0; i < count; i++) {
     const date = new Date(startDate)
     date.setDate(date.getDate() + i)
-    
+
     const record = {
       record_date: date.toISOString().split('T')[0],
       record_time: `${String(randomInt(6, 22)).padStart(2, '0')}:${String(randomInt(0, 59)).padStart(2, '0')}`,
@@ -54,9 +54,52 @@ function generateRandomRecords(count: number, startDate: Date) {
 
 export default function Settings() {
   const [devMode, setDevMode] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
   const [generating, setGenerating] = useState(false)
   const [generateCount, setGenerateCount] = useState(7)
   const [message, setMessage] = useState('')
+
+  useEffect(() => {
+    const loadSettings = async () => {
+      if (!localStorage.getItem('token')) {
+        setLoading(false)
+        return
+      }
+
+      try {
+        const res = await getUserSettings()
+        setDevMode(res.data?.dev_mode || false)
+      } catch (err) {
+        console.error('加载设置失败:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadSettings()
+  }, [])
+
+  const handleDevModeToggle = async () => {
+    if (!localStorage.getItem('token')) {
+      setMessage('请先登录')
+      return
+    }
+
+    const newDevMode = !devMode
+    setDevMode(newDevMode)
+    setSaving(true)
+    setMessage('')
+
+    try {
+      await updateUserSettings({ dev_mode: newDevMode })
+    } catch (err) {
+      setDevMode(!newDevMode)
+      setMessage((err as Error).message)
+    } finally {
+      setSaving(false)
+    }
+  }
 
   const handleGenerateTestData = async () => {
     if (!localStorage.getItem('token')) {
@@ -70,13 +113,12 @@ export default function Settings() {
     try {
       const records = generateRandomRecords(generateCount, new Date())
       let successCount = 0
-      
+
       for (const record of records) {
         try {
           await createRecord(record)
           successCount++
         } catch {
-          // 继续尝试下一条
         }
       }
 
@@ -88,11 +130,19 @@ export default function Settings() {
     }
   }
 
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-gray-500">加载�?..</div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen flex flex-col">
       <header className="bg-white/80 backdrop-blur-sm shadow-sm sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center">
-          <Link to="/" className="text-gray-400 mr-4">←</Link>
+          <Link to="/" className="text-gray-400 mr-4">�?/Link>
           <h1 className="text-xl font-bold text-emerald-700">设置</h1>
         </div>
       </header>
@@ -101,14 +151,15 @@ export default function Settings() {
         <div className="bg-white rounded-2xl p-6 shadow-lg mb-4">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="font-semibold text-gray-800">开发者模式</h3>
-              <p className="text-sm text-gray-500 mt-1">启用测试和调试工具</p>
+              <h3 className="font-semibold text-gray-800">开发者模�?/h3>
+              <p className="text-sm text-gray-500 mt-1">启用测试和调试工�?/p>
             </div>
             <button
-              onClick={() => setDevMode(!devMode)}
+              onClick={handleDevModeToggle}
+              disabled={saving}
               className={`relative w-14 h-8 rounded-full transition-colors ${
                 devMode ? 'bg-emerald-500' : 'bg-gray-300'
-              }`}
+              } ${saving ? 'opacity-50' : ''}`}
             >
               <span
                 className={`absolute top-1 w-6 h-6 bg-white rounded-full shadow transition-transform ${
@@ -122,17 +173,17 @@ export default function Settings() {
         {devMode && (
           <div className="bg-white rounded-2xl p-6 shadow-lg">
             <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
-              <span>🛠️</span> 开发者工具包
+              <span>🛠�?/span> 开发者工具包
             </h3>
 
             <div className="border-t pt-4">
-              <h4 className="font-medium text-gray-700 mb-3">测试数据生成器</h4>
+              <h4 className="font-medium text-gray-700 mb-3">测试数据生成�?/h4>
               <p className="text-sm text-gray-500 mb-4">
                 生成连续日期的随机排便数据，用于测试AI分析功能
               </p>
 
               <div className="flex items-center gap-4 mb-4">
-                <label className="text-sm text-gray-600">生成天数：</label>
+                <label className="text-sm text-gray-600">生成天数�?/label>
                 <input
                   type="number"
                   min="1"
@@ -141,20 +192,20 @@ export default function Settings() {
                   onChange={e => setGenerateCount(Math.min(30, Math.max(1, parseInt(e.target.value) || 1)))}
                   className="w-20 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                 />
-                <span className="text-sm text-gray-500">天</span>
+                <span className="text-sm text-gray-500">�?/span>
               </div>
 
               <div className="bg-gray-50 rounded-xl p-4 mb-4">
                 <h5 className="text-sm font-medium text-gray-700 mb-2">将生成以下随机数据：</h5>
                 <ul className="text-sm text-gray-600 space-y-1">
-                  <li>• 日期：从今天开始连续 {generateCount} 天</li>
-                  <li>• 时间：随机 06:00 - 22:59</li>
-                  <li>• 时长：随机 1-15 分钟</li>
-                  <li>• 粪便形态：随机类型 1-7</li>
-                  <li>• 颜色：随机选择</li>
-                  <li>• 气味等级：随机 1-5</li>
-                  <li>• 排便感受：随机选择</li>
-                  <li>• 伴随症状：40%概率出现</li>
+                  <li>�?日期：从今天开始连�?{generateCount} �?/li>
+                  <li>�?时间：随�?06:00 - 22:59</li>
+                  <li>�?时长：随�?1-15 分钟</li>
+                  <li>�?粪便形态：随机类型 1-7</li>
+                  <li>�?颜色：随机选择</li>
+                  <li>�?气味等级：随�?1-5</li>
+                  <li>�?排便感受：随机选择</li>
+                  <li>�?伴随症状�?0%概率出现</li>
                 </ul>
               </div>
 
@@ -171,7 +222,7 @@ export default function Settings() {
                 disabled={generating}
                 className="w-full bg-gradient-to-r from-purple-500 to-indigo-500 text-white py-3 rounded-xl font-medium hover:from-purple-600 hover:to-indigo-600 transition-colors disabled:opacity-50"
               >
-                {generating ? '生成中...' : '🎲 随机生成排便数据'}
+                {generating ? '生成�?..' : '🎲 随机生成排便数据'}
               </button>
             </div>
           </div>

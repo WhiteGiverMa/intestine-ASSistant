@@ -6,15 +6,10 @@ from typing import Optional, List
 from datetime import date
 
 from app.database import get_db
-from app.models import BowelRecord
-from app.routers.auth import create_access_token
-from jose import jwt, JWTError
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from app.config import settings
-from app.models import User
+from app.models import BowelRecord, User
+from app.routers.auth import get_current_user
 
 router = APIRouter()
-security = HTTPBearer()
 
 class RecordCreate(BaseModel):
     record_date: str
@@ -50,24 +45,6 @@ class RecordResponse(BaseModel):
     symptoms: Optional[str]
     notes: Optional[str]
     created_at: str
-
-async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: AsyncSession = Depends(get_db)
-) -> User:
-    try:
-        payload = jwt.decode(credentials.credentials, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
-        user_id = payload.get("sub")
-        if not user_id:
-            raise HTTPException(status_code=401, detail="无效的认证令牌")
-    except JWTError:
-        raise HTTPException(status_code=401, detail="无效的认证令牌")
-    
-    result = await db.execute(select(User).where(User.id == user_id))
-    user = result.scalar_one_or_none()
-    if not user:
-        raise HTTPException(status_code=401, detail="用户不存在")
-    return user
 
 @router.post("", response_model=dict)
 async def create_record(

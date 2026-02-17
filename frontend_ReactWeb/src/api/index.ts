@@ -63,7 +63,7 @@ export async function getRecords(startDate?: string, endDate?: string, page = 1,
   if (endDate) params.append('end_date', endDate)
   params.append('page', String(page))
   params.append('limit', String(limit))
-  
+
   const res = await fetch(`${API_BASE}/records?${params}`, {
     headers: getAuthHeaders()
   })
@@ -132,6 +132,30 @@ export async function getAnalyses() {
   if (!res.ok) {
     const error = await res.json()
     throw new Error(error.detail || '获取分析历史失败')
+  }
+  return res.json()
+}
+
+export async function getUserSettings() {
+  const res = await fetch(`${API_BASE}/auth/settings`, {
+    headers: getAuthHeaders()
+  })
+  if (!res.ok) {
+    const error = await res.json()
+    throw new Error(error.detail || '获取设置失败')
+  }
+  return res.json()
+}
+
+export async function updateUserSettings(settings: { dev_mode?: boolean }) {
+  const res = await fetch(`${API_BASE}/auth/settings`, {
+    method: 'PUT',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(settings)
+  })
+  if (!res.ok) {
+    const error = await res.json()
+    throw new Error(error.detail || '更新设置失败')
   }
   return res.json()
 }

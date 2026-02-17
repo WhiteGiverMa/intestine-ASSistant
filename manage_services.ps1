@@ -9,7 +9,7 @@ $BackendPort = 8001
 $FrontendPort = 5174
 $PythonPath = ".venv\Scripts\python.exe"
 $BackendDir = "backend"
-$FrontendDir = "mobile_app"
+$FrontendDir = "frontend_Flutter"
 
 function Get-BackendStatus {
     $connections = Get-NetTCPConnection -LocalPort $BackendPort -State Listen -ErrorAction SilentlyContinue

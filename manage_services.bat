@@ -6,7 +6,7 @@ set BACKEND_PORT=8001
 set FRONTEND_PORT=5174
 set PYTHON_PATH=.venv\Scripts\python.exe
 set BACKEND_DIR=backend
-set FRONTEND_DIR=mobile_app
+set FRONTEND_DIR=frontend_Flutter
 
 :menu
 cls

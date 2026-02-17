@@ -1,4 +1,20 @@
-# React + TypeScript + Vite
+# Intestine Assistant - React Web 前端
+
+> **⚠️ 已弃用版本 v0.2.0**
+>
+> 此 React Web 前端已弃用，不再维护。
+>
+> 当前启用的前端版本为 Flutter 分支 (v0.1.0)。
+>
+> **注意**：React Web 分支中已修复的许多 Bug 尚未迁移到 Flutter 分支。
+
+---
+
+## 技术栈
+
+- React + TypeScript + Vite
+
+## 原始模板说明
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 

@@ -1,4 +1,4 @@
-name: mobile_app
+name: frontend_flutter
 description: "肠道健康助手 - Intestine ASSistant"
 publish_to: 'none'
 version: 1.0.0+1
@@ -15,6 +15,7 @@ dependencies:
   provider: ^6.1.1
   intl: ^0.19.0
   fl_chart: ^0.68.0
+  url_launcher: ^6.2.0
 
 dev_dependencies:
   flutter_test:

@@ -13,14 +13,14 @@ export default function Register() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (password !== confirmPassword) {
-      setError('两次输入的密码不一致')
+      setError('两次输入的密码不一�?)
       return
     }
 
     if (password.length < 6) {
-      setError('密码长度至少6位')
+      setError('密码长度至少6�?)
       return
     }
 
@@ -80,7 +80,7 @@ export default function Register() {
               value={password}
               onChange={e => setPassword(e.target.value)}
               required
-              placeholder="至少6位"
+              placeholder="至少6�?
               className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
             />
           </div>
@@ -108,12 +108,12 @@ export default function Register() {
             disabled={loading}
             className="w-full bg-emerald-500 text-white py-3 rounded-xl font-medium hover:bg-emerald-600 transition-colors disabled:opacity-50"
           >
-            {loading ? '注册中...' : '注册'}
+            {loading ? '注册�?..' : '注册'}
           </button>
         </form>
 
         <div className="text-center mt-6">
-          <span className="text-gray-500">已有账号？</span>
+          <span className="text-gray-500">已有账号�?/span>
           <Link to="/login" className="text-emerald-600 font-medium ml-1">
             立即登录
           </Link>
@@ -121,7 +121,7 @@ export default function Register() {
 
         <div className="text-center mt-4">
           <Link to="/" className="text-gray-400 text-sm hover:text-gray-600">
-            ← 返回首页
+            �?返回首页
           </Link>
         </div>
       </div>

@@ -1,4 +1,4 @@
-package com.intestine.mobile_app
+package com.intestine.frontend_flutter
 
 import io.flutter.embedding.android.FlutterActivity
 
