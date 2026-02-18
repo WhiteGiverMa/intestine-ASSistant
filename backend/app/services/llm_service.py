@@ -81,7 +81,9 @@ class LLMService:
 2. insights 应包含2-4条有价值的洞察
 3. suggestions 应包含2-3条实用的改善建议
 4. warnings 仅在发现明显健康问题时添加
-5. 请用中文回复"""
+5. 请用中文回复
+6. 【重要】如果数据覆盖率低于50%，请在分析中说明"数据较少，分析结果仅供参考"
+7. 平均排便频率是基于实际记录天数计算的，未记录的天数不计入统计"""
                             },
                             {
                                 "role": "user",
@@ -124,11 +126,25 @@ class LLMService:
         """
         period = "近一周" if analysis_type == "weekly" else "近一月"
 
+        coverage_rate = stats_data.get('coverage_rate', 1)
+        recorded_days = stats_data.get('recorded_days', 0)
+        period_days = stats_data.get('days', 0)
+
+        coverage_warning = ""
+        if coverage_rate < 0.5:
+            coverage_warning = "\n⚠️ 注意：数据覆盖率较低，分析结果仅供参考，建议用户持续记录更多数据。"
+        elif coverage_rate < 0.8:
+            coverage_warning = "\n📊 提示：数据覆盖率中等，分析结果仅供参考。"
+
         prompt = f"""请分析以下{period}的排便记录数据：
+
+## 数据说明
+- 分析周期: {period_days}天
+- 实际记录: {recorded_days}天 (覆盖率{coverage_rate*100:.0f}%)
+- 平均排便频率: 基于实际记录天数计算{coverage_warning}
 
 ## 统计概览
 - 记录总数: {stats_data.get('total_records', 0)}条
-- 分析周期: {stats_data.get('days', 0)}天
 - 平均排便频率: {stats_data.get('avg_frequency', 0)}次/天
 - 平均排便时长: {stats_data.get('avg_duration', 0)}分钟
 

@@ -190,8 +190,10 @@ def calculate_stats(records, start_date, end_date) -> dict:
     返回：
         包含以下统计数据的字典：
         - total_records: 总记录数
-        - days: 分析天数
-        - avg_frequency: 平均每日排便次数
+        - days: 分析周期天数
+        - recorded_days: 实际记录天数
+        - coverage_rate: 数据覆盖率
+        - avg_frequency: 平均每日排便次数（基于实际记录天数）
         - avg_duration: 平均排便时长（分钟）
         - type_dist: 粪便类型分布
         - feeling_dist: 排便感受分布
@@ -200,32 +202,42 @@ def calculate_stats(records, start_date, end_date) -> dict:
     from collections import Counter
     from datetime import datetime
 
-    total_records = len(records)
-    days = (datetime.fromisoformat(end_date) - datetime.fromisoformat(start_date)).days or 1
-    avg_frequency = round(total_records / days, 2)
+    normal_records = [r for r in records if not r.is_no_bowel]
+    total_records = len(normal_records)
 
-    durations = [r.duration_minutes for r in records if r.duration_minutes]
+    recorded_dates = set(r.record_date for r in records)
+    recorded_days = len(recorded_dates)
+
+    period_days = (datetime.fromisoformat(end_date) - datetime.fromisoformat(start_date)).days or 1
+    coverage_rate = round(recorded_days / period_days, 2) if period_days > 0 else 0
+
+    avg_frequency = round(total_records / recorded_days, 2) if recorded_days > 0 else 0
+
+    durations = [r.duration_minutes for r in normal_records if r.duration_minutes]
     avg_duration = round(sum(durations) / len(durations), 1) if durations else 0
 
-    stool_types = [r.stool_type for r in records if r.stool_type]
+    stool_types = [r.stool_type for r in normal_records if r.stool_type]
     type_dist = dict(Counter(stool_types))
 
-    feelings = [r.feeling for r in records if r.feeling]
+    feelings = [r.feeling for r in normal_records if r.feeling]
     feeling_dist = dict(Counter(feelings))
 
     time_dist = {"morning": 0, "afternoon": 0, "evening": 0}
-    for r in records:
-        hour = int(r.record_time.split(":")[0])
-        if 6 <= hour < 12:
-            time_dist["morning"] += 1
-        elif 12 <= hour < 18:
-            time_dist["afternoon"] += 1
-        else:
-            time_dist["evening"] += 1
+    for r in normal_records:
+        if r.record_time:
+            hour = int(r.record_time.split(":")[0])
+            if 6 <= hour < 12:
+                time_dist["morning"] += 1
+            elif 12 <= hour < 18:
+                time_dist["afternoon"] += 1
+            else:
+                time_dist["evening"] += 1
 
     return {
         "total_records": total_records,
-        "days": days,
+        "days": period_days,
+        "recorded_days": recorded_days,
+        "coverage_rate": coverage_rate,
         "avg_frequency": avg_frequency,
         "avg_duration": avg_duration,
         "type_dist": type_dist,

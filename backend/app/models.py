@@ -48,7 +48,7 @@ class BowelRecord(Base):
     id = Column(String(36), primary_key=True, default=generate_uuid)
     user_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
     record_date = Column(String(10), nullable=False)
-    record_time = Column(String(8), nullable=False)
+    record_time = Column(String(8), nullable=True)
     duration_minutes = Column(Integer)
     stool_type = Column(Integer)
     color = Column(String(50))
@@ -57,6 +57,7 @@ class BowelRecord(Base):
     symptoms = Column(Text)
     notes = Column(Text)
     is_manual = Column(Boolean, default=True)
+    is_no_bowel = Column(Boolean, default=False)
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
     
