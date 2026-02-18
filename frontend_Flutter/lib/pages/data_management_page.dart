@@ -225,31 +225,38 @@ class _DataManagementPageState extends State<DataManagementPage> {
       }
     }
 
-    if (datesToMark.isEmpty) return;
+    if (datesToMark.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('没有需要标注的日期')));
+      }
+      return;
+    }
 
     int successCount = 0;
-    int failCount = 0;
+    List<String> errorMessages = [];
 
     for (final date in datesToMark) {
       try {
         await ApiService.markNoBowel(_formatDate(date));
         successCount++;
       } catch (e) {
-        failCount++;
+        errorMessages.add(
+          '${_formatDate(date)}: ${e.toString().replaceAll('Exception: ', '')}',
+        );
       }
     }
 
     await _loadDailyCounts();
 
     if (mounted) {
-      if (failCount == 0) {
+      if (errorMessages.isEmpty) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('已标注 $successCount 天为无排便')));
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('成功 $successCount 天，失败 $failCount 天')),
-        );
+        _showErrorDialog('标注无排便失败', successCount, errorMessages);
       }
     }
   }
@@ -272,33 +279,111 @@ class _DataManagementPageState extends State<DataManagementPage> {
       }
     }
 
-    if (datesToUnmark.isEmpty) return;
+    if (datesToUnmark.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('没有需要取消标注的日期')));
+      }
+      return;
+    }
 
     int successCount = 0;
-    int failCount = 0;
+    List<String> errorMessages = [];
 
     for (final date in datesToUnmark) {
       try {
         await ApiService.unmarkNoBowel(_formatDate(date));
         successCount++;
       } catch (e) {
-        failCount++;
+        errorMessages.add(
+          '${_formatDate(date)}: ${e.toString().replaceAll('Exception: ', '')}',
+        );
       }
     }
 
     await _loadDailyCounts();
 
     if (mounted) {
-      if (failCount == 0) {
+      if (errorMessages.isEmpty) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('已取消 $successCount 天的无排便标注')));
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('成功 $successCount 天，失败 $failCount 天')),
-        );
+        _showErrorDialog('取消标注失败', successCount, errorMessages);
       }
     }
+  }
+
+  void _showErrorDialog(
+    String title,
+    int successCount,
+    List<String> errorMessages,
+  ) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (successCount > 0)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Text(
+                    '成功: $successCount 天',
+                    style: const TextStyle(
+                      color: Colors.green,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              Text(
+                '失败: ${errorMessages.length} 天',
+                style: const TextStyle(
+                  color: Colors.red,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                constraints: const BoxConstraints(maxHeight: 200),
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: SingleChildScrollView(
+                  child: SelectableText(
+                    errorMessages.join('\n'),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontFamily: 'monospace',
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Clipboard.setData(ClipboardData(text: errorMessages.join('\n')));
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(const SnackBar(content: Text('错误信息已复制')));
+            },
+            child: const Text('复制错误信息'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('关闭'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showRecordDetail(BowelRecord record) {

@@ -24,3 +24,6 @@ API端口:
 ## 前端端口
 frontend_ReactWeb: 5173（已弃用）
 frontend_Flutter: 5174
+
+## 代码格式注意
+注意修复尾随空格（Trailing whitespace），保持代码整洁
