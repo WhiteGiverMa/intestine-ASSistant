@@ -14,6 +14,8 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _emailFocusNode = FocusNode();
+  final _passwordFocusNode = FocusNode();
   bool _loading = false;
   bool _obscurePassword = true;
 
@@ -44,6 +46,8 @@ class _LoginPageState extends State<LoginPage> {
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _emailFocusNode.dispose();
+    _passwordFocusNode.dispose();
     super.dispose();
   }
 
@@ -71,14 +75,22 @@ class _LoginPageState extends State<LoginPage> {
                   const SizedBox(height: 8),
                   Text('欢迎回来', style: TextStyle(color: Colors.grey[600])),
                   const SizedBox(height: 32),
-                  _buildTextField('邮箱', _emailController, keyboardType: TextInputType.emailAddress),
+                  _buildTextField(
+                    '邮箱',
+                    _emailController,
+                    focusNode: _emailFocusNode,
+                    keyboardType: TextInputType.emailAddress,
+                    onSubmitted: (_) => _passwordFocusNode.requestFocus(),
+                  ),
                   const SizedBox(height: 16),
                   _buildTextField(
                     '密码',
                     _passwordController,
+                    focusNode: _passwordFocusNode,
                     obscureText: _obscurePassword,
                     isPassword: true,
                     onToggleVisibility: () => setState(() => _obscurePassword = !_obscurePassword),
+                    onSubmitted: (_) => _login(),
                   ),
                   const SizedBox(height: 24),
                   SizedBox(
@@ -118,7 +130,16 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  Widget _buildTextField(String label, TextEditingController controller, {bool obscureText = false, TextInputType? keyboardType, VoidCallback? onToggleVisibility, bool isPassword = false}) {
+  Widget _buildTextField(
+    String label,
+    TextEditingController controller, {
+    FocusNode? focusNode,
+    bool obscureText = false,
+    TextInputType? keyboardType,
+    VoidCallback? onToggleVisibility,
+    bool isPassword = false,
+    ValueChanged<String>? onSubmitted,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -126,8 +147,10 @@ class _LoginPageState extends State<LoginPage> {
         const SizedBox(height: 8),
         TextField(
           controller: controller,
+          focusNode: focusNode,
           obscureText: obscureText,
           keyboardType: keyboardType,
+          onSubmitted: onSubmitted,
           decoration: InputDecoration(
             filled: true,
             fillColor: Colors.white,

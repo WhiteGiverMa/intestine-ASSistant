@@ -1,12 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_
+from sqlalchemy import select, and_, func
 from pydantic import BaseModel
 from typing import Optional, List
 from datetime import date
 
 from app.database import get_db
-from app.models import BowelRecord, User
+from app.models import BowelRecord, User, generate_lid_from_date
 from app.routers.auth import get_current_user
 
 router = APIRouter()
@@ -35,6 +35,7 @@ class RecordUpdate(BaseModel):
 
 class RecordResponse(BaseModel):
     record_id: str
+    lid: Optional[str]
     record_date: str
     record_time: Optional[str]
     duration_minutes: Optional[int]
@@ -56,8 +57,19 @@ async def create_record(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
+    count_result = await db.execute(
+        select(func.count()).where(
+            BowelRecord.user_id == current_user.id,
+            BowelRecord.record_date == record_data.record_date
+        )
+    )
+    daily_count = count_result.scalar() or 0
+
+    lid = generate_lid_from_date(record_data.record_date, daily_count)
+
     record = BowelRecord(
         user_id=current_user.id,
+        lid=lid,
         record_date=record_data.record_date,
         record_time=record_data.record_time,
         duration_minutes=record_data.duration_minutes,
@@ -72,7 +84,7 @@ async def create_record(
     await db.commit()
     await db.refresh(record)
 
-    return {"code": 200, "data": {"record_id": record.id, "created_at": str(record.created_at)}}
+    return {"code": 200, "data": {"record_id": record.id, "lid": record.lid, "created_at": str(record.created_at)}}
 
 @router.get("", response_model=dict)
 async def get_records(
@@ -102,6 +114,7 @@ async def get_records(
             "records": [
                 {
                     "record_id": r.id,
+                    "lid": r.lid,
                     "record_date": r.record_date,
                     "record_time": r.record_time,
                     "duration_minutes": r.duration_minutes,
@@ -178,10 +191,21 @@ async def mark_no_bowel(
     existing = result.scalar_one_or_none()
 
     if existing:
-        return {"code": 200, "data": {"record_id": existing.id, "message": "该日期已标注无排便"}}
+        return {"code": 200, "data": {"record_id": existing.id, "lid": existing.lid, "message": "该日期已标注无排便"}}
+
+    count_result = await db.execute(
+        select(func.count()).where(
+            BowelRecord.user_id == current_user.id,
+            BowelRecord.record_date == request.date
+        )
+    )
+    daily_count = count_result.scalar() or 0
+
+    lid = generate_lid_from_date(request.date, daily_count)
 
     no_bowel_record = BowelRecord(
         user_id=current_user.id,
+        lid=lid,
         record_date=request.date,
         record_time=None,
         is_no_bowel=True
@@ -190,7 +214,7 @@ async def mark_no_bowel(
     await db.commit()
     await db.refresh(no_bowel_record)
 
-    return {"code": 200, "data": {"record_id": no_bowel_record.id, "message": "已标注无排便"}}
+    return {"code": 200, "data": {"record_id": no_bowel_record.id, "lid": no_bowel_record.lid, "message": "已标注无排便"}}
 
 @router.delete("/no-bowel/{date}", response_model=dict)
 async def unmark_no_bowel(

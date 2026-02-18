@@ -4,9 +4,26 @@ from sqlalchemy.sql import func
 from app.database import Base
 import enum
 import uuid
+from datetime import datetime
 
 def generate_uuid():
     return str(uuid.uuid4())
+
+LID_CHARS = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
+
+def encode_sequence(num: int) -> str:
+    result = []
+    for _ in range(4):
+        result.append(LID_CHARS[num % 62])
+        num //= 62
+    return ''.join(reversed(result))
+
+def generate_lid_from_date(record_date: str, sequence: int) -> str:
+    date_obj = datetime.strptime(record_date, '%Y-%m-%d')
+    yy = str(date_obj.year)[-2:]
+    mmdd = f'{date_obj.month:02d}{date_obj.day:02d}'
+    seq_str = encode_sequence(sequence)
+    return f'L{yy}{mmdd}{seq_str}'
 
 class StoolType(int, enum.Enum):
     TYPE_1 = 1
@@ -47,6 +64,7 @@ class BowelRecord(Base):
     
     id = Column(String(36), primary_key=True, default=generate_uuid)
     user_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
+    lid = Column(String(12), unique=True, nullable=True, index=True)
     record_date = Column(String(10), nullable=False)
     record_time = Column(String(8), nullable=True)
     duration_minutes = Column(Integer)

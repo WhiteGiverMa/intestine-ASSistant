@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
 import '../models/models.dart';
@@ -206,45 +207,95 @@ class _DataManagementPageState extends State<DataManagementPage> {
     }
   }
 
-  Future<void> _markNoBowel(DateTime date) async {
-    try {
-      await ApiService.markNoBowel(_formatDate(date));
-      await _loadDailyCounts();
-      if (mounted) {
+  Future<void> _markNoBowelForSelection() async {
+    List<DateTime> datesToMark = [];
+
+    if (_viewMode == 'single' && _selectedDate != null) {
+      datesToMark = [_selectedDate!];
+    } else if (_viewMode == 'range' &&
+        _rangeStart != null &&
+        _rangeEnd != null) {
+      final days = _rangeEnd!.difference(_rangeStart!).inDays + 1;
+      for (int i = 0; i < days; i++) {
+        final date = _rangeStart!.add(Duration(days: i));
+        final dateStr = _formatDate(date);
+        if (!_noBowelDates.contains(dateStr)) {
+          datesToMark.add(date);
+        }
+      }
+    }
+
+    if (datesToMark.isEmpty) return;
+
+    int successCount = 0;
+    int failCount = 0;
+
+    for (final date in datesToMark) {
+      try {
+        await ApiService.markNoBowel(_formatDate(date));
+        successCount++;
+      } catch (e) {
+        failCount++;
+      }
+    }
+
+    await _loadDailyCounts();
+
+    if (mounted) {
+      if (failCount == 0) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('已标注为无排便')));
-      }
-    } catch (e) {
-      if (mounted) {
+        ).showSnackBar(SnackBar(content: Text('已标注 $successCount 天为无排便')));
+      } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              '标注失败: ${e.toString().replaceAll('Exception: ', '')}',
-            ),
-          ),
+          SnackBar(content: Text('成功 $successCount 天，失败 $failCount 天')),
         );
       }
     }
   }
 
-  Future<void> _unmarkNoBowel(DateTime date) async {
-    try {
-      await ApiService.unmarkNoBowel(_formatDate(date));
-      await _loadDailyCounts();
-      if (mounted) {
+  Future<void> _unmarkNoBowelForSelection() async {
+    List<DateTime> datesToUnmark = [];
+
+    if (_viewMode == 'single' && _selectedDate != null) {
+      datesToUnmark = [_selectedDate!];
+    } else if (_viewMode == 'range' &&
+        _rangeStart != null &&
+        _rangeEnd != null) {
+      final days = _rangeEnd!.difference(_rangeStart!).inDays + 1;
+      for (int i = 0; i < days; i++) {
+        final date = _rangeStart!.add(Duration(days: i));
+        final dateStr = _formatDate(date);
+        if (_noBowelDates.contains(dateStr)) {
+          datesToUnmark.add(date);
+        }
+      }
+    }
+
+    if (datesToUnmark.isEmpty) return;
+
+    int successCount = 0;
+    int failCount = 0;
+
+    for (final date in datesToUnmark) {
+      try {
+        await ApiService.unmarkNoBowel(_formatDate(date));
+        successCount++;
+      } catch (e) {
+        failCount++;
+      }
+    }
+
+    await _loadDailyCounts();
+
+    if (mounted) {
+      if (failCount == 0) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('已取消无排便标注')));
-      }
-    } catch (e) {
-      if (mounted) {
+        ).showSnackBar(SnackBar(content: Text('已取消 $successCount 天的无排便标注')));
+      } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              '取消标注失败: ${e.toString().replaceAll('Exception: ', '')}',
-            ),
-          ),
+          SnackBar(content: Text('成功 $successCount 天，失败 $failCount 天')),
         );
       }
     }
@@ -301,6 +352,7 @@ class _DataManagementPageState extends State<DataManagementPage> {
                   ],
                 ),
                 const Divider(),
+                if (record.lid != null) _buildLidRow(record.lid!),
                 _buildDetailRow('📅 日期', record.recordDate),
                 if (!record.isNoBowel) ...[
                   if (record.recordTime != null)
@@ -338,6 +390,75 @@ class _DataManagementPageState extends State<DataManagementPage> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildLidRow(String lid) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          const SizedBox(
+            width: 100,
+            child: Text(
+              '🏷️ LID',
+              style: TextStyle(fontWeight: FontWeight.w500),
+            ),
+          ),
+          Expanded(
+            child: Row(
+              children: [
+                Text(
+                  lid,
+                  style: const TextStyle(
+                    color: Color(0xFF2E7D32),
+                    fontWeight: FontWeight.w600,
+                    fontFamily: 'monospace',
+                    fontSize: 15,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                GestureDetector(
+                  onTap: () {
+                    Clipboard.setData(ClipboardData(text: lid));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('LID已复制'),
+                        duration: Duration(seconds: 1),
+                      ),
+                    );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF2E7D32).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.copy, size: 14, color: Color(0xFF2E7D32)),
+                        SizedBox(width: 4),
+                        Text(
+                          '复制',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFF2E7D32),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -529,8 +650,6 @@ class _DataManagementPageState extends State<DataManagementPage> {
             noBowelDates: _noBowelDates,
             onDateSelected: _onDateSelected,
             onDateRangeSelected: _onDateRangeSelected,
-            onMarkNoBowel: _markNoBowel,
-            onUnmarkNoBowel: _unmarkNoBowel,
             isExpanded: _calendarExpanded,
             onExpandToggle: () {
               setState(() {
@@ -562,7 +681,7 @@ class _DataManagementPageState extends State<DataManagementPage> {
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                '点击日期查看当天记录，长按可标注无排便',
+                '点击日期查看当天记录，可选择日期范围',
                 style: TextStyle(color: Colors.grey[600], fontSize: 12),
               ),
             ),
@@ -620,6 +739,38 @@ class _DataManagementPageState extends State<DataManagementPage> {
   }
 
   Widget _buildEmptyWidget() {
+    bool canMarkNoBowel = false;
+    bool isAlreadyMarked = false;
+    int daysToMark = 0;
+
+    if (_viewMode == 'single' && _selectedDate != null) {
+      final dateStr = _formatDate(_selectedDate!);
+      final hasRecords =
+          _dailyCounts.containsKey(dateStr) && _dailyCounts[dateStr]! > 0;
+      canMarkNoBowel = !hasRecords;
+      isAlreadyMarked = _noBowelDates.contains(dateStr);
+      daysToMark = 1;
+    } else if (_viewMode == 'range' &&
+        _rangeStart != null &&
+        _rangeEnd != null) {
+      daysToMark = _rangeEnd!.difference(_rangeStart!).inDays + 1;
+      int noBowelCount = 0;
+      int hasRecordCount = 0;
+
+      for (int i = 0; i < daysToMark; i++) {
+        final date = _rangeStart!.add(Duration(days: i));
+        final dateStr = _formatDate(date);
+        if (_dailyCounts.containsKey(dateStr) && _dailyCounts[dateStr]! > 0) {
+          hasRecordCount++;
+        } else if (_noBowelDates.contains(dateStr)) {
+          noBowelCount++;
+        }
+      }
+
+      canMarkNoBowel = hasRecordCount == 0;
+      isAlreadyMarked = noBowelCount == daysToMark;
+    }
+
     return Container(
       padding: const EdgeInsets.all(32),
       child: Column(
@@ -630,6 +781,47 @@ class _DataManagementPageState extends State<DataManagementPage> {
             _viewMode == 'all' ? '暂无记录数据' : '该时间段暂无记录',
             style: const TextStyle(fontSize: 16, color: Colors.grey),
           ),
+          if (_viewMode != 'all') ...[
+            const SizedBox(height: 16),
+            if (canMarkNoBowel && !isAlreadyMarked)
+              ElevatedButton.icon(
+                onPressed: () => _markNoBowelForSelection(),
+                icon: const Icon(Icons.block, size: 18),
+                label: Text(
+                  '标注为"无排便"${daysToMark > 1 ? ' ($daysToMark天)' : ''}',
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.grey[600],
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 12,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              )
+            else if (isAlreadyMarked)
+              ElevatedButton.icon(
+                onPressed: () => _unmarkNoBowelForSelection(),
+                icon: const Icon(Icons.remove_circle_outline, size: 18),
+                label: Text(
+                  '取消"无排便"标注${daysToMark > 1 ? ' ($daysToMark天)' : ''}',
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 12,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+          ],
         ],
       ),
     );
@@ -726,6 +918,56 @@ class _DataManagementPageState extends State<DataManagementPage> {
                   const SizedBox(height: 4),
                   Row(
                     children: [
+                      if (record.lid != null)
+                        GestureDetector(
+                          onTap: () {
+                            Clipboard.setData(ClipboardData(text: record.lid!));
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('LID已复制'),
+                                duration: Duration(seconds: 1),
+                              ),
+                            );
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
+                            margin: const EdgeInsets.only(right: 8),
+                            decoration: BoxDecoration(
+                              color: const Color(
+                                0xFF2E7D32,
+                              ).withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(
+                                color: const Color(
+                                  0xFF2E7D32,
+                                ).withValues(alpha: 0.3),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  record.lid!,
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    color: Color(0xFF2E7D32),
+                                    fontWeight: FontWeight.w500,
+                                    fontFamily: 'monospace',
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                const Icon(
+                                  Icons.copy,
+                                  size: 12,
+                                  color: Color(0xFF2E7D32),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
                       if (record.stoolType != null)
                         Container(
                           padding: const EdgeInsets.symmetric(
@@ -820,9 +1062,57 @@ class _DataManagementPageState extends State<DataManagementPage> {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  Text(
-                    '无排便',
-                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  Row(
+                    children: [
+                      if (record.lid != null)
+                        GestureDetector(
+                          onTap: () {
+                            Clipboard.setData(ClipboardData(text: record.lid!));
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('LID已复制'),
+                                duration: Duration(seconds: 1),
+                              ),
+                            );
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
+                            margin: const EdgeInsets.only(right: 8),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[200],
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(color: Colors.grey[400]!),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  record.lid!,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.grey[700],
+                                    fontWeight: FontWeight.w500,
+                                    fontFamily: 'monospace',
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                Icon(
+                                  Icons.copy,
+                                  size: 12,
+                                  color: Colors.grey[600],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      Text(
+                        '无排便',
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      ),
+                    ],
                   ),
                 ],
               ),

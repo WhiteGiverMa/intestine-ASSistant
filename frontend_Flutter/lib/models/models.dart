@@ -23,6 +23,7 @@ class User {
 
 class BowelRecord {
   final String recordId;
+  final String? lid;
   final String recordDate;
   final String? recordTime;
   final int? durationMinutes;
@@ -37,6 +38,7 @@ class BowelRecord {
 
   BowelRecord({
     required this.recordId,
+    this.lid,
     required this.recordDate,
     this.recordTime,
     this.durationMinutes,
@@ -53,6 +55,7 @@ class BowelRecord {
   factory BowelRecord.fromJson(Map<String, dynamic> json) {
     return BowelRecord(
       recordId: json['record_id'],
+      lid: json['lid'],
       recordDate: json['record_date'],
       recordTime: json['record_time'],
       durationMinutes: json['duration_minutes'],

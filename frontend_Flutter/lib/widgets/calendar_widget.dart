@@ -9,8 +9,6 @@ class CalendarWidget extends StatefulWidget {
   final List<String> noBowelDates;
   final Function(DateTime) onDateSelected;
   final Function(DateTime, DateTime)? onDateRangeSelected;
-  final Function(DateTime)? onMarkNoBowel;
-  final Function(DateTime)? onUnmarkNoBowel;
   final bool isExpanded;
   final VoidCallback? onExpandToggle;
   final int? minYear;
@@ -25,8 +23,6 @@ class CalendarWidget extends StatefulWidget {
     this.noBowelDates = const [],
     required this.onDateSelected,
     this.onDateRangeSelected,
-    this.onMarkNoBowel,
-    this.onUnmarkNoBowel,
     this.isExpanded = true,
     this.onExpandToggle,
     this.minYear,
@@ -56,10 +52,12 @@ class _CalendarWidgetState extends State<CalendarWidget> {
   @override
   void didUpdateWidget(CalendarWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.selectedDate != null && widget.selectedDate != oldWidget.selectedDate) {
+    if (widget.selectedDate != null &&
+        widget.selectedDate != oldWidget.selectedDate) {
       _currentMonth = widget.selectedDate!;
     }
-    if (widget.startDate != oldWidget.startDate || widget.endDate != oldWidget.endDate) {
+    if (widget.startDate != oldWidget.startDate ||
+        widget.endDate != oldWidget.endDate) {
       _rangeStart = widget.startDate;
       _rangeEnd = widget.endDate;
     }
@@ -123,89 +121,29 @@ class _CalendarWidgetState extends State<CalendarWidget> {
     }
   }
 
-  void _onDayLongPress(DateTime date) {
-    final dateStr = _formatDate(date);
-    final isNoBowel = widget.noBowelDates.contains(dateStr);
-    final hasRecords = widget.dailyCounts.containsKey(dateStr) && widget.dailyCounts[dateStr]! > 0;
-
-    if (hasRecords) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('该日期已有排便记录，无法标注无排便')),
-      );
-      return;
-    }
-
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              _formatDateDisplay(date),
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            if (isNoBowel)
-              ListTile(
-                leading: const Icon(Icons.remove_circle_outline, color: Colors.orange),
-                title: const Text('取消"无排便"标注'),
-                onTap: () {
-                  Navigator.pop(context);
-                  if (widget.onUnmarkNoBowel != null) {
-                    widget.onUnmarkNoBowel!(date);
-                  }
-                },
-              )
-            else
-              ListTile(
-                leading: const Icon(Icons.block, color: Colors.grey),
-                title: const Text('标注为"无排便"'),
-                subtitle: const Text('表示当天没有排便'),
-                onTap: () {
-                  Navigator.pop(context);
-                  if (widget.onMarkNoBowel != null) {
-                    widget.onMarkNoBowel!(date);
-                  }
-                },
-              ),
-            const SizedBox(height: 16),
-          ],
-        ),
-      ),
-    );
-  }
-
   String _formatDate(DateTime date) {
     return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
   }
 
-  String _formatDateDisplay(DateTime date) {
-    return '${date.year}年${date.month}月${date.day}日';
-  }
-
   bool _isInRange(DateTime date) {
     if (_rangeStart == null || _rangeEnd == null) return false;
-    return (date.isAfter(_rangeStart!) || date.isAtSameMomentAs(_rangeStart!)) &&
-           (date.isBefore(_rangeEnd!) || date.isAtSameMomentAs(_rangeEnd!));
+    return (date.isAfter(_rangeStart!) ||
+            date.isAtSameMomentAs(_rangeStart!)) &&
+        (date.isBefore(_rangeEnd!) || date.isAtSameMomentAs(_rangeEnd!));
   }
 
   bool _isRangeStart(DateTime date) {
     if (_rangeStart == null) return false;
     return date.year == _rangeStart!.year &&
-           date.month == _rangeStart!.month &&
-           date.day == _rangeStart!.day;
+        date.month == _rangeStart!.month &&
+        date.day == _rangeStart!.day;
   }
 
   bool _isRangeEnd(DateTime date) {
     if (_rangeEnd == null) return false;
     return date.year == _rangeEnd!.year &&
-           date.month == _rangeEnd!.month &&
-           date.day == _rangeEnd!.day;
+        date.month == _rangeEnd!.month &&
+        date.day == _rangeEnd!.day;
   }
 
   @override
@@ -255,9 +193,7 @@ class _CalendarWidgetState extends State<CalendarWidget> {
             onTap: _showYearMonthPicker,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8),
-              ),
+              decoration: BoxDecoration(borderRadius: BorderRadius.circular(8)),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -326,8 +262,16 @@ class _CalendarWidgetState extends State<CalendarWidget> {
   }
 
   Widget _buildCalendarGrid() {
-    final firstDayOfMonth = DateTime(_currentMonth.year, _currentMonth.month, 1);
-    final lastDayOfMonth = DateTime(_currentMonth.year, _currentMonth.month + 1, 0);
+    final firstDayOfMonth = DateTime(
+      _currentMonth.year,
+      _currentMonth.month,
+      1,
+    );
+    final lastDayOfMonth = DateTime(
+      _currentMonth.year,
+      _currentMonth.month + 1,
+      0,
+    );
     final startingWeekday = firstDayOfMonth.weekday % 7;
     final totalDays = lastDayOfMonth.day;
 
@@ -346,7 +290,8 @@ class _CalendarWidgetState extends State<CalendarWidget> {
       final count = widget.dailyCounts[dateStr] ?? -1;
       final isNoBowel = widget.noBowelDates.contains(dateStr);
       final isToday = date.isAtSameMomentAs(todayDate);
-      final isSelected = widget.selectedDate != null &&
+      final isSelected =
+          widget.selectedDate != null &&
           date.year == widget.selectedDate!.year &&
           date.month == widget.selectedDate!.month &&
           date.day == widget.selectedDate!.day;
@@ -354,17 +299,19 @@ class _CalendarWidgetState extends State<CalendarWidget> {
       final isRangeStart = _isRangeStart(date);
       final isRangeEnd = _isRangeEnd(date);
 
-      dayWidgets.add(_buildDayCell(
-        date: date,
-        day: day,
-        count: count,
-        isNoBowel: isNoBowel,
-        isToday: isToday,
-        isSelected: isSelected,
-        isInRange: isInRange,
-        isRangeStart: isRangeStart,
-        isRangeEnd: isRangeEnd,
-      ));
+      dayWidgets.add(
+        _buildDayCell(
+          date: date,
+          day: day,
+          count: count,
+          isNoBowel: isNoBowel,
+          isToday: isToday,
+          isSelected: isSelected,
+          isInRange: isInRange,
+          isRangeStart: isRangeStart,
+          isRangeEnd: isRangeEnd,
+        ),
+      );
     }
 
     return GridView.count(
@@ -405,7 +352,6 @@ class _CalendarWidgetState extends State<CalendarWidget> {
 
     return GestureDetector(
       onTap: () => _onDayTap(date),
-      onLongPress: () => _onDayLongPress(date),
       child: Container(
         margin: const EdgeInsets.all(1),
         decoration: BoxDecoration(
@@ -498,7 +444,9 @@ class _CalendarWidgetState extends State<CalendarWidget> {
                 style: const TextStyle(fontSize: 13),
               ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: _isSelectingRange ? Colors.grey : const Color(0xFF2E7D32),
+                backgroundColor: _isSelectingRange
+                    ? Colors.grey
+                    : const Color(0xFF2E7D32),
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 shape: RoundedRectangleBorder(
