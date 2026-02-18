@@ -19,7 +19,11 @@ class ApiService {
     };
   }
 
-  static Future<User> register(String email, String password, {String? nickname}) async {
+  static Future<User> register(
+    String email,
+    String password, {
+    String? nickname,
+  }) async {
     final response = await http.post(
       Uri.parse('$baseUrl/auth/register'),
       headers: {'Content-Type': 'application/json'},
@@ -47,10 +51,7 @@ class ApiService {
     final response = await http.post(
       Uri.parse('$baseUrl/auth/login'),
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'email': email,
-        'password': password,
-      }),
+      body: jsonEncode({'email': email, 'password': password}),
     );
 
     if (response.statusCode != 200) {
@@ -254,42 +255,46 @@ class ApiService {
 
   static Future<void> markNoBowel(String date) async {
     final headers = await _getHeaders();
+    http.Response response;
     try {
-      final response = await http.post(
+      response = await http.post(
         Uri.parse('$baseUrl/records/no-bowel'),
         headers: headers,
         body: jsonEncode({'date': date}),
       );
-
-      if (response.statusCode != 200) {
-        final error = jsonDecode(response.body);
-        throw Exception(error['detail'] ?? '标注失败');
-      }
     } catch (e) {
-      if (e.toString().contains('ClientException') || e.toString().contains('Failed to fetch')) {
-        throw Exception('网络连接失败，请检查后端服务是否运行');
-      }
-      rethrow;
+      throw Exception('网络连接失败: ${e.toString()}');
+    }
+
+    if (response.statusCode != 200) {
+      String errorMsg = '标注失败';
+      try {
+        final error = jsonDecode(response.body);
+        errorMsg = error['detail'] ?? errorMsg;
+      } catch (_) {}
+      throw Exception(errorMsg);
     }
   }
 
   static Future<void> unmarkNoBowel(String date) async {
     final headers = await _getHeaders();
+    http.Response response;
     try {
-      final response = await http.delete(
+      response = await http.delete(
         Uri.parse('$baseUrl/records/no-bowel/$date'),
         headers: headers,
       );
-
-      if (response.statusCode != 200) {
-        final error = jsonDecode(response.body);
-        throw Exception(error['detail'] ?? '取消标注失败');
-      }
     } catch (e) {
-      if (e.toString().contains('ClientException') || e.toString().contains('Failed to fetch')) {
-        throw Exception('网络连接失败，请检查后端服务是否运行');
-      }
-      rethrow;
+      throw Exception('网络连接失败: ${e.toString()}');
+    }
+
+    if (response.statusCode != 200) {
+      String errorMsg = '取消标注失败';
+      try {
+        final error = jsonDecode(response.body);
+        errorMsg = error['detail'] ?? errorMsg;
+      } catch (_) {}
+      throw Exception(errorMsg);
     }
   }
 
@@ -303,7 +308,9 @@ class ApiService {
     if (endDate != null) params['end_date'] = endDate;
 
     final response = await http.get(
-      Uri.parse('$baseUrl/records/daily-counts').replace(queryParameters: params),
+      Uri.parse(
+        '$baseUrl/records/daily-counts',
+      ).replace(queryParameters: params),
       headers: headers,
     );
 

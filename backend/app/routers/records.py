@@ -181,40 +181,45 @@ async def mark_no_bowel(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    result = await db.execute(
-        select(BowelRecord).where(
-            BowelRecord.user_id == current_user.id,
-            BowelRecord.record_date == request.date,
-            BowelRecord.is_no_bowel == True
+    try:
+        result = await db.execute(
+            select(BowelRecord).where(
+                BowelRecord.user_id == current_user.id,
+                BowelRecord.record_date == request.date,
+                BowelRecord.is_no_bowel == True
+            )
         )
-    )
-    existing = result.scalar_one_or_none()
+        existing = result.scalar_one_or_none()
 
-    if existing:
-        return {"code": 200, "data": {"record_id": existing.id, "lid": existing.lid, "message": "该日期已标注无排便"}}
+        if existing:
+            return {"code": 200, "data": {"record_id": existing.id, "lid": existing.lid, "message": "该日期已标注无排便"}}
 
-    count_result = await db.execute(
-        select(func.count()).where(
-            BowelRecord.user_id == current_user.id,
-            BowelRecord.record_date == request.date
+        count_result = await db.execute(
+            select(func.count()).where(
+                BowelRecord.user_id == current_user.id,
+                BowelRecord.record_date == request.date
+            )
         )
-    )
-    daily_count = count_result.scalar() or 0
+        daily_count = count_result.scalar() or 0
 
-    lid = generate_lid_from_date(request.date, daily_count)
+        lid = generate_lid_from_date(request.date, daily_count)
 
-    no_bowel_record = BowelRecord(
-        user_id=current_user.id,
-        lid=lid,
-        record_date=request.date,
-        record_time=None,
-        is_no_bowel=True
-    )
-    db.add(no_bowel_record)
-    await db.commit()
-    await db.refresh(no_bowel_record)
+        no_bowel_record = BowelRecord(
+            user_id=current_user.id,
+            lid=lid,
+            record_date=request.date,
+            record_time=None,
+            is_no_bowel=True
+        )
+        db.add(no_bowel_record)
+        await db.commit()
+        await db.refresh(no_bowel_record)
 
-    return {"code": 200, "data": {"record_id": no_bowel_record.id, "lid": no_bowel_record.lid, "message": "已标注无排便"}}
+        return {"code": 200, "data": {"record_id": no_bowel_record.id, "lid": no_bowel_record.lid, "message": "已标注无排便"}}
+    except Exception as e:
+        await db.rollback()
+        print(f"Error in mark_no_bowel: {e}")
+        raise HTTPException(status_code=500, detail=f"标注失败: {str(e)}")
 
 @router.delete("/no-bowel/{date}", response_model=dict)
 async def unmark_no_bowel(
