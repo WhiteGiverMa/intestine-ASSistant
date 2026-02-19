@@ -114,3 +114,6 @@ htmlcov/
 
 # Docs
 docs/
+
+# Trae documents
+.trae/documents/
