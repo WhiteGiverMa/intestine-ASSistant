@@ -111,3 +111,6 @@ coverage/
 .pytest_cache/
 .coverage
 htmlcov/
+
+# Docs
+docs/
