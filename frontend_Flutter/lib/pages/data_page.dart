@@ -1,7 +1,18 @@
+// 数据管理中心入口页面。
+//
+// @module: data_page
+// @type: page
+// @layer: frontend
+// @depends: [record_page, data_overview_page, analysis_page, settings_page]
+// @exports: [DataPage]
+// @brief: 数据管理入口，提供记录排便和数据概览的快捷入口。
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/theme_provider.dart';
+import '../theme/theme_colors.dart';
+import '../theme/theme_decorations.dart';
 import 'record_page.dart';
-import 'stats_page.dart';
-import 'data_management_page.dart';
+import 'data_overview_page.dart';
 import 'analysis_page.dart';
 import 'settings_page.dart';
 
@@ -15,32 +26,32 @@ class DataPage extends StatefulWidget {
 class _DataPageState extends State<DataPage> {
   @override
   Widget build(BuildContext context) {
+    final themeProvider = context.watch<ThemeProvider>();
+    final colors = themeProvider.colors;
+
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFFE8F5E9), Color(0xFFB2DFDB)],
-          ),
+        decoration: ThemeDecorations.backgroundGradient(
+          context,
+          mode: themeProvider.mode,
         ),
         child: SafeArea(
           child: Column(
             children: [
-              _buildHeader(),
+              _buildHeader(colors),
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(16),
                   child: Column(
                     children: [
-                      _buildWelcome(),
+                      _buildWelcome(colors),
                       const SizedBox(height: 24),
-                      _buildMenuGrid(),
+                      _buildMenuGrid(colors),
                     ],
                   ),
                 ),
               ),
-              _buildBottomNav(),
+              _buildBottomNav(colors),
             ],
           ),
         ),
@@ -48,27 +59,18 @@ class _DataPageState extends State<DataPage> {
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(ThemeColors colors) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.8),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: const Row(
+      decoration: ThemeDecorations.header(context, mode: context.themeMode),
+      child: Row(
         children: [
           Text(
             '数据管理',
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF2E7D32),
+              color: colors.primary,
             ),
           ),
         ],
@@ -76,56 +78,69 @@ class _DataPageState extends State<DataPage> {
     );
   }
 
-  Widget _buildWelcome() {
+  Widget _buildWelcome(ThemeColors colors) {
     return Column(
       children: [
         const Text('📊', style: TextStyle(fontSize: 64)),
         const SizedBox(height: 16),
-        const Text(
+        Text(
           '数据管理中心',
-          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: colors.textPrimary,
+          ),
         ),
         const SizedBox(height: 8),
-        Text(
-          '记录、查看和管理您的肠道健康数据',
-          style: TextStyle(color: Colors.grey[600]),
-        ),
+        Text('记录、查看和管理您的肠道健康数据', style: TextStyle(color: colors.textSecondary)),
       ],
     );
   }
 
-  Widget _buildMenuGrid() {
+  Widget _buildMenuGrid(ThemeColors colors) {
     return Column(
       children: [
         Row(
           children: [
-            Expanded(child: _buildMenuItem('📝', '记录排便', '手动输入或计时记录', const RecordPage())),
+            Expanded(
+              child: _buildMenuItem(
+                '📝',
+                '记录排便',
+                '手动输入或计时记录',
+                const RecordPage(),
+                colors,
+              ),
+            ),
             const SizedBox(width: 16),
-            Expanded(child: _buildMenuItem('📊', '数据统计', '查看排便趋势和评分', const StatsPage())),
+            Expanded(
+              child: _buildMenuItem(
+                '📈',
+                '数据概览',
+                '统计趋势与记录管理',
+                const DataOverviewPage(),
+                colors,
+              ),
+            ),
           ],
         ),
-        const SizedBox(height: 16),
-        _buildMenuItem('🗂️', '数据管理', '浏览、编辑和删除历史记录', const DataManagementPage(), fullWidth: true),
       ],
     );
   }
 
-  Widget _buildMenuItem(String emoji, String title, String subtitle, Widget page, {bool fullWidth = false}) {
+  Widget _buildMenuItem(
+    String emoji,
+    String title,
+    String subtitle,
+    Widget page,
+    ThemeColors colors, {
+    bool fullWidth = false,
+  }) {
     return GestureDetector(
-      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => page)),
+      onTap: () =>
+          Navigator.push(context, MaterialPageRoute(builder: (_) => page)),
       child: Container(
         padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.1),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
+        decoration: ThemeDecorations.card(context, mode: context.themeMode),
         child: fullWidth
             ? Row(
                 children: [
@@ -134,9 +149,22 @@ class _DataPageState extends State<DataPage> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: colors.textPrimary,
+                        ),
+                      ),
                       const SizedBox(height: 4),
-                      Text(subtitle, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: colors.textSecondary,
+                        ),
+                      ),
                     ],
                   ),
                 ],
@@ -145,47 +173,78 @@ class _DataPageState extends State<DataPage> {
                 children: [
                   Text(emoji, style: const TextStyle(fontSize: 40)),
                   const SizedBox(height: 12),
-                  Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: colors.textPrimary,
+                    ),
+                  ),
                   const SizedBox(height: 4),
-                  Text(subtitle, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                  Text(
+                    subtitle,
+                    style: TextStyle(fontSize: 12, color: colors.textSecondary),
+                  ),
                 ],
               ),
       ),
     );
   }
 
-  Widget _buildBottomNav() {
+  Widget _buildBottomNav(ThemeColors colors) {
     return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: Colors.grey.shade200)),
-      ),
+      decoration: ThemeDecorations.bottomNav(context, mode: context.themeMode),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 8),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
-            _buildNavItem('🏠', '首页', false, () => Navigator.pop(context)),
-            _buildNavItem('📊', '数据', true),
-            _buildNavItem('🤖', '分析', false, const AnalysisPage()),
-            _buildNavItem('⚙️', '设置', false, const SettingsPage()),
+            _buildNavItem(
+              '🏠',
+              '首页',
+              false,
+              colors,
+              callback: () => Navigator.pop(context),
+            ),
+            _buildNavItem('📊', '数据', true, colors),
+            _buildNavItem(
+              '🤖',
+              '分析',
+              false,
+              colors,
+              page: const AnalysisPage(),
+            ),
+            _buildNavItem(
+              '⚙️',
+              '设置',
+              false,
+              colors,
+              page: const SettingsPage(),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildNavItem(String emoji, String label, bool isActive, [dynamic target]) {
+  Widget _buildNavItem(
+    String emoji,
+    String label,
+    bool isActive,
+    ThemeColors colors, {
+    Widget? page,
+    VoidCallback? callback,
+  }) {
     return GestureDetector(
-      onTap: target != null
-          ? () {
-              if (target is VoidCallback) {
-                target();
-              } else if (target is Widget) {
-                Navigator.push(context, MaterialPageRoute(builder: (_) => target));
-              }
-            }
-          : null,
+      onTap:
+          callback ??
+          (page != null
+              ? () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => page),
+                )
+              : null),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -194,7 +253,7 @@ class _DataPageState extends State<DataPage> {
             label,
             style: TextStyle(
               fontSize: 10,
-              color: isActive ? const Color(0xFF2E7D32) : Colors.grey,
+              color: isActive ? colors.primary : colors.textSecondary,
             ),
           ),
         ],

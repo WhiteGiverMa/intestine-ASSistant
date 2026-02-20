@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/theme_provider.dart';
+import '../theme/theme_colors.dart';
 import 'year_month_picker.dart';
 
 class CalendarWidget extends StatefulWidget {
@@ -9,6 +12,7 @@ class CalendarWidget extends StatefulWidget {
   final List<String> noBowelDates;
   final Function(DateTime) onDateSelected;
   final Function(DateTime, DateTime)? onDateRangeSelected;
+  final Function(DateTime)? onDateClick;
   final bool isExpanded;
   final VoidCallback? onExpandToggle;
   final int? minYear;
@@ -23,6 +27,7 @@ class CalendarWidget extends StatefulWidget {
     this.noBowelDates = const [],
     required this.onDateSelected,
     this.onDateRangeSelected,
+    this.onDateClick,
     this.isExpanded = true,
     this.onExpandToggle,
     this.minYear,
@@ -37,7 +42,6 @@ class _CalendarWidgetState extends State<CalendarWidget> {
   late DateTime _currentMonth;
   DateTime? _rangeStart;
   DateTime? _rangeEnd;
-  bool _isSelectingRange = false;
 
   @override
   void initState() {
@@ -60,6 +64,9 @@ class _CalendarWidgetState extends State<CalendarWidget> {
         widget.endDate != oldWidget.endDate) {
       _rangeStart = widget.startDate;
       _rangeEnd = widget.endDate;
+      if (widget.endDate != null && oldWidget.endDate == null) {
+        _currentMonth = DateTime(widget.endDate!.year, widget.endDate!.month);
+      }
     }
   }
 
@@ -76,12 +83,14 @@ class _CalendarWidgetState extends State<CalendarWidget> {
   }
 
   Future<void> _showYearMonthPicker() async {
+    final colors = context.read<ThemeProvider>().colors;
     final result = await YearMonthPicker.show(
       context: context,
       initialYear: _currentMonth.year,
       initialMonth: _currentMonth.month,
       minYear: widget.minYear,
       maxYear: widget.maxYear,
+      accentColor: colors.primary,
     );
     if (result != null) {
       setState(() {
@@ -91,10 +100,13 @@ class _CalendarWidgetState extends State<CalendarWidget> {
   }
 
   void _onDayTap(DateTime date) {
-    if (_isSelectingRange) {
+    widget.onDateClick?.call(date);
+
+    if (widget.onDateRangeSelected != null) {
       if (_rangeStart == null) {
         setState(() {
           _rangeStart = date;
+          _rangeEnd = null;
         });
       } else if (_rangeEnd == null) {
         if (date.isBefore(_rangeStart!)) {
@@ -107,16 +119,14 @@ class _CalendarWidgetState extends State<CalendarWidget> {
             _rangeEnd = date;
           });
         }
-        _isSelectingRange = false;
-        if (widget.onDateRangeSelected != null) {
-          widget.onDateRangeSelected!(_rangeStart!, _rangeEnd!);
-        }
+        widget.onDateRangeSelected!(_rangeStart!, _rangeEnd!);
+      } else {
+        setState(() {
+          _rangeStart = date;
+          _rangeEnd = null;
+        });
       }
     } else {
-      setState(() {
-        _rangeStart = null;
-        _rangeEnd = null;
-      });
       widget.onDateSelected(date);
     }
   }
@@ -146,15 +156,23 @@ class _CalendarWidgetState extends State<CalendarWidget> {
         date.day == _rangeEnd!.day;
   }
 
+  bool _isPendingStart(DateTime date) {
+    if (widget.endDate != null || widget.startDate == null) return false;
+    return date.year == widget.startDate!.year &&
+        date.month == widget.startDate!.month &&
+        date.day == widget.startDate!.day;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final colors = context.watch<ThemeProvider>().colors;
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: colors.card,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
+            color: colors.shadow,
             blurRadius: 8,
             offset: const Offset(0, 4),
           ),
@@ -162,22 +180,21 @@ class _CalendarWidgetState extends State<CalendarWidget> {
       ),
       child: Column(
         children: [
-          _buildHeader(),
+          _buildHeader(colors),
           if (widget.isExpanded) ...[
-            _buildWeekdayHeaders(),
-            _buildCalendarGrid(),
-            if (widget.onDateRangeSelected != null) _buildRangeModeToggle(),
+            _buildWeekdayHeaders(colors),
+            _buildCalendarGrid(colors),
           ],
         ],
       ),
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(ThemeColors colors) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFF2E7D32).withValues(alpha: 0.1),
+        color: colors.primary.withValues(alpha: 0.1),
         borderRadius: widget.isExpanded
             ? const BorderRadius.vertical(top: Radius.circular(16))
             : BorderRadius.circular(16),
@@ -186,7 +203,7 @@ class _CalendarWidgetState extends State<CalendarWidget> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           IconButton(
-            icon: const Icon(Icons.chevron_left, color: Color(0xFF2E7D32)),
+            icon: Icon(Icons.chevron_left, color: colors.primary),
             onPressed: widget.isExpanded ? _previousMonth : null,
           ),
           GestureDetector(
@@ -199,18 +216,14 @@ class _CalendarWidgetState extends State<CalendarWidget> {
                 children: [
                   Text(
                     '${_currentMonth.year}年${_currentMonth.month}月',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF2E7D32),
+                      color: colors.primary,
                     ),
                   ),
                   const SizedBox(width: 4),
-                  const Icon(
-                    Icons.arrow_drop_down,
-                    color: Color(0xFF2E7D32),
-                    size: 20,
-                  ),
+                  Icon(Icons.arrow_drop_down, color: colors.primary, size: 20),
                 ],
               ),
             ),
@@ -219,14 +232,14 @@ class _CalendarWidgetState extends State<CalendarWidget> {
             mainAxisSize: MainAxisSize.min,
             children: [
               IconButton(
-                icon: const Icon(Icons.chevron_right, color: Color(0xFF2E7D32)),
+                icon: Icon(Icons.chevron_right, color: colors.primary),
                 onPressed: widget.isExpanded ? _nextMonth : null,
               ),
               if (widget.onExpandToggle != null)
                 IconButton(
                   icon: Icon(
                     widget.isExpanded ? Icons.expand_less : Icons.expand_more,
-                    color: const Color(0xFF2E7D32),
+                    color: colors.primary,
                   ),
                   onPressed: widget.onExpandToggle,
                   tooltip: widget.isExpanded ? '收起' : '展开',
@@ -238,7 +251,7 @@ class _CalendarWidgetState extends State<CalendarWidget> {
     );
   }
 
-  Widget _buildWeekdayHeaders() {
+  Widget _buildWeekdayHeaders(ThemeColors colors) {
     const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 4),
@@ -250,7 +263,7 @@ class _CalendarWidgetState extends State<CalendarWidget> {
                 day,
                 style: TextStyle(
                   fontSize: 11,
-                  color: Colors.grey[600],
+                  color: colors.textSecondary,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -261,11 +274,10 @@ class _CalendarWidgetState extends State<CalendarWidget> {
     );
   }
 
-  Widget _buildCalendarGrid() {
+  Widget _buildCalendarGrid(ThemeColors colors) {
     final firstDayOfMonth = DateTime(
       _currentMonth.year,
       _currentMonth.month,
-      1,
     );
     final lastDayOfMonth = DateTime(
       _currentMonth.year,
@@ -278,7 +290,7 @@ class _CalendarWidgetState extends State<CalendarWidget> {
     final today = DateTime.now();
     final todayDate = DateTime(today.year, today.month, today.day);
 
-    List<Widget> dayWidgets = [];
+    final List<Widget> dayWidgets = [];
 
     for (int i = 0; i < startingWeekday; i++) {
       dayWidgets.add(const SizedBox());
@@ -298,6 +310,7 @@ class _CalendarWidgetState extends State<CalendarWidget> {
       final isInRange = _isInRange(date);
       final isRangeStart = _isRangeStart(date);
       final isRangeEnd = _isRangeEnd(date);
+      final isPendingStart = _isPendingStart(date);
 
       dayWidgets.add(
         _buildDayCell(
@@ -310,6 +323,8 @@ class _CalendarWidgetState extends State<CalendarWidget> {
           isInRange: isInRange,
           isRangeStart: isRangeStart,
           isRangeEnd: isRangeEnd,
+          isPendingStart: isPendingStart,
+          colors: colors,
         ),
       );
     }
@@ -334,20 +349,25 @@ class _CalendarWidgetState extends State<CalendarWidget> {
     required bool isInRange,
     required bool isRangeStart,
     required bool isRangeEnd,
+    required bool isPendingStart,
+    required ThemeColors colors,
   }) {
     Color? bgColor;
-    Color textColor = Colors.black87;
+    Color textColor = colors.textPrimary;
 
     if (isRangeStart || isRangeEnd) {
-      bgColor = const Color(0xFF2E7D32);
-      textColor = Colors.white;
+      bgColor = colors.primary;
+      textColor = colors.textOnPrimary;
+    } else if (isPendingStart) {
+      bgColor = colors.primary.withValues(alpha: 0.5);
+      textColor = colors.textOnPrimary;
     } else if (isInRange) {
-      bgColor = const Color(0xFF2E7D32).withValues(alpha: 0.2);
+      bgColor = colors.primary.withValues(alpha: 0.2);
     } else if (isSelected) {
-      bgColor = const Color(0xFF2E7D32);
-      textColor = Colors.white;
+      bgColor = colors.primary;
+      textColor = colors.textOnPrimary;
     } else if (isToday) {
-      bgColor = const Color(0xFF2E7D32).withValues(alpha: 0.1);
+      bgColor = colors.primary.withValues(alpha: 0.1);
     }
 
     return GestureDetector(
@@ -357,8 +377,13 @@ class _CalendarWidgetState extends State<CalendarWidget> {
         decoration: BoxDecoration(
           color: bgColor,
           borderRadius: BorderRadius.circular(6),
-          border: isToday && !isSelected && !isRangeStart && !isRangeEnd
-              ? Border.all(color: const Color(0xFF2E7D32), width: 1)
+          border:
+              isToday &&
+                  !isSelected &&
+                  !isRangeStart &&
+                  !isRangeEnd &&
+                  !isPendingStart
+              ? Border.all(color: colors.primary)
               : null,
         ),
         child: Column(
@@ -375,11 +400,16 @@ class _CalendarWidgetState extends State<CalendarWidget> {
             const SizedBox(height: 1),
             if (count > 0)
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 0),
+                padding: const EdgeInsets.symmetric(horizontal: 3),
                 decoration: BoxDecoration(
-                  color: isSelected || isRangeStart || isRangeEnd || isInRange
-                      ? Colors.white.withValues(alpha: 0.3)
-                      : const Color(0xFF2E7D32).withValues(alpha: 0.2),
+                  color:
+                      isSelected ||
+                          isRangeStart ||
+                          isRangeEnd ||
+                          isInRange ||
+                          isPendingStart
+                      ? colors.textOnPrimary.withValues(alpha: 0.3)
+                      : colors.primary.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(3),
                 ),
                 child: Text(
@@ -387,19 +417,24 @@ class _CalendarWidgetState extends State<CalendarWidget> {
                   style: TextStyle(
                     fontSize: 9,
                     fontWeight: FontWeight.bold,
-                    color: isSelected || isRangeStart || isRangeEnd
-                        ? Colors.white
-                        : const Color(0xFF2E7D32),
+                    color:
+                        isSelected ||
+                            isRangeStart ||
+                            isRangeEnd ||
+                            isPendingStart
+                        ? colors.textOnPrimary
+                        : colors.primary,
                   ),
                 ),
               )
             else if (isNoBowel)
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 0),
+                padding: const EdgeInsets.symmetric(horizontal: 3),
                 decoration: BoxDecoration(
-                  color: isSelected || isRangeStart || isRangeEnd
-                      ? Colors.white.withValues(alpha: 0.3)
-                      : Colors.grey.withValues(alpha: 0.2),
+                  color:
+                      isSelected || isRangeStart || isRangeEnd || isPendingStart
+                      ? colors.textOnPrimary.withValues(alpha: 0.3)
+                      : colors.textHint.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(3),
                 ),
                 child: Text(
@@ -407,55 +442,18 @@ class _CalendarWidgetState extends State<CalendarWidget> {
                   style: TextStyle(
                     fontSize: 9,
                     fontWeight: FontWeight.bold,
-                    color: isSelected || isRangeStart || isRangeEnd
-                        ? Colors.white
-                        : Colors.grey,
+                    color:
+                        isSelected ||
+                            isRangeStart ||
+                            isRangeEnd ||
+                            isPendingStart
+                        ? colors.textOnPrimary
+                        : colors.textHint,
                   ),
                 ),
               ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildRangeModeToggle() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      child: Row(
-        children: [
-          Expanded(
-            child: ElevatedButton.icon(
-              onPressed: () {
-                setState(() {
-                  _isSelectingRange = !_isSelectingRange;
-                  if (!_isSelectingRange) {
-                    _rangeStart = null;
-                    _rangeEnd = null;
-                  }
-                });
-              },
-              icon: Icon(
-                _isSelectingRange ? Icons.close : Icons.date_range,
-                size: 16,
-              ),
-              label: Text(
-                _isSelectingRange ? '取消选择' : '选择日期范围',
-                style: const TextStyle(fontSize: 13),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _isSelectingRange
-                    ? Colors.grey
-                    : const Color(0xFF2E7D32),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }

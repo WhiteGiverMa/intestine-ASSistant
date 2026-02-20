@@ -73,7 +73,7 @@ flutter run -d chrome --web-port=5174
 
 ## 致谢
 
-本项目由 **GLM-5** 和 **DeepSeek V3.2** 全程生成代码，开发者仅进行产品设计指导和 Vibe Coding。
+本项目由 **GLM-5** 、**Kimi-K2.5**和 **DeepSeek V3.2** 全程生成代码，开发者仅进行产品设计指导和 Vibe Coding。
 
 感谢这些优秀的 AI 模型让创意得以快速实现！
 

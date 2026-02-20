@@ -1,0 +1,234 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../models/models.dart';
+import '../services/api_service.dart';
+import '../providers/theme_provider.dart';
+import '../theme/theme_colors.dart';
+
+class ConversationSidebar extends StatefulWidget {
+  final bool isOpen;
+  final VoidCallback onClose;
+  final String? selectedConversationId;
+  final Function(String) onConversationSelected;
+  final VoidCallback onNewConversation;
+
+  const ConversationSidebar({
+    super.key,
+    required this.isOpen,
+    required this.onClose,
+    this.selectedConversationId,
+    required this.onConversationSelected,
+    required this.onNewConversation,
+  });
+
+  @override
+  State<ConversationSidebar> createState() => _ConversationSidebarState();
+}
+
+class _ConversationSidebarState extends State<ConversationSidebar> {
+  List<ConversationSummary> _conversations = [];
+  bool _loading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadConversations();
+  }
+
+  Future<void> _loadConversations() async {
+    setState(() => _loading = true);
+    try {
+      final conversations = await ApiService.getConversations();
+      setState(() {
+        _conversations = conversations;
+        _loading = false;
+      });
+    } catch (e) {
+      setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _deleteConversation(String conversationId) async {
+    final colors = context.read<ThemeProvider>().colors;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('删除对话'),
+        content: const Text('确定要删除这个对话吗？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: colors.error),
+            child: const Text('删除'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await ApiService.deleteConversation(conversationId: conversationId);
+      _loadConversations();
+    }
+  }
+
+  Future<void> _renameConversation(ConversationSummary conversation) async {
+    final controller = TextEditingController(text: conversation.title ?? '新对话');
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('重命名对话'),
+        content: TextField(controller: controller, autofocus: true),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('确定'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && controller.text.isNotEmpty) {
+      await ApiService.renameConversation(
+        conversationId: conversation.conversationId,
+        title: controller.text,
+      );
+      _loadConversations();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.watch<ThemeProvider>().colors;
+    return Container(
+      color: colors.surface,
+      child: SafeArea(
+        child: Column(
+          children: [
+            _buildHeader(colors),
+            Expanded(child: _buildConversationList(colors)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader(ThemeColors colors) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: colors.divider)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              '对话历史',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: colors.textPrimary,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          IconButton(
+            icon: Icon(Icons.close, size: 20, color: colors.textSecondary),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+            onPressed: widget.onClose,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildConversationList(ThemeColors colors) {
+    if (_loading) {
+      return Center(child: CircularProgressIndicator(color: colors.primary));
+    }
+    if (_conversations.isEmpty) {
+      return Center(
+        child: Text('暂无对话', style: TextStyle(color: colors.textSecondary)),
+      );
+    }
+    return ListView.builder(
+      itemCount: _conversations.length + 1,
+      itemBuilder: (context, index) {
+        if (index == 0) {
+          return _buildNewItem(colors);
+        }
+        final conversation = _conversations[index - 1];
+        return _buildConversationItem(conversation, colors);
+      },
+    );
+  }
+
+  Widget _buildNewItem(ThemeColors colors) {
+    return ListTile(
+      leading: Icon(Icons.add, color: colors.primary),
+      title: Text('新建对话', style: TextStyle(color: colors.primary)),
+      onTap: widget.onNewConversation,
+    );
+  }
+
+  Widget _buildConversationItem(
+    ConversationSummary conversation,
+    ThemeColors colors,
+  ) {
+    final isSelected =
+        conversation.conversationId == widget.selectedConversationId;
+    return ListTile(
+      selected: isSelected,
+      selectedTileColor: colors.primary.withValues(alpha: 0.1),
+      title: Text(
+        conversation.title ?? '新对话',
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(color: colors.textPrimary),
+      ),
+      subtitle: Text(
+        _formatTime(conversation.updatedAt),
+        style: TextStyle(fontSize: 12, color: colors.textSecondary),
+      ),
+      onTap: () => widget.onConversationSelected(conversation.conversationId),
+      trailing: SizedBox(
+        width: 40,
+        child: PopupMenuButton<String>(
+          padding: EdgeInsets.zero,
+          onSelected: (value) {
+            if (value == 'rename') {
+              _renameConversation(conversation);
+            }
+            if (value == 'delete') {
+              _deleteConversation(conversation.conversationId);
+            }
+          },
+          itemBuilder: (context) => [
+            const PopupMenuItem(value: 'rename', child: Text('重命名')),
+            const PopupMenuItem(value: 'delete', child: Text('删除')),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _formatTime(String timeStr) {
+    try {
+      final dt = DateTime.parse(timeStr);
+      final now = DateTime.now();
+      final diff = now.difference(dt);
+      if (diff.inDays == 0) return '今天';
+      if (diff.inDays == 1) return '昨天';
+      if (diff.inDays < 7) return '${diff.inDays}天前';
+      return '${dt.month}月${dt.day}日';
+    } catch (e) {
+      return '';
+    }
+  }
+}

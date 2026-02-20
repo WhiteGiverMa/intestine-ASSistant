@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
+import '../providers/theme_provider.dart';
 
 class DateInputField extends StatefulWidget {
   final DateTime initialDate;
@@ -10,6 +12,8 @@ class DateInputField extends StatefulWidget {
   final Color? accentColor;
   final bool showDay;
   final bool showDatePicker;
+  final ValueChanged<bool>? onFocusChanged;
+  final bool isExternallyFocused;
 
   const DateInputField({
     super.key,
@@ -21,13 +25,15 @@ class DateInputField extends StatefulWidget {
     this.accentColor,
     this.showDay = true,
     this.showDatePicker = true,
+    this.onFocusChanged,
+    this.isExternallyFocused = false,
   });
 
   @override
-  State<DateInputField> createState() => _DateInputFieldState();
+  State<DateInputField> createState() => DateInputFieldState();
 }
 
-class _DateInputFieldState extends State<DateInputField> {
+class DateInputFieldState extends State<DateInputField> {
   late final TextEditingController _yearController;
   late final TextEditingController _monthController;
   late final TextEditingController _dayController;
@@ -40,13 +46,33 @@ class _DateInputFieldState extends State<DateInputField> {
   static const int _maxYear = 2112;
 
   late DateTime _currentDate;
-  late final Color _accentColor;
+  bool _isFocused = false;
+
+  bool get isFocused => _isFocused;
+
+  void setDate(DateTime date) {
+    setState(() {
+      _currentDate = date;
+      _yearController.text = date.year.toString();
+      _monthController.text = date.month.toString().padLeft(2, '0');
+      _dayController.text = date.day.toString().padLeft(2, '0');
+    });
+    widget.onChanged?.call(_currentDate);
+  }
+
+  void _checkFocusState() {
+    final hasFocus =
+        _yearFocus.hasFocus || _monthFocus.hasFocus || _dayFocus.hasFocus;
+    if (hasFocus != _isFocused) {
+      _isFocused = hasFocus;
+      widget.onFocusChanged?.call(_isFocused);
+    }
+  }
 
   @override
   void initState() {
     super.initState();
     _currentDate = widget.initialDate;
-    _accentColor = widget.accentColor ?? const Color(0xFF2E7D32);
 
     _yearController = TextEditingController(text: _currentDate.year.toString());
     _monthController = TextEditingController(
@@ -91,16 +117,27 @@ class _DateInputFieldState extends State<DateInputField> {
   }
 
   void _onYearFocusChanged() {
+    _checkFocusState();
     if (!_yearFocus.hasFocus) {
       _completeYear();
     }
   }
 
   void _completeYear() {
-    final value = _yearController.text;
-    if (value.isEmpty) return;
+    final value = _yearController.text.trim();
 
-    int year = int.tryParse(value) ?? DateTime.now().year;
+    if (value.isEmpty) {
+      _yearController.text = _currentDate.year.toString();
+      return;
+    }
+
+    final int? parsedYear = int.tryParse(value);
+    if (parsedYear == null) {
+      _yearController.text = _currentDate.year.toString();
+      return;
+    }
+
+    int year = parsedYear;
 
     if (value.length <= 2) {
       final twoDigitYear = year % 100;
@@ -131,17 +168,27 @@ class _DateInputFieldState extends State<DateInputField> {
   }
 
   void _onMonthFocusChanged() {
+    _checkFocusState();
     if (!_monthFocus.hasFocus) {
       _completeMonth();
     }
   }
 
   void _completeMonth() {
-    final value = _monthController.text;
-    if (value.isEmpty) return;
+    final value = _monthController.text.trim();
 
-    int month = int.tryParse(value) ?? 1;
-    month = month.clamp(1, 12);
+    if (value.isEmpty) {
+      _monthController.text = _currentDate.month.toString().padLeft(2, '0');
+      return;
+    }
+
+    final int? parsedMonth = int.tryParse(value);
+    if (parsedMonth == null) {
+      _monthController.text = _currentDate.month.toString().padLeft(2, '0');
+      return;
+    }
+
+    final int month = parsedMonth.clamp(1, 12);
     _monthController.text = month.toString().padLeft(2, '0');
     _updateDate();
   }
@@ -169,17 +216,27 @@ class _DateInputFieldState extends State<DateInputField> {
   }
 
   void _onDayFocusChanged() {
+    _checkFocusState();
     if (!_dayFocus.hasFocus) {
       _completeDay();
     }
   }
 
   void _completeDay() {
-    final value = _dayController.text;
-    if (value.isEmpty) return;
+    final value = _dayController.text.trim();
 
-    int day = int.tryParse(value) ?? 1;
-    day = day.clamp(1, 31);
+    if (value.isEmpty) {
+      _dayController.text = _currentDate.day.toString().padLeft(2, '0');
+      return;
+    }
+
+    final int? parsedDay = int.tryParse(value);
+    if (parsedDay == null) {
+      _dayController.text = _currentDate.day.toString().padLeft(2, '0');
+      return;
+    }
+
+    final int day = parsedDay.clamp(1, 31);
     _dayController.text = day.toString().padLeft(2, '0');
     _updateDate();
   }
@@ -199,16 +256,30 @@ class _DateInputFieldState extends State<DateInputField> {
   }
 
   void _updateDate() {
-    try {
-      final year = int.parse(_yearController.text);
-      final month = _monthController.text.isNotEmpty
-          ? int.parse(_monthController.text)
-          : _currentDate.month;
-      final day = widget.showDay && _dayController.text.isNotEmpty
-          ? int.parse(_dayController.text)
-          : 1;
+    final yearText = _yearController.text.trim();
+    final monthText = _monthController.text.trim();
+    final dayText = _dayController.text.trim();
 
-      final newDate = DateTime(year, month, day);
+    final year = yearText.isNotEmpty
+        ? int.tryParse(yearText)
+        : _currentDate.year;
+    final month = monthText.isNotEmpty
+        ? int.tryParse(monthText)
+        : _currentDate.month;
+    final day = widget.showDay && dayText.isNotEmpty
+        ? int.tryParse(dayText)
+        : _currentDate.day;
+
+    if (year == null || month == null || day == null) {
+      return;
+    }
+
+    try {
+      final clampedMonth = month.clamp(1, 12);
+      final maxDay = DateTime(year, clampedMonth + 1, 0).day;
+      final clampedDay = day.clamp(1, maxDay);
+
+      final newDate = DateTime(year, clampedMonth, clampedDay);
 
       DateTime clampedDate = newDate;
       if (widget.firstDate != null && newDate.isBefore(widget.firstDate!)) {
@@ -244,93 +315,45 @@ class _DateInputFieldState extends State<DateInputField> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (widget.label != null) ...[
-          Text(
-            widget.label!,
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-          ),
-          const SizedBox(height: 8),
-        ],
-        Row(
-          children: [
-            Expanded(
-              flex: 3,
-              child: TextField(
-                controller: _yearController,
-                focusNode: _yearFocus,
-                keyboardType: TextInputType.number,
-                textAlign: TextAlign.center,
-                maxLength: 4,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                style: const TextStyle(fontSize: 14),
-                decoration: InputDecoration(
-                  hintText: 'YYYY',
-                  counterText: '',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 12,
-                  ),
-                ),
-                onChanged: _onYearChanged,
+    final colors = context.watch<ThemeProvider>().colors;
+    final accentColor = widget.accentColor ?? colors.primary;
+    final isHighlighted = widget.isExternallyFocused || _isFocused;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: isHighlighted ? colors.primary.withValues(alpha: 0.05) : null,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      padding: isHighlighted ? const EdgeInsets.all(8) : EdgeInsets.zero,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (widget.label != null) ...[
+            Text(
+              widget.label!,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: colors.textPrimary,
               ),
             ),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 4),
-              child: Text(
-                '-',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-            ),
-            Expanded(
-              flex: 2,
-              child: TextField(
-                controller: _monthController,
-                focusNode: _monthFocus,
-                keyboardType: TextInputType.number,
-                textAlign: TextAlign.center,
-                maxLength: 2,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                style: const TextStyle(fontSize: 14),
-                decoration: InputDecoration(
-                  hintText: 'MM',
-                  counterText: '',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 12,
-                  ),
-                ),
-                onChanged: _onMonthChanged,
-              ),
-            ),
-            if (widget.showDay) ...[
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 4),
-                child: Text(
-                  '-',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-              ),
+            const SizedBox(height: 8),
+          ],
+          Row(
+            children: [
               Expanded(
-                flex: 2,
+                flex: 3,
                 child: TextField(
-                  controller: _dayController,
-                  focusNode: _dayFocus,
+                  controller: _yearController,
+                  focusNode: _yearFocus,
                   keyboardType: TextInputType.number,
                   textAlign: TextAlign.center,
-                  maxLength: 2,
+                  maxLength: 4,
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  style: const TextStyle(fontSize: 14),
+                  style: TextStyle(fontSize: 14, color: colors.textPrimary),
                   decoration: InputDecoration(
-                    hintText: 'DD',
+                    hintText: 'YYYY',
+                    hintStyle: TextStyle(color: colors.textHint),
                     counterText: '',
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
@@ -340,34 +363,108 @@ class _DateInputFieldState extends State<DateInputField> {
                       vertical: 12,
                     ),
                   ),
-                  onChanged: _onDayChanged,
+                  onChanged: _onYearChanged,
                 ),
               ),
-            ],
-            if (widget.showDatePicker) ...[
-              const SizedBox(width: 8),
-              GestureDetector(
-                onTap: _selectDate,
-                child: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: _accentColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: _accentColor.withValues(alpha: 0.3),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: Text(
+                  '-',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: colors.textPrimary,
+                  ),
+                ),
+              ),
+              Expanded(
+                flex: 2,
+                child: TextField(
+                  controller: _monthController,
+                  focusNode: _monthFocus,
+                  keyboardType: TextInputType.number,
+                  textAlign: TextAlign.center,
+                  maxLength: 2,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  style: TextStyle(fontSize: 14, color: colors.textPrimary),
+                  decoration: InputDecoration(
+                    hintText: 'MM',
+                    hintStyle: TextStyle(color: colors.textHint),
+                    counterText: '',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 12,
                     ),
                   ),
-                  child: Icon(
-                    Icons.calendar_today,
-                    color: _accentColor,
-                    size: 20,
-                  ),
+                  onChanged: _onMonthChanged,
                 ),
               ),
+              if (widget.showDay) ...[
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: Text(
+                    '-',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: colors.textPrimary,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  flex: 2,
+                  child: TextField(
+                    controller: _dayController,
+                    focusNode: _dayFocus,
+                    keyboardType: TextInputType.number,
+                    textAlign: TextAlign.center,
+                    maxLength: 2,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    style: TextStyle(fontSize: 14, color: colors.textPrimary),
+                    decoration: InputDecoration(
+                      hintText: 'DD',
+                      hintStyle: TextStyle(color: colors.textHint),
+                      counterText: '',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 12,
+                      ),
+                    ),
+                    onChanged: _onDayChanged,
+                  ),
+                ),
+              ],
+              if (widget.showDatePicker) ...[
+                const SizedBox(width: 8),
+                GestureDetector(
+                  onTap: _selectDate,
+                  child: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: accentColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: accentColor.withValues(alpha: 0.3),
+                      ),
+                    ),
+                    child: Icon(
+                      Icons.calendar_today,
+                      color: accentColor,
+                      size: 20,
+                    ),
+                  ),
+                ),
+              ],
             ],
-          ],
-        ),
-      ],
+          ),
+        ],
+      ),
     );
   }
 }

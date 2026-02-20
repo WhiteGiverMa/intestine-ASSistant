@@ -111,9 +111,10 @@ coverage/
 .pytest_cache/
 .coverage
 htmlcov/
+scripts/
 
 # Docs
 docs/
 
 # Trae documents
-.trae/documents/
+.trae/

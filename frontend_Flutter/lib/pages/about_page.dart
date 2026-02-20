@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/theme_provider.dart';
+import '../theme/theme_colors.dart';
+import '../theme/theme_decorations.dart';
 
 const String appVersion = '0.2.0';
 
@@ -7,31 +11,30 @@ class AboutPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = context.watch<ThemeProvider>();
+    final colors = themeProvider.colors;
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFFE8F5E9), Color(0xFFB2DFDB)],
-          ),
+        decoration: ThemeDecorations.backgroundGradient(
+          context,
+          mode: themeProvider.mode,
         ),
         child: SafeArea(
           child: Column(
             children: [
-              _buildHeader(context),
+              _buildHeader(context, colors),
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(16),
                   child: Column(
                     children: [
-                      _buildAppInfo(),
+                      _buildAppInfo(colors),
                       const SizedBox(height: 16),
-                      _buildVersionCard(),
+                      _buildVersionCard(context, colors),
                       const SizedBox(height: 16),
-                      _buildDeveloperCard(),
+                      _buildDeveloperCard(context, colors),
                       const SizedBox(height: 16),
-                      _buildPoweredByCard(),
+                      _buildPoweredByCard(context, colors),
                     ],
                   ),
                 ),
@@ -43,35 +46,26 @@ class AboutPage extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
+  Widget _buildHeader(BuildContext context, ThemeColors colors) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.8),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
+      decoration: ThemeDecorations.header(context),
       child: Row(
         children: [
           GestureDetector(
             onTap: () => Navigator.pop(context),
-            child: const Text(
+            child: Text(
               '←',
-              style: TextStyle(fontSize: 20, color: Colors.grey),
+              style: TextStyle(fontSize: 20, color: colors.textSecondary),
             ),
           ),
           const SizedBox(width: 16),
-          const Text(
+          Text(
             '关于',
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF2E7D32),
+              color: colors.primary,
             ),
           ),
         ],
@@ -79,7 +73,7 @@ class AboutPage extends StatelessWidget {
     );
   }
 
-  Widget _buildAppInfo() {
+  Widget _buildAppInfo(ThemeColors colors) {
     return Column(
       children: [
         const SizedBox(height: 24),
@@ -87,65 +81,49 @@ class AboutPage extends StatelessWidget {
           width: 80,
           height: 80,
           decoration: BoxDecoration(
-            color: const Color(0xFF2E7D32),
+            color: colors.primary,
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.15),
+                color: colors.shadow,
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
             ],
           ),
           child: const Center(
-            child: Text(
-              '🚽',
-              style: TextStyle(fontSize: 40),
-            ),
+            child: Text('🚽', style: TextStyle(fontSize: 40)),
           ),
         ),
         const SizedBox(height: 16),
-        const Text(
+        Text(
           'Intestine ASSistant',
           style: TextStyle(
             fontSize: 22,
             fontWeight: FontWeight.bold,
-            color: Color(0xFF2E7D32),
+            color: colors.primary,
           ),
         ),
         const SizedBox(height: 4),
         Text(
           '智能排便健康助手',
-          style: TextStyle(
-            fontSize: 14,
-            color: Colors.grey[600],
-          ),
+          style: TextStyle(fontSize: 14, color: colors.textSecondary),
         ),
       ],
     );
   }
 
-  Widget _buildVersionCard() {
+  Widget _buildVersionCard(BuildContext context, ThemeColors colors) {
     return Container(
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
+      decoration: ThemeDecorations.card(context),
       child: Row(
         children: [
           Container(
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: Colors.blue.shade50,
+              color: colors.info.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(10),
             ),
             child: const Center(
@@ -153,7 +131,7 @@ class AboutPage extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 16),
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -162,22 +140,23 @@ class AboutPage extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
+                    color: colors.textPrimary,
                   ),
                 ),
-                SizedBox(height: 4),
+                const SizedBox(height: 4),
                 Text(
                   '当前版本',
-                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                  style: TextStyle(fontSize: 12, color: colors.textSecondary),
                 ),
               ],
             ),
           ),
           Text(
             'v$appVersion',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w500,
-              color: Color(0xFF2E7D32),
+              color: colors.primary,
             ),
           ),
         ],
@@ -185,27 +164,17 @@ class AboutPage extends StatelessWidget {
     );
   }
 
-  Widget _buildDeveloperCard() {
+  Widget _buildDeveloperCard(BuildContext context, ThemeColors colors) {
     return Container(
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
+      decoration: ThemeDecorations.card(context),
       child: Row(
         children: [
           Container(
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: Colors.purple.shade50,
+              color: colors.secondary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(10),
             ),
             child: const Center(
@@ -213,7 +182,7 @@ class AboutPage extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 16),
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -222,22 +191,23 @@ class AboutPage extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
+                    color: colors.textPrimary,
                   ),
                 ),
-                SizedBox(height: 4),
+                const SizedBox(height: 4),
                 Text(
                   '项目作者',
-                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                  style: TextStyle(fontSize: 12, color: colors.textSecondary),
                 ),
               ],
             ),
           ),
-          const Text(
+          Text(
             '马戈',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w500,
-              color: Color(0xFF2E7D32),
+              color: colors.primary,
             ),
           ),
         ],
@@ -245,20 +215,10 @@ class AboutPage extends StatelessWidget {
     );
   }
 
-  Widget _buildPoweredByCard() {
+  Widget _buildPoweredByCard(BuildContext context, ThemeColors colors) {
     return Container(
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
+      decoration: ThemeDecorations.card(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -268,7 +228,7 @@ class AboutPage extends StatelessWidget {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: Colors.orange.shade50,
+                  color: colors.accent.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: const Center(
@@ -276,29 +236,34 @@ class AboutPage extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 16),
-              const Text(
+              Text(
                 'Powered by',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
+                  color: colors.textPrimary,
                 ),
               ),
             ],
           ),
           const SizedBox(height: 16),
-          _buildPoweredByItem('GLM-5', '智谱AI大语言模型'),
+          _buildPoweredByItem('GLM-5', '智谱AI大语言模型', colors),
           const SizedBox(height: 12),
-          _buildPoweredByItem('DeepSeek v3.2', '深度求索AI模型'),
+          _buildPoweredByItem('DeepSeek v3.2', '深度求索AI模型', colors),
         ],
       ),
     );
   }
 
-  Widget _buildPoweredByItem(String name, String description) {
+  Widget _buildPoweredByItem(
+    String name,
+    String description,
+    ThemeColors colors,
+  ) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.grey.shade50,
+        color: colors.surfaceVariant,
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
@@ -306,8 +271,8 @@ class AboutPage extends StatelessWidget {
           Container(
             width: 8,
             height: 8,
-            decoration: const BoxDecoration(
-              color: Color(0xFF2E7D32),
+            decoration: BoxDecoration(
+              color: colors.primary,
               shape: BoxShape.circle,
             ),
           ),
@@ -318,17 +283,15 @@ class AboutPage extends StatelessWidget {
               children: [
                 Text(
                   name,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
+                    color: colors.textPrimary,
                   ),
                 ),
                 Text(
                   description,
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: Colors.grey[600],
-                  ),
+                  style: TextStyle(fontSize: 11, color: colors.textSecondary),
                 ),
               ],
             ),

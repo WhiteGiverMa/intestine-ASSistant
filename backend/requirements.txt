@@ -9,3 +9,6 @@ python-multipart==0.0.17
 aiosqlite==0.20.0
 httpx==0.28.0
 openai==1.57.0
+
+# 开发工具
+ruff>=0.6.0

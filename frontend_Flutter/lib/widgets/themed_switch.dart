@@ -1,29 +1,36 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/theme_provider.dart';
 
 class ThemedSwitch extends StatelessWidget {
   final bool value;
   final ValueChanged<bool>? onChanged;
-  final Color activeColor;
-  final Color inactiveTrackColor;
-  final Color thumbColor;
+  final Color? activeColor;
+  final Color? inactiveTrackColor;
+  final Color? thumbColor;
 
   const ThemedSwitch({
     super.key,
     required this.value,
     this.onChanged,
-    this.activeColor = const Color(0xFF2E7D32),
-    this.inactiveTrackColor = Colors.grey,
-    this.thumbColor = Colors.white,
+    this.activeColor,
+    this.inactiveTrackColor,
+    this.thumbColor,
   });
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.watch<ThemeProvider>().colors;
+    final effectiveActiveColor = activeColor ?? colors.primary;
+    final effectiveInactiveColor = inactiveTrackColor ?? colors.textHint;
+    final effectiveThumbColor = thumbColor ?? colors.card;
+
     return Switch(
       value: value,
       onChanged: onChanged,
-      activeTrackColor: activeColor,
-      inactiveTrackColor: inactiveTrackColor,
-      thumbColor: WidgetStateProperty.all(thumbColor),
+      activeTrackColor: effectiveActiveColor,
+      inactiveTrackColor: effectiveInactiveColor,
+      thumbColor: WidgetStateProperty.all(effectiveThumbColor),
       trackOutlineColor: WidgetStateProperty.all(Colors.transparent),
     );
   }
@@ -34,7 +41,7 @@ class ThemedSwitchWithTitle extends StatelessWidget {
   final ValueChanged<bool>? onChanged;
   final String title;
   final String? subtitle;
-  final Color activeColor;
+  final Color? activeColor;
 
   const ThemedSwitchWithTitle({
     super.key,
@@ -42,19 +49,21 @@ class ThemedSwitchWithTitle extends StatelessWidget {
     this.onChanged,
     required this.title,
     this.subtitle,
-    this.activeColor = const Color(0xFF2E7D32),
+    this.activeColor,
   });
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.watch<ThemeProvider>().colors;
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: colors.card,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
+            color: colors.shadow,
             blurRadius: 8,
             offset: const Offset(0, 4),
           ),
@@ -68,16 +77,17 @@ class ThemedSwitchWithTitle extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
+                  color: colors.textPrimary,
                 ),
               ),
               if (subtitle != null) ...[
                 const SizedBox(height: 4),
                 Text(
                   subtitle!,
-                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  style: TextStyle(fontSize: 12, color: colors.textSecondary),
                 ),
               ],
             ],

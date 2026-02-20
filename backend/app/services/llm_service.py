@@ -1,52 +1,95 @@
-import httpx
+"""LLM服务封装模块。
+
+@module: llm_service
+@type: service
+@layer: backend
+@depends: [httpx]
+@exports: [llm_service, LLMService]
+@features:
+  - chat: 多轮对话（支持思考模式）
+  - chat_stream: 流式对话
+  - generate_conversation_title: 生成对话标题
+"""
 import json
-from typing import Optional, List, Dict, Any
+
+import httpx
+
+DEFAULT_SYSTEM_PROMPT = """You are a professional gut health consultant. You can have friendly conversations with users, answer questions about gut health, and provide professional advice.
+
+If the user shares bowel record data, please analyze and provide suggestions based on this data.
+
+Please reply in Chinese, maintaining a professional yet friendly tone."""
+
+THINKING_PARAMS = {
+    "low": {"temperature": 0.7, "max_tokens": 1500},
+    "medium": {"temperature": 0.5, "max_tokens": 2000},
+    "high": {"temperature": 0.3, "max_tokens": 3000},
+}
+
 
 class LLMService:
-    """
-    LLM服务类：负责调用外部AI API进行排便健康分析
+    """LLM服务类：负责调用外部AI API进行AI对话
 
-    降级机制说明：
-    1. 如果用户在设置页面配置了自己的API（api_key, api_url, model），则调用用户配置的API
-    2. 如果用户未配置或API调用失败，返回None，由调用方进行本地规则分析
-    注意：系统不再提供默认API配置，用户需要自行配置API才能使用AI分析功能
+    说明：
+    - 本服务仅用于AI对话功能（chat方法）
+    - 本地分析功能完全独立于本服务，在ai.py中直接实现
+    - 两个功能完全分离，互不影响
     """
 
-    async def analyze_bowel_health(
+    async def chat(
         self,
-        records_data: List[Dict[str, Any]],
-        stats_data: Dict[str, Any],
-        analysis_type: str = "weekly",
-        user_api_key: Optional[str] = None,
-        user_api_url: Optional[str] = None,
-        user_model: Optional[str] = None
-    ) -> Dict[str, Any]:
-        """
-        分析排便健康数据
+        messages: list[dict[str, str]],
+        user_api_key: str | None = None,
+        user_api_url: str | None = None,
+        user_model: str | None = None,
+        records_context: str | None = None,
+        system_prompt: str | None = None,
+        thinking_intensity: str | None = None,
+    ) -> dict[str, str | None]:
+        """Multi-turn conversation with deep thinking support
 
-        参数:
-            records_data: 排便记录数据列表
-            stats_data: 统计数据字典
-            analysis_type: 分析类型 (weekly/monthly)
-            user_api_key: 用户自定义的API密钥（可选）
-            user_api_url: 用户自定义的API URL（可选）
-            user_model: 用户自定义的模型名称（可选）
+        Args:
+            messages: List of conversation messages, each containing role and content
+            user_api_key: User's custom API key
+            user_api_url: User's custom API URL
+            user_model: User's custom model name
+            records_context: Bowel records context (optional)
+            system_prompt: Custom system prompt (optional, uses default if not provided)
+            thinking_intensity: Thinking intensity level: low/medium/high (optional)
 
-        返回:
-            分析结果字典，如果无法调用API则返回None
-
-        降级逻辑:
-            1. 检查用户是否配置了API密钥
-            2. 如果配置了则调用用户指定的API
-            3. 如果未配置或调用失败，返回None触发本地分析
+        Returns:
+            Dict with 'content' and 'thinking_content' keys, or None values if API call fails
         """
         if not user_api_key:
-            return None
+            return {"content": None, "thinking_content": None}
 
         if not user_api_url or not user_model:
-            return None
+            return {"content": None, "thinking_content": None}
 
-        prompt = self._build_analysis_prompt(records_data, stats_data, analysis_type)
+        system_content = system_prompt if system_prompt else DEFAULT_SYSTEM_PROMPT
+
+        if records_context:
+            system_content += f"""
+
+Here is the user's bowel record data for reference:
+{records_context}"""
+
+        formatted_messages = [{"role": "system", "content": system_content}]
+
+        for msg in messages:
+            formatted_messages.append(
+                {"role": msg.get("role", "user"), "content": msg.get("content", "")}
+            )
+
+        request_params = {"model": user_model, "messages": formatted_messages}
+
+        if thinking_intensity and thinking_intensity in THINKING_PARAMS:
+            params = THINKING_PARAMS[thinking_intensity]
+            request_params["temperature"] = params["temperature"]
+            request_params["max_tokens"] = params["max_tokens"]
+        else:
+            request_params["temperature"] = 0.7
+            request_params["max_tokens"] = 2000
 
         try:
             async with httpx.AsyncClient(timeout=60.0) as client:
@@ -54,186 +97,202 @@ class LLMService:
                     f"{user_api_url}/chat/completions",
                     headers={
                         "Authorization": f"Bearer {user_api_key}",
-                        "Content-Type": "application/json"
+                        "Content-Type": "application/json",
                     },
-                    json={
-                        "model": user_model,
-                        "messages": [
-                            {
-                                "role": "system",
-                                "content": """你是一位专业的肠道健康顾问。你需要根据用户的排便记录数据，提供专业的健康分析和建议。
-请以JSON格式返回分析结果，格式如下：
-{
-    "health_score": 0-100的整数,
-    "insights": [
-        {"type": "pattern|stool_type|frequency|other", "title": "标题", "description": "详细描述"}
-    ],
-    "suggestions": [
-        {"category": "diet|habit|lifestyle|health|general", "suggestion": "具体建议"}
-    ],
-    "warnings": [
-        {"type": "warning_type", "message": "警告信息"}
-    ]
-}
-
-注意：
-1. health_score 基于排便频率、时长、粪便形态、感受等综合评估
-2. insights 应包含2-4条有价值的洞察
-3. suggestions 应包含2-3条实用的改善建议
-4. warnings 仅在发现明显健康问题时添加
-5. 请用中文回复
-6. 【重要】如果数据覆盖率低于50%，请在分析中说明"数据较少，分析结果仅供参考"
-7. 平均排便频率是基于实际记录天数计算的，未记录的天数不计入统计"""
-                            },
-                            {
-                                "role": "user",
-                                "content": prompt
-                            }
-                        ],
-                        "temperature": 0.7,
-                        "max_tokens": 2000
-                    }
+                    json=request_params,
                 )
 
                 if response.status_code == 200:
                     result = response.json()
-                    content = result["choices"][0]["message"]["content"]
-                    return self._parse_llm_response(content)
-                else:
-                    print(f"LLM API错误: {response.status_code} - {response.text}")
-                    return None
+                    message = result["choices"][0]["message"]
+                    content = message.get("content")
+                    thinking_content = message.get("reasoning_content")
+                    return {"content": content, "thinking_content": thinking_content}
+                print(f"LLM API error: {response.status_code} - {response.text}")
+                return {"content": None, "thinking_content": None}
 
         except Exception as e:
-            print(f"LLM分析异常: {e}")
-            return None
+            print(f"LLM chat exception: {e}")
+            return {"content": None, "thinking_content": None}
 
-    def _build_analysis_prompt(
+    async def chat_stream(
         self,
-        records_data: List[Dict[str, Any]],
-        stats_data: Dict[str, Any],
-        analysis_type: str
-    ) -> str:
+        messages: list[dict[str, str]],
+        user_api_key: str | None = None,
+        user_api_url: str | None = None,
+        user_model: str | None = None,
+        records_context: str | None = None,
+        system_prompt: str | None = None,
+        thinking_intensity: str | None = None,
+    ):
+        """Multi-turn conversation with streaming support
+
+        Args:
+            messages: List of conversation messages, each containing role and content
+            user_api_key: User's custom API key
+            user_api_url: User's custom API URL
+            user_model: User's custom model name
+            records_context: Bowel records context (optional)
+            system_prompt: Custom system prompt (optional, uses default if not provided)
+            thinking_intensity: Thinking intensity level: low/medium/high (optional)
+
+        Yields:
+            Dict with 'content', 'reasoning_content', and 'done' keys
+            Format: {"content": str, "reasoning_content": str, "done": bool}
         """
-        构建发送给LLM的分析提示词
+        if not user_api_key or not user_api_url or not user_model:
+            yield {"content": None, "reasoning_content": None, "done": True}
+            return
 
-        参数:
-            records_data: 排便记录数据列表
-            stats_data: 统计数据字典
-            analysis_type: 分析类型
+        system_content = system_prompt if system_prompt else DEFAULT_SYSTEM_PROMPT
 
-        返回:
-            格式化的提示词字符串
-        """
-        period = "近一周" if analysis_type == "weekly" else "近一月"
+        if records_context:
+            system_content += f"""
 
-        coverage_rate = stats_data.get('coverage_rate', 1)
-        recorded_days = stats_data.get('recorded_days', 0)
-        period_days = stats_data.get('days', 0)
+Here is the user's bowel record data for reference:
+{records_context}"""
 
-        coverage_warning = ""
-        if coverage_rate < 0.5:
-            coverage_warning = "\n⚠️ 注意：数据覆盖率较低，分析结果仅供参考，建议用户持续记录更多数据。"
-        elif coverage_rate < 0.8:
-            coverage_warning = "\n📊 提示：数据覆盖率中等，分析结果仅供参考。"
+        formatted_messages = [{"role": "system", "content": system_content}]
 
-        prompt = f"""请分析以下{period}的排便记录数据：
+        for msg in messages:
+            formatted_messages.append(
+                {"role": msg.get("role", "user"), "content": msg.get("content", "")}
+            )
 
-## 数据说明
-- 分析周期: {period_days}天
-- 实际记录: {recorded_days}天 (覆盖率{coverage_rate*100:.0f}%)
-- 平均排便频率: 基于实际记录天数计算{coverage_warning}
+        request_params = {"model": user_model, "messages": formatted_messages, "stream": True}
 
-## 统计概览
-- 记录总数: {stats_data.get('total_records', 0)}条
-- 平均排便频率: {stats_data.get('avg_frequency', 0)}次/天
-- 平均排便时长: {stats_data.get('avg_duration', 0)}分钟
+        if thinking_intensity and thinking_intensity in THINKING_PARAMS:
+            params = THINKING_PARAMS[thinking_intensity]
+            request_params["temperature"] = params["temperature"]
+            request_params["max_tokens"] = params["max_tokens"]
+        else:
+            request_params["temperature"] = 0.7
+            request_params["max_tokens"] = 2000
 
-## 粪便类型分布（布里斯托分类）
-"""
-        type_dist = stats_data.get('type_dist', {})
-        type_names = {
-            1: "硬块状（便秘）",
-            2: "结块状（轻度便秘）",
-            3: "有裂纹（正常）",
-            4: "光滑柔软（理想）",
-            5: "断块状（缺乏纤维）",
-            6: "糊状（轻度腹泻）",
-            7: "液体状（腹泻）"
-        }
-        for type_id, count in type_dist.items():
-            prompt += f"- 类型{type_id} ({type_names.get(int(type_id), '未知')}): {count}次\n"
-
-        prompt += f"""
-## 排便感受分布
-"""
-        feeling_dist = stats_data.get('feeling_dist', {})
-        feeling_names = {
-            "smooth": "顺畅",
-            "difficult": "困难",
-            "painful": "疼痛",
-            "urgent": "急迫",
-            "incomplete": "未排尽"
-        }
-        for feeling, count in feeling_dist.items():
-            prompt += f"- {feeling_names.get(feeling, feeling)}: {count}次\n"
-
-        prompt += f"""
-## 时间段分布
-"""
-        time_dist = stats_data.get('time_dist', {})
-        time_names = {"morning": "早晨(6-12点)", "afternoon": "下午(12-18点)", "evening": "晚上(18-6点)"}
-        for time_period, count in time_dist.items():
-            prompt += f"- {time_names.get(time_period, time_period)}: {count}次\n"
-
-        prompt += """
-## 详细记录（最近5条）
-"""
-        for i, record in enumerate(records_data[:5], 1):
-            prompt += f"""
-{i}. 日期: {record.get('record_date', '未知')} {record.get('record_time', '未知')}
-   时长: {record.get('duration_minutes', '未知')}分钟
-   类型: {record.get('stool_type', '未知')}
-   感受: {feeling_names.get(record.get('feeling', ''), record.get('feeling', '未知'))}
-   备注: {record.get('notes', '无')}
-"""
-
-        prompt += """
-请根据以上数据，提供专业的肠道健康分析。"""
-
-        return prompt
-
-    def _parse_llm_response(self, content: str) -> Optional[Dict[str, Any]]:
-        """
-        解析LLM返回的JSON响应
-
-        参数:
-            content: LLM返回的原始内容字符串
-
-        返回:
-            解析后的字典，解析失败返回None
-        """
         try:
-            if "```json" in content:
-                content = content.split("```json")[1].split("```")[0]
-            elif "```" in content:
-                content = content.split("```")[1].split("```")[0]
+            async with (
+                httpx.AsyncClient(timeout=60.0) as client,
+                client.stream(
+                    "POST",
+                    f"{user_api_url}/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {user_api_key}",
+                        "Content-Type": "application/json",
+                    },
+                    json=request_params,
+                ) as response,
+            ):
+                if response.status_code != 200:
+                    error_text = await response.aread()
+                    print(f"LLM API error: {response.status_code} - {error_text}")
+                    yield {"content": None, "reasoning_content": None, "done": True}
+                    return
 
-            result = json.loads(content.strip())
+                async for line in response.aiter_lines():
+                    line = line.strip()
+                    if not line:
+                        continue
+                    if not line.startswith("data: "):
+                        continue
 
-            if "health_score" not in result:
-                result["health_score"] = 60
-            if "insights" not in result:
-                result["insights"] = []
-            if "suggestions" not in result:
-                result["suggestions"] = []
-            if "warnings" not in result:
-                result["warnings"] = []
+                    data = line[6:]
+                    if data == "[DONE]":
+                        yield {"content": "", "reasoning_content": "", "done": True}
+                        return
 
-            return result
+                    try:
+                        chunk = json.loads(data)
+                        delta = chunk.get("choices", [{}])[0].get("delta", {})
+                        content = delta.get("content", "") or ""
+                        reasoning_content = delta.get("reasoning_content", "") or ""
 
-        except json.JSONDecodeError as e:
-            print(f"JSON解析错误: {e}")
-            print(f"原始内容: {content}")
+                        if content or reasoning_content:
+                            yield {
+                                "content": content,
+                                "reasoning_content": reasoning_content,
+                                "done": False,
+                            }
+                    except json.JSONDecodeError:
+                        continue
+
+            yield {"content": "", "reasoning_content": "", "done": True}
+
+        except Exception as e:
+            print(f"LLM chat stream exception: {e}")
+            yield {"content": None, "reasoning_content": None, "done": True}
+
+    async def generate_conversation_title(
+        self,
+        user_message: str,
+        ai_response: str,
+        user_api_key: str | None = None,
+        user_api_url: str | None = None,
+        user_model: str | None = None,
+    ) -> str | None:
+        """Generate a concise title for the conversation based on the first exchange
+
+        Args:
+            user_message: The user's first message
+            ai_response: The AI's response
+            user_api_key: User's custom API key
+            user_api_url: User's custom API URL
+            user_model: User's custom model name
+
+        Returns:
+            A concise title (max 20 chars) or None if generation fails
+        """
+        if not user_api_key or not user_api_url or not user_model:
             return None
+
+        title_prompt = f"""Based on the following conversation, generate a concise title (maximum 20 characters, in Chinese) that summarizes the main topic.
+
+User: {user_message}
+
+Assistant: {ai_response[:200]}...
+
+Please provide only the title without any explanation or punctuation."""
+
+        request_params = {
+            "model": user_model,
+            "messages": [
+                {
+                    "role": "system",
+                    "content": "You are a helpful assistant that generates concise conversation titles.",
+                },
+                {"role": "user", "content": title_prompt},
+            ],
+            "temperature": 0.5,
+            "max_tokens": 50,
+        }
+
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.post(
+                    f"{user_api_url}/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {user_api_key}",
+                        "Content-Type": "application/json",
+                    },
+                    json=request_params,
+                )
+
+                if response.status_code == 200:
+                    result = response.json()
+                    title = result["choices"][0]["message"].get("content", "").strip()
+                    # Clean up the title
+                    title = (
+                        title.replace('"', "").replace("'", "").replace("「", "").replace("」", "")
+                    )
+                    title = title.replace("标题：", "").replace("标题:", "").replace("Title: ", "")
+                    # Limit to 20 characters
+                    if len(title) > 20:
+                        title = title[:20]
+                    return title if title else None
+                return None
+
+        except Exception as e:
+            print(f"Generate title exception: {e}")
+            return None
+
 
 llm_service = LLMService()

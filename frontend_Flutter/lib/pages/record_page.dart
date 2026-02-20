@@ -1,9 +1,14 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
 import '../widgets/date_input_field.dart';
+import '../widgets/record_form_selectors.dart';
+import '../providers/theme_provider.dart';
+import '../theme/theme_colors.dart';
+import '../theme/theme_decorations.dart';
 import 'data_page.dart';
 import 'analysis_page.dart';
 import 'settings_page.dart';
@@ -163,33 +168,32 @@ class _RecordPageState extends State<RecordPage> {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = context.watch<ThemeProvider>();
+    final colors = themeProvider.colors;
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFFE8F5E9), Color(0xFFB2DFDB)],
-          ),
+        decoration: ThemeDecorations.backgroundGradient(
+          context,
+          mode: themeProvider.mode,
         ),
         child: SafeArea(
           child: Column(
             children: [
-              _buildHeader(),
+              _buildHeader(colors),
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(16),
                   child: Column(
                     children: [
-                      _buildModeToggle(),
+                      _buildModeToggle(colors),
                       const SizedBox(height: 16),
-                      if (_isTimerMode) _buildTimerSection(),
-                      _buildFormSection(),
+                      if (_isTimerMode) _buildTimerSection(colors),
+                      _buildFormSection(colors),
                     ],
                   ),
                 ),
               ),
-              _buildBottomNav(),
+              _buildBottomNav(colors),
             ],
           ),
         ),
@@ -197,35 +201,26 @@ class _RecordPageState extends State<RecordPage> {
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(ThemeColors colors) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.8),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
+      decoration: ThemeDecorations.header(context),
       child: Row(
         children: [
           GestureDetector(
             onTap: () => Navigator.pop(context),
-            child: const Text(
+            child: Text(
               '←',
-              style: TextStyle(fontSize: 20, color: Colors.grey),
+              style: TextStyle(fontSize: 20, color: colors.textSecondary),
             ),
           ),
           const SizedBox(width: 16),
-          const Text(
+          Text(
             '记录排便',
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF2E7D32),
+              color: colors.primary,
             ),
           ),
         ],
@@ -233,20 +228,10 @@ class _RecordPageState extends State<RecordPage> {
     );
   }
 
-  Widget _buildModeToggle() {
+  Widget _buildModeToggle(ThemeColors colors) {
     return Container(
       padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
+      decoration: ThemeDecorations.card(context),
       child: Row(
         children: [
           Expanded(
@@ -255,16 +240,16 @@ class _RecordPageState extends State<RecordPage> {
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 decoration: BoxDecoration(
-                  color: !_isTimerMode
-                      ? const Color(0xFF2E7D32)
-                      : Colors.transparent,
+                  color: !_isTimerMode ? colors.primary : Colors.transparent,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
                   '手动输入',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: !_isTimerMode ? Colors.white : Colors.grey[600],
+                    color: !_isTimerMode
+                        ? colors.textOnPrimary
+                        : colors.textSecondary,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -277,16 +262,16 @@ class _RecordPageState extends State<RecordPage> {
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 decoration: BoxDecoration(
-                  color: _isTimerMode
-                      ? const Color(0xFF2E7D32)
-                      : Colors.transparent,
+                  color: _isTimerMode ? colors.primary : Colors.transparent,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
                   '计时器',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: _isTimerMode ? Colors.white : Colors.grey[600],
+                    color: _isTimerMode
+                        ? colors.textOnPrimary
+                        : colors.textSecondary,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -298,29 +283,19 @@ class _RecordPageState extends State<RecordPage> {
     );
   }
 
-  Widget _buildTimerSection() {
+  Widget _buildTimerSection(ThemeColors colors) {
     return Container(
       padding: const EdgeInsets.all(24),
       margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
+      decoration: ThemeDecorations.card(context),
       child: Column(
         children: [
           Text(
             _formatTime(_timerSeconds),
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 64,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF2E7D32),
+              color: colors.primary,
               fontFamily: 'monospace',
             ),
           ),
@@ -329,7 +304,8 @@ class _RecordPageState extends State<RecordPage> {
             ElevatedButton(
               onPressed: _startTimer,
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF2E7D32),
+                backgroundColor: colors.primary,
+                foregroundColor: colors.textOnPrimary,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 32,
                   vertical: 16,
@@ -344,7 +320,8 @@ class _RecordPageState extends State<RecordPage> {
             ElevatedButton(
               onPressed: _stopTimer,
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
+                backgroundColor: colors.error,
+                foregroundColor: colors.textOnPrimary,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 32,
                   vertical: 16,
@@ -360,7 +337,7 @@ class _RecordPageState extends State<RecordPage> {
               padding: const EdgeInsets.only(top: 16),
               child: Text(
                 '已记录时长: ${_durationController.text} 分钟',
-                style: const TextStyle(color: Colors.grey),
+                style: TextStyle(color: colors.textSecondary),
               ),
             ),
         ],
@@ -368,20 +345,10 @@ class _RecordPageState extends State<RecordPage> {
     );
   }
 
-  Widget _buildFormSection() {
+  Widget _buildFormSection(ThemeColors colors) {
     return Container(
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
+      decoration: ThemeDecorations.card(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -403,7 +370,12 @@ class _RecordPageState extends State<RecordPage> {
               ),
               const SizedBox(width: 16),
               Expanded(
-                child: _buildTextField('时间', _timeController, readOnly: true),
+                child: _buildTextField(
+                  '时间',
+                  _timeController,
+                  readOnly: true,
+                  colors: colors,
+                ),
               ),
             ],
           ),
@@ -413,30 +385,51 @@ class _RecordPageState extends State<RecordPage> {
               '时长（分钟）',
               _durationController,
               keyboardType: TextInputType.number,
+              colors: colors,
             ),
           ],
           const SizedBox(height: 16),
-          _buildStoolTypeSelector(),
+          StoolTypeSelector(
+            value: _stoolType,
+            onChanged: (v) => setState(() => _stoolType = v),
+            colors: colors,
+          ),
           const SizedBox(height: 16),
-          _buildColorSelector(),
+          ColorSelector(
+            value: _color,
+            onChanged: (v) => setState(() => _color = v),
+            colors: colors,
+          ),
           const SizedBox(height: 16),
-          _buildSmellSelector(),
+          SmellSelector(
+            value: _smellLevel,
+            onChanged: (v) => setState(() => _smellLevel = v),
+            colors: colors,
+          ),
           const SizedBox(height: 16),
-          _buildFeelingSelector(),
+          FeelingSelector(
+            value: _feeling,
+            onChanged: (v) => setState(() => _feeling = v),
+            colors: colors,
+          ),
           const SizedBox(height: 16),
-          _buildSymptomsSelector(),
+          SymptomsSelector(
+            value: _symptoms,
+            onChanged: (v) => setState(() => _symptoms = v),
+            colors: colors,
+          ),
           const SizedBox(height: 16),
-          _buildTextField('备注', _notesController, maxLines: 2),
+          _buildTextField('备注', _notesController, maxLines: 2, colors: colors),
           if (_message != null) ...[
             const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: _message!.contains('成功')
-                    ? Colors.green.shade50
+                    ? colors.success.withValues(alpha: 0.1)
                     : (_message!.contains('登录') || _message!.contains('过期'))
-                    ? Colors.orange.shade50
-                    : Colors.red.shade50,
+                    ? colors.warning.withValues(alpha: 0.1)
+                    : colors.errorBackground,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Column(
@@ -446,11 +439,11 @@ class _RecordPageState extends State<RecordPage> {
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: _message!.contains('成功')
-                          ? Colors.green
+                          ? colors.success
                           : (_message!.contains('登录') ||
                                 _message!.contains('过期'))
-                          ? Colors.orange
-                          : Colors.red,
+                          ? colors.warning
+                          : colors.error,
                       fontSize: 15,
                     ),
                   ),
@@ -464,7 +457,8 @@ class _RecordPageState extends State<RecordPage> {
                         );
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF2E7D32),
+                        backgroundColor: colors.primary,
+                        foregroundColor: colors.textOnPrimary,
                         padding: const EdgeInsets.symmetric(
                           horizontal: 24,
                           vertical: 12,
@@ -493,7 +487,8 @@ class _RecordPageState extends State<RecordPage> {
             child: ElevatedButton(
               onPressed: _submitting ? null : _submit,
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF2E7D32),
+                backgroundColor: colors.primary,
+                foregroundColor: colors.textOnPrimary,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -516,13 +511,18 @@ class _RecordPageState extends State<RecordPage> {
     int maxLines = 1,
     bool readOnly = false,
     TextInputType? keyboardType,
+    required ThemeColors colors,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: colors.textPrimary,
+          ),
         ),
         const SizedBox(height: 8),
         TextField(
@@ -536,294 +536,32 @@ class _RecordPageState extends State<RecordPage> {
               horizontal: 12,
               vertical: 12,
             ),
+            filled: true,
+            fillColor: colors.surface,
           ),
         ),
       ],
     );
   }
 
-  Widget _buildStoolTypeSelector() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          '粪便形态（布里斯托分类）',
-          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-        ),
-        const SizedBox(height: 8),
-        Row(
-          children: List.generate(7, (index) {
-            final type = index + 1;
-            final emojis = ['🪨', '🥜', '🌭', '🍌', '🫘', '🥣', '💧'];
-            return Expanded(
-              child: GestureDetector(
-                onTap: () => setState(() => _stoolType = type),
-                child: Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 2),
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  decoration: BoxDecoration(
-                    color: _stoolType == type
-                        ? const Color(0xFF2E7D32)
-                        : Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Column(
-                    children: [
-                      Text(emojis[index], style: const TextStyle(fontSize: 20)),
-                      Text(
-                        '$type',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: _stoolType == type
-                              ? Colors.white
-                              : Colors.grey,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          }),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildColorSelector() {
-    final colors = [
-      {'value': 'brown', 'label': '棕色', 'color': const Color(0xFF8B4513)},
-      {'value': 'dark_brown', 'label': '深棕', 'color': const Color(0xFF5D4037)},
-      {'value': 'light_brown', 'label': '浅棕', 'color': const Color(0xFFA1887F)},
-      {'value': 'green', 'label': '绿色', 'color': const Color(0xFF4CAF50)},
-      {'value': 'yellow', 'label': '黄色', 'color': const Color(0xFFFFEB3B)},
-      {'value': 'black', 'label': '黑色', 'color': const Color(0xFF212121)},
-      {'value': 'red', 'label': '红色', 'color': const Color(0xFFF44336)},
-    ];
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          '颜色',
-          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-        ),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: colors.map((c) {
-            final isSelected = _color == c['value'];
-            return GestureDetector(
-              onTap: () => setState(() => _color = c['value'] as String),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(16),
-                  border: isSelected
-                      ? Border.all(color: const Color(0xFF2E7D32), width: 2)
-                      : null,
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 12,
-                      height: 12,
-                      decoration: BoxDecoration(
-                        color: c['color'] as Color,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      c['label'] as String,
-                      style: const TextStyle(fontSize: 12),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }).toList(),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSmellSelector() {
-    final levels = ['无', '轻微', '一般', '较重', '严重'];
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          '气味',
-          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-        ),
-        const SizedBox(height: 8),
-        Row(
-          children: List.generate(5, (index) {
-            final level = index + 1;
-            return Expanded(
-              child: GestureDetector(
-                onTap: () => setState(() => _smellLevel = level),
-                child: Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 2),
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  decoration: BoxDecoration(
-                    color: _smellLevel == level
-                        ? const Color(0xFF2E7D32)
-                        : Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    levels[index],
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: _smellLevel == level ? Colors.white : Colors.grey,
-                    ),
-                  ),
-                ),
-              ),
-            );
-          }),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildFeelingSelector() {
-    final feelings = [
-      {'value': 'smooth', 'label': '顺畅', 'emoji': '😊'},
-      {'value': 'difficult', 'label': '困难', 'emoji': '😣'},
-      {'value': 'painful', 'label': '疼痛', 'emoji': '😫'},
-      {'value': 'urgent', 'label': '急迫', 'emoji': '😰'},
-      {'value': 'incomplete', 'label': '不尽', 'emoji': '😕'},
-    ];
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          '排便感受',
-          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-        ),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: feelings.map((f) {
-            final isSelected = _feeling == f['value'];
-            return GestureDetector(
-              onTap: () => setState(() => _feeling = f['value'] as String),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? const Color(0xFF2E7D32)
-                      : Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      f['emoji'] as String,
-                      style: const TextStyle(fontSize: 16),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      f['label'] as String,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: isSelected ? Colors.white : Colors.grey,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }).toList(),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSymptomsSelector() {
-    final allSymptoms = ['腹痛', '腹胀', '恶心', '便血', '粘液'];
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          '伴随症状',
-          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-        ),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: allSymptoms.map((s) {
-            final isSelected = _symptoms.contains(s);
-            return GestureDetector(
-              onTap: () {
-                setState(() {
-                  if (isSelected) {
-                    _symptoms.remove(s);
-                  } else {
-                    _symptoms.add(s);
-                  }
-                });
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? const Color(0xFF2E7D32)
-                      : Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Text(
-                  s,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: isSelected ? Colors.white : Colors.grey,
-                  ),
-                ),
-              ),
-            );
-          }).toList(),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildBottomNav() {
+  Widget _buildBottomNav(ThemeColors colors) {
     return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: Colors.grey.shade200)),
-      ),
+      decoration: ThemeDecorations.bottomNav(context),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 8),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
-            _buildNavItem('🏠', '首页', false, () => Navigator.pop(context)),
-            _buildNavItem('📊', '数据', false, const DataPage()),
-            _buildNavItem('🤖', '分析', false, const AnalysisPage()),
-            _buildNavItem('⚙️', '设置', false, const SettingsPage()),
+            _buildNavItem(
+              '🏠',
+              '首页',
+              false,
+              colors,
+              () => Navigator.pop(context),
+            ),
+            _buildNavItem('📊', '数据', false, colors, const DataPage()),
+            _buildNavItem('🤖', '分析', false, colors, const AnalysisPage()),
+            _buildNavItem('⚙️', '设置', false, colors, const SettingsPage()),
           ],
         ),
       ),
@@ -833,7 +571,8 @@ class _RecordPageState extends State<RecordPage> {
   Widget _buildNavItem(
     String emoji,
     String label,
-    bool isActive, [
+    bool isActive,
+    ThemeColors colors, [
     dynamic target,
   ]) {
     return GestureDetector(
@@ -857,7 +596,7 @@ class _RecordPageState extends State<RecordPage> {
             label,
             style: TextStyle(
               fontSize: 10,
-              color: isActive ? const Color(0xFF2E7D32) : Colors.grey,
+              color: isActive ? colors.primary : colors.textSecondary,
             ),
           ),
         ],

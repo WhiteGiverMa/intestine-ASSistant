@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:url_launcher/url_launcher.dart';
+import '../providers/theme_provider.dart';
+import '../theme/theme_colors.dart';
+import '../theme/theme_decorations.dart';
 import '../services/api_service.dart';
 import '../widgets/themed_switch.dart';
 import 'data_page.dart';
@@ -9,6 +12,9 @@ import 'about_page.dart';
 import 'login_page.dart';
 import 'misc_settings_page.dart';
 import 'dev_tools_page.dart';
+import 'user_account_page.dart';
+import 'ai_chat_options_page.dart';
+import 'theme_selector_page.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -22,24 +28,11 @@ class _SettingsPageState extends State<SettingsPage> {
   bool _loading = true;
   bool _saving = false;
   String? _message;
-  bool _obscureApiKey = true;
-
-  final _aiApiKeyController = TextEditingController();
-  final _aiApiUrlController = TextEditingController();
-  final _aiModelController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _loadSettings();
-  }
-
-  @override
-  void dispose() {
-    _aiApiKeyController.dispose();
-    _aiApiUrlController.dispose();
-    _aiModelController.dispose();
-    super.dispose();
   }
 
   Future<void> _loadSettings() async {
@@ -55,9 +48,6 @@ class _SettingsPageState extends State<SettingsPage> {
       final settings = await ApiService.getUserSettings();
       setState(() {
         _devMode = settings['dev_mode'] ?? false;
-        _aiApiKeyController.text = settings['ai_api_key'] ?? '';
-        _aiApiUrlController.text = settings['ai_api_url'] ?? '';
-        _aiModelController.text = settings['ai_model'] ?? '';
         _loading = false;
       });
     } catch (e) {
@@ -120,57 +110,23 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
-  Future<void> _handleSaveAiConfig() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token');
-
-    if (token == null) {
-      setState(() => _message = '请先登录');
-      return;
-    }
-
-    setState(() {
-      _saving = true;
-      _message = null;
-    });
-
-    try {
-      await ApiService.updateUserSettings(
-        aiApiKey: _aiApiKeyController.text.trim(),
-        aiApiUrl: _aiApiUrlController.text.trim(),
-        aiModel: _aiModelController.text.trim(),
-      );
-      setState(() {
-        _message = 'AI配置保存成功';
-      });
-    } catch (e) {
-      final errorMsg = e.toString().replaceAll('Exception: ', '');
-      if (_isAuthError(errorMsg)) {
-        await _handleAuthError();
-      } else {
-        setState(() {
-          _message = errorMsg;
-        });
-      }
-    } finally {
-      setState(() => _saving = false);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
+    final themeProvider = context.watch<ThemeProvider>();
+    final colors = themeProvider.colors;
+
     if (_loading) {
       return Scaffold(
         body: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [Color(0xFFE8F5E9), Color(0xFFB2DFDB)],
-            ),
+          decoration: ThemeDecorations.backgroundGradient(
+            context,
+            mode: themeProvider.mode,
           ),
-          child: const Center(
-            child: Text('加载中...', style: TextStyle(color: Colors.grey)),
+          child: Center(
+            child: Text(
+              '加载中...',
+              style: TextStyle(color: colors.textSecondary),
+            ),
           ),
         ),
       );
@@ -178,40 +134,41 @@ class _SettingsPageState extends State<SettingsPage> {
 
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFFE8F5E9), Color(0xFFB2DFDB)],
-          ),
+        decoration: ThemeDecorations.backgroundGradient(
+          context,
+          mode: themeProvider.mode,
         ),
         child: SafeArea(
           child: Column(
             children: [
-              _buildHeader(),
+              _buildHeader(colors),
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(16),
                   child: Column(
                     children: [
-                      _buildAiConfigSection(),
+                      _buildThemeButton(colors),
                       const SizedBox(height: 16),
-                      _buildMiscButton(),
+                      _buildAiChatOptionsButton(colors),
                       const SizedBox(height: 16),
-                      _buildDevModeToggle(),
+                      _buildUserButton(colors),
                       const SizedBox(height: 16),
-                      if (_devMode) _buildDevTools(),
+                      _buildMiscButton(colors),
+                      const SizedBox(height: 16),
+                      _buildDevModeToggle(colors),
+                      const SizedBox(height: 16),
+                      if (_devMode) _buildDevTools(colors),
                       if (_message != null) ...[
                         const SizedBox(height: 16),
-                        _buildMessage(),
+                        _buildMessage(colors),
                       ],
                       const SizedBox(height: 16),
-                      _buildAboutButton(),
+                      _buildAboutButton(colors),
                     ],
                   ),
                 ),
               ),
-              _buildBottomNav(),
+              _buildBottomNav(colors),
             ],
           ),
         ),
@@ -219,35 +176,26 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(ThemeColors colors) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.8),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
+      decoration: ThemeDecorations.header(context, mode: context.themeMode),
       child: Row(
         children: [
           GestureDetector(
             onTap: () => Navigator.pop(context),
-            child: const Text(
+            child: Text(
               '←',
-              style: TextStyle(fontSize: 20, color: Colors.grey),
+              style: TextStyle(fontSize: 20, color: colors.textSecondary),
             ),
           ),
           const SizedBox(width: 16),
-          const Text(
+          Text(
             '设置',
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF2E7D32),
+              color: colors.primary,
             ),
           ),
         ],
@@ -255,160 +203,185 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  Widget _buildAiConfigSection() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Row(
-            children: [
-              Text('🤖', style: TextStyle(fontSize: 20)),
-              SizedBox(width: 8),
-              Text(
-                'AI 分析配置',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-            ],
-          ),
-          const Divider(height: 24),
-          Text(
-            '配置AI API后，系统将使用AI进行智能分析；未配置则使用本地规则分析。',
-            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _aiApiKeyController,
-            decoration: InputDecoration(
-              labelText: 'API 密钥',
-              hintText: '输入您的API密钥',
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 12,
-              ),
-              suffixIcon: IconButton(
-                icon: Icon(
-                  _obscureApiKey ? Icons.visibility_off : Icons.visibility,
-                ),
-                onPressed: () =>
-                    setState(() => _obscureApiKey = !_obscureApiKey),
-              ),
-            ),
-            obscureText: _obscureApiKey,
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _aiApiUrlController,
-            decoration: InputDecoration(
-              labelText: 'API URL',
-              hintText: '例如: https://api.deepseek.com/v1',
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 12,
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _aiModelController,
-            decoration: InputDecoration(
-              labelText: '模型名称',
-              hintText: '例如: deepseek-chat',
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 12,
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.blue.shade50,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildThemeButton(ThemeColors colors) {
+    final themeProvider = context.watch<ThemeProvider>();
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const ThemeSelectorPage()),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: ThemeDecorations.card(context, mode: themeProvider.mode),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
               children: [
-                const Text(
-                  '支持的API格式：',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  '• DeepSeek: https://api.deepseek.com/v1\n'
-                  '• OpenAI兼容API: 填写对应的Base URL\n'
-                  '• 本地部署模型: 填写本地服务地址',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: Colors.grey[600],
-                    height: 1.5,
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: ThemeDecorations.iconContainer(
+                    context,
+                    mode: themeProvider.mode,
+                    backgroundColor: colors.primary.withValues(alpha: 0.1),
                   ),
+                  child: const Center(
+                    child: Text('🎨', style: TextStyle(fontSize: 20)),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '主题',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: colors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      themeProvider.mode.label,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: colors.textSecondary,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _saving ? null : _handleSaveAiConfig,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF2E7D32),
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: Text(
-                _saving ? '保存中...' : '💾 保存AI配置',
-                style: const TextStyle(fontSize: 14, color: Colors.white),
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          _buildApiLinks(),
-        ],
+            Icon(Icons.chevron_right, color: colors.textSecondary),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildApiLinks() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        _buildLinkButton(
-          'SiliconFlow',
-          'https://siliconflow.cn',
-          Colors.purple,
+  Widget _buildAiChatOptionsButton(ThemeColors colors) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const AiChatOptionsPage()),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: ThemeDecorations.card(context, mode: context.themeMode),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: ThemeDecorations.iconContainer(
+                    context,
+                    mode: context.themeMode,
+                    backgroundColor: colors.primary.withValues(alpha: 0.1),
+                  ),
+                  child: const Center(
+                    child: Text('🤖', style: TextStyle(fontSize: 20)),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'AI对话选项',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: colors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'API配置、清除对话',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: colors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            Icon(Icons.chevron_right, color: colors.textSecondary),
+          ],
         ),
-        const SizedBox(width: 16),
-        _buildLinkButton('DeepSeek', 'https://deepseek.com', Colors.blue),
-      ],
+      ),
     );
   }
 
-  Widget _buildMiscButton() {
+  Widget _buildUserButton(ThemeColors colors) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const UserAccountPage()),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: ThemeDecorations.card(context, mode: context.themeMode),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: ThemeDecorations.iconContainer(
+                    context,
+                    mode: context.themeMode,
+                    backgroundColor: colors.primary.withValues(alpha: 0.1),
+                  ),
+                  child: const Center(
+                    child: Text('👤', style: TextStyle(fontSize: 20)),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '用户',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: colors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '账号管理、修改密码、退出登录',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: colors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            Icon(Icons.chevron_right, color: colors.textSecondary),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMiscButton(ThemeColors colors) {
     return GestureDetector(
       onTap: () {
         Navigator.push(
@@ -418,17 +391,7 @@ class _SettingsPageState extends State<SettingsPage> {
       },
       child: Container(
         padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.1),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
+        decoration: ThemeDecorations.card(context, mode: context.themeMode),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -437,16 +400,17 @@ class _SettingsPageState extends State<SettingsPage> {
                 Container(
                   width: 40,
                   height: 40,
-                  decoration: BoxDecoration(
-                    color: Colors.orange.shade50,
-                    borderRadius: BorderRadius.circular(10),
+                  decoration: ThemeDecorations.iconContainer(
+                    context,
+                    mode: context.themeMode,
+                    backgroundColor: colors.warning.withValues(alpha: 0.1),
                   ),
                   child: const Center(
                     child: Text('⚙️', style: TextStyle(fontSize: 20)),
                   ),
                 ),
                 const SizedBox(width: 16),
-                const Column(
+                Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
@@ -454,59 +418,29 @@ class _SettingsPageState extends State<SettingsPage> {
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
+                        color: colors.textPrimary,
                       ),
                     ),
-                    SizedBox(height: 4),
+                    const SizedBox(height: 4),
                     Text(
                       '系统记录最大年份等设置',
-                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: colors.textSecondary,
+                      ),
                     ),
                   ],
                 ),
               ],
             ),
-            const Icon(Icons.chevron_right, color: Colors.grey),
+            Icon(Icons.chevron_right, color: colors.textSecondary),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildLinkButton(String label, String url, Color color) {
-    return GestureDetector(
-      onTap: () async {
-        final uri = Uri.parse(url);
-        if (await canLaunchUrl(uri)) {
-          await launchUrl(uri, mode: LaunchMode.externalApplication);
-        }
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: color, width: 1),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.open_in_new, size: 14, color: Colors.white),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 13,
-                color: Colors.white,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDevModeToggle() {
+  Widget _buildDevModeToggle(ThemeColors colors) {
     return ThemedSwitchWithTitle(
       value: _devMode,
       onChanged: _saving ? null : _handleDevModeToggle,
@@ -515,7 +449,7 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  Widget _buildDevTools() {
+  Widget _buildDevTools(ThemeColors colors) {
     return GestureDetector(
       onTap: () {
         Navigator.push(
@@ -525,17 +459,7 @@ class _SettingsPageState extends State<SettingsPage> {
       },
       child: Container(
         padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.1),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
+        decoration: ThemeDecorations.card(context, mode: context.themeMode),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -544,16 +468,17 @@ class _SettingsPageState extends State<SettingsPage> {
                 Container(
                   width: 40,
                   height: 40,
-                  decoration: BoxDecoration(
-                    color: Colors.purple.shade50,
-                    borderRadius: BorderRadius.circular(10),
+                  decoration: ThemeDecorations.iconContainer(
+                    context,
+                    mode: context.themeMode,
+                    backgroundColor: colors.primary.withValues(alpha: 0.1),
                   ),
                   child: const Center(
                     child: Text('🛠️', style: TextStyle(fontSize: 20)),
                   ),
                 ),
                 const SizedBox(width: 16),
-                const Column(
+                Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
@@ -561,31 +486,37 @@ class _SettingsPageState extends State<SettingsPage> {
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
+                        color: colors.textPrimary,
                       ),
                     ),
-                    SizedBox(height: 4),
+                    const SizedBox(height: 4),
                     Text(
                       '测试数据生成器',
-                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: colors.textSecondary,
+                      ),
                     ),
                   ],
                 ),
               ],
             ),
-            const Icon(Icons.chevron_right, color: Colors.grey),
+            Icon(Icons.chevron_right, color: colors.textSecondary),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildMessage() {
+  Widget _buildMessage(ThemeColors colors) {
     final isSuccess = _message!.contains('成功');
     final isAuthError = _message!.contains('登录');
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: isSuccess ? Colors.green.shade50 : Colors.red.shade50,
+        color: isSuccess
+            ? colors.success.withValues(alpha: 0.1)
+            : colors.error.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(
@@ -595,7 +526,7 @@ class _SettingsPageState extends State<SettingsPage> {
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 12,
-              color: isSuccess ? Colors.green : Colors.red,
+              color: isSuccess ? colors.success : colors.error,
             ),
           ),
           if (isAuthError) ...[
@@ -608,7 +539,8 @@ class _SettingsPageState extends State<SettingsPage> {
                 );
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF2E7D32),
+                backgroundColor: colors.primary,
+                foregroundColor: colors.background,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 24,
                   vertical: 10,
@@ -622,10 +554,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 children: [
                   Text('🔑', style: TextStyle(fontSize: 14)),
                   SizedBox(width: 6),
-                  Text(
-                    '去登录',
-                    style: TextStyle(fontSize: 12, color: Colors.white),
-                  ),
+                  Text('去登录', style: TextStyle(fontSize: 12)),
                 ],
               ),
             ),
@@ -635,7 +564,7 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  Widget _buildAboutButton() {
+  Widget _buildAboutButton(ThemeColors colors) {
     return GestureDetector(
       onTap: () {
         Navigator.push(
@@ -645,17 +574,7 @@ class _SettingsPageState extends State<SettingsPage> {
       },
       child: Container(
         padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.1),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
+        decoration: ThemeDecorations.card(context, mode: context.themeMode),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -664,16 +583,17 @@ class _SettingsPageState extends State<SettingsPage> {
                 Container(
                   width: 40,
                   height: 40,
-                  decoration: BoxDecoration(
-                    color: Colors.green.shade50,
-                    borderRadius: BorderRadius.circular(10),
+                  decoration: ThemeDecorations.iconContainer(
+                    context,
+                    mode: context.themeMode,
+                    backgroundColor: colors.primary.withValues(alpha: 0.1),
                   ),
                   child: const Center(
                     child: Text('ℹ️', style: TextStyle(fontSize: 20)),
                   ),
                 ),
                 const SizedBox(width: 16),
-                const Column(
+                Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
@@ -681,39 +601,46 @@ class _SettingsPageState extends State<SettingsPage> {
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
+                        color: colors.textPrimary,
                       ),
                     ),
-                    SizedBox(height: 4),
+                    const SizedBox(height: 4),
                     Text(
                       '版本信息、开发者',
-                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: colors.textSecondary,
+                      ),
                     ),
                   ],
                 ),
               ],
             ),
-            const Icon(Icons.chevron_right, color: Colors.grey),
+            Icon(Icons.chevron_right, color: colors.textSecondary),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildBottomNav() {
+  Widget _buildBottomNav(ThemeColors colors) {
     return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: Colors.grey.shade200)),
-      ),
+      decoration: ThemeDecorations.bottomNav(context, mode: context.themeMode),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 8),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
-            _buildNavItem('🏠', '首页', false, () => Navigator.pop(context)),
-            _buildNavItem('📊', '数据', false, const DataPage()),
-            _buildNavItem('🤖', '分析', false, const AnalysisPage()),
-            _buildNavItem('⚙️', '设置', true),
+            _buildNavItem(
+              '🏠',
+              '首页',
+              false,
+              () => Navigator.pop(context),
+              colors,
+            ),
+            _buildNavItem('📊', '数据', false, const DataPage(), colors),
+            _buildNavItem('🤖', '分析', false, const AnalysisPage(), colors),
+            _buildNavItem('⚙️', '设置', true, null, colors),
           ],
         ),
       ),
@@ -723,9 +650,10 @@ class _SettingsPageState extends State<SettingsPage> {
   Widget _buildNavItem(
     String emoji,
     String label,
-    bool isActive, [
+    bool isActive,
     dynamic target,
-  ]) {
+    ThemeColors colors,
+  ) {
     return GestureDetector(
       onTap: target != null
           ? () {
@@ -747,7 +675,7 @@ class _SettingsPageState extends State<SettingsPage> {
             label,
             style: TextStyle(
               fontSize: 10,
-              color: isActive ? const Color(0xFF2E7D32) : Colors.grey,
+              color: isActive ? colors.primary : colors.textSecondary,
             ),
           ),
         ],
