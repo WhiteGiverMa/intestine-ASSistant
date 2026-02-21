@@ -1,8 +1,0 @@
-services:
-  - name: backend
-    type: web
-    source:
-      type: docker
-      path: backend
-    config:
-      port: 8001
