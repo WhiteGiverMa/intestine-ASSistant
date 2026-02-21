@@ -3,12 +3,12 @@ import 'package:provider/provider.dart';
 import '../providers/theme_provider.dart';
 import '../theme/theme_colors.dart';
 
-class CompactTabSwitcher extends StatelessWidget {
+class CompactTabBar extends StatelessWidget {
   final int currentIndex;
   final List<CompactTabItem> tabs;
   final ValueChanged<int> onTabChanged;
 
-  const CompactTabSwitcher({
+  const CompactTabBar({
     super.key,
     required this.currentIndex,
     required this.tabs,
@@ -89,12 +89,104 @@ class CompactTabSwitcher extends StatelessWidget {
   }
 }
 
+class CompactTabContent extends StatefulWidget {
+  final int currentIndex;
+  final List<CompactTabItem> tabs;
+  final bool enableSwipe;
+  final ValueChanged<int>? onTabChanged;
+
+  const CompactTabContent({
+    super.key,
+    required this.currentIndex,
+    required this.tabs,
+    this.enableSwipe = false,
+    this.onTabChanged,
+  });
+
+  @override
+  State<CompactTabContent> createState() => CompactTabContentState();
+}
+
+class CompactTabContentState extends State<CompactTabContent>
+    with SingleTickerProviderStateMixin {
+  TabController? _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.enableSwipe) {
+      _tabController = TabController(
+        length: widget.tabs.length,
+        vsync: this,
+        initialIndex: widget.currentIndex,
+      );
+      _tabController!.addListener(_onTabControllerChanged);
+    }
+  }
+
+  @override
+  void didUpdateWidget(CompactTabContent oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_tabController != null && oldWidget.currentIndex != widget.currentIndex) {
+      if (_tabController!.index != widget.currentIndex) {
+        _tabController!.animateTo(widget.currentIndex);
+      }
+    }
+  }
+
+  void _onTabControllerChanged() {
+    if (_tabController!.indexIsChanging) {
+      widget.onTabChanged?.call(_tabController!.index);
+    }
+  }
+
+  @override
+  void dispose() {
+    _tabController?.removeListener(_onTabControllerChanged);
+    _tabController?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.enableSwipe && _tabController != null) {
+      return TabBarView(
+        controller: _tabController,
+        children: widget.tabs.map((tab) => tab.content).toList(),
+      );
+    }
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 300),
+      switchInCurve: Curves.easeInOut,
+      switchOutCurve: Curves.easeInOut,
+      transitionBuilder: (child, animation) {
+        return FadeTransition(
+          opacity: animation,
+          child: SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(0.1, 0),
+              end: Offset.zero,
+            ).animate(animation),
+            child: child,
+          ),
+        );
+      },
+      child: KeyedSubtree(
+        key: ValueKey(widget.currentIndex),
+        child: widget.tabs[widget.currentIndex].content,
+      ),
+    );
+  }
+}
+
 class CompactTabItem {
   final String label;
   final IconData? icon;
+  final Widget content;
 
   const CompactTabItem({
     required this.label,
+    required this.content,
     this.icon,
   });
 }

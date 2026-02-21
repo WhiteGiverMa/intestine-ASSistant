@@ -6,6 +6,8 @@ import '../models/models.dart';
 import '../widgets/error_dialog.dart';
 import '../widgets/compact_tab_switcher.dart';
 import '../widgets/analysis_result.dart';
+import '../widgets/app_header.dart';
+import '../widgets/app_bottom_nav.dart';
 import '../providers/theme_provider.dart';
 import '../theme/theme_colors.dart';
 import '../theme/theme_decorations.dart';
@@ -513,13 +515,74 @@ class _AnalysisPageState extends State<AnalysisPage> {
             children: [
               Column(
                 children: [
-                  _buildHeader(colors),
-                  Expanded(
-                    child: _currentTab == 0
-                        ? _buildChatLayout(colors)
-                        : _buildLocalAnalysisView(colors),
+                  AppHeader(
+                    titleWidget: Row(
+                      children: [
+                        Text(
+                          'AI 健康分析',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: colors.primary,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        CompactTabBar(
+                          currentIndex: _currentTab,
+                          onTabChanged: (index) =>
+                              setState(() => _currentTab = index),
+                          tabs: const [
+                            CompactTabItem(
+                              label: 'AI 对话',
+                              content: SizedBox.shrink(),
+                            ),
+                            CompactTabItem(
+                              label: '本地分析',
+                              content: SizedBox.shrink(),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    trailing: _aiStatus?.isConfigured == true
+                        ? GestureDetector(
+                            onTap: _openSettings,
+                            child: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: colors.cardBackground,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Icon(
+                                Icons.settings,
+                                color: colors.textSecondary,
+                                size: 20,
+                              ),
+                            ),
+                          )
+                        : null,
                   ),
-                  _buildBottomNav(colors),
+                  Expanded(
+                    child: CompactTabContent(
+                      currentIndex: _currentTab,
+                      onTabChanged: (index) =>
+                          setState(() => _currentTab = index),
+                      tabs: [
+                        CompactTabItem(
+                          label: 'AI 对话',
+                          content: _buildChatLayout(colors),
+                        ),
+                        CompactTabItem(
+                          label: '本地分析',
+                          content: _buildLocalAnalysisView(colors),
+                        ),
+                      ],
+                    ),
+                  ),
+                  AppBottomNav(
+                    activeTab: NavTab.analysis,
+                    onNavigate: (tab) => _handleNavTab(context, tab),
+                  ),
                 ],
               ),
               if (_currentTab == 0 && _aiStatus?.isConfigured == true)
@@ -529,6 +592,28 @@ class _AnalysisPageState extends State<AnalysisPage> {
         ),
       ),
     );
+  }
+
+  void _handleNavTab(BuildContext context, NavTab tab) {
+    switch (tab) {
+      case NavTab.home:
+        Navigator.pop(context);
+        break;
+      case NavTab.data:
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const DataPage()),
+        );
+        break;
+      case NavTab.analysis:
+        break;
+      case NavTab.settings:
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const SettingsPage()),
+        );
+        break;
+    }
   }
 
   Widget _buildChatLayout(ThemeColors colors) {
@@ -654,60 +739,6 @@ class _AnalysisPageState extends State<AnalysisPage> {
         Expanded(child: _buildMessageList(colors)),
         _buildInputArea(colors),
       ],
-    );
-  }
-
-  Widget _buildHeader(ThemeColors colors) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: ThemeDecorations.header(context),
-      child: Row(
-        children: [
-          const SizedBox(width: 36),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Row(
-              children: [
-                Text(
-                  'AI 健康分析',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: colors.primary,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                CompactTabSwitcher(
-                  currentIndex: _currentTab,
-                  tabs: const [
-                    CompactTabItem(label: 'AI 对话'),
-                    CompactTabItem(label: '本地分析'),
-                  ],
-                  onTabChanged: (index) => setState(() => _currentTab = index),
-                ),
-              ],
-            ),
-          ),
-          if (_aiStatus?.isConfigured == true)
-            GestureDetector(
-              onTap: _openSettings,
-              child: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: colors.cardBackground,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(
-                  Icons.settings,
-                  color: colors.textSecondary,
-                  size: 20,
-                ),
-              ),
-            )
-          else
-            const SizedBox(width: 36),
-        ],
-      ),
     );
   }
 
@@ -1153,66 +1184,6 @@ class _AnalysisPageState extends State<AnalysisPage> {
                 _analysisLoading ? '分析中...' : '🤖 开始 AI 分析',
                 style: TextStyle(fontSize: 16, color: colors.textOnPrimary),
               ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBottomNav(ThemeColors colors) {
-    return Container(
-      decoration: ThemeDecorations.bottomNav(context),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _buildNavItem(
-              '🏠',
-              '首页',
-              false,
-              colors,
-              () => Navigator.pop(context),
-            ),
-            _buildNavItem('📊', '数据', false, colors, const DataPage()),
-            _buildNavItem('🤖', '分析', true, colors),
-            _buildNavItem('⚙️', '设置', false, colors, const SettingsPage()),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNavItem(
-    String emoji,
-    String label,
-    bool isActive,
-    ThemeColors colors, [
-    dynamic target,
-  ]) {
-    return GestureDetector(
-      onTap: target != null
-          ? () {
-              if (target is VoidCallback) {
-                target();
-              } else if (target is Widget) {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => target),
-                );
-              }
-            }
-          : null,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(emoji, style: const TextStyle(fontSize: 20)),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 10,
-              color: isActive ? colors.primary : colors.textSecondary,
             ),
           ),
         ],

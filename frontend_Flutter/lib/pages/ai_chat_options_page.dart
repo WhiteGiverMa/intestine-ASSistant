@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/api_service.dart';
 import '../widgets/themed_switch.dart';
+import '../widgets/app_header.dart';
 import '../providers/theme_provider.dart';
 import '../theme/theme_colors.dart';
 import '../theme/theme_decorations.dart';
@@ -229,7 +230,7 @@ class _AiChatOptionsPageState extends State<AiChatOptionsPage> {
         child: SafeArea(
           child: Column(
             children: [
-              _buildHeader(colors),
+              AppHeader(title: 'AI对话选项', showBackButton: true),
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(16),
@@ -249,33 +250,6 @@ class _AiChatOptionsPageState extends State<AiChatOptionsPage> {
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildHeader(ThemeColors colors) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: ThemeDecorations.header(context),
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: () => Navigator.pop(context),
-            child: Text(
-              '←',
-              style: TextStyle(fontSize: 20, color: colors.textSecondary),
-            ),
-          ),
-          const SizedBox(width: 16),
-          Text(
-            'AI对话选项',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: colors.primary,
-            ),
-          ),
-        ],
       ),
     );
   }

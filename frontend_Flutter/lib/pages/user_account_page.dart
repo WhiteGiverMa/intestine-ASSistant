@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
+import '../widgets/app_header.dart';
 import '../providers/theme_provider.dart';
 import '../theme/theme_colors.dart';
 import '../theme/theme_decorations.dart';
@@ -419,7 +420,7 @@ class _UserAccountPageState extends State<UserAccountPage> {
         child: SafeArea(
           child: Column(
             children: [
-              _buildHeader(colors),
+              AppHeader(title: '用户', showBackButton: true),
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(16),
@@ -436,33 +437,6 @@ class _UserAccountPageState extends State<UserAccountPage> {
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildHeader(ThemeColors colors) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: ThemeDecorations.header(context),
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: () => Navigator.pop(context),
-            child: Text(
-              '←',
-              style: TextStyle(fontSize: 20, color: colors.textSecondary),
-            ),
-          ),
-          const SizedBox(width: 16),
-          Text(
-            '用户',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: colors.primary,
-            ),
-          ),
-        ],
       ),
     );
   }

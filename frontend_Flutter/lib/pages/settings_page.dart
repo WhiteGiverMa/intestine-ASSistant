@@ -6,6 +6,8 @@ import '../theme/theme_colors.dart';
 import '../theme/theme_decorations.dart';
 import '../services/api_service.dart';
 import '../widgets/themed_switch.dart';
+import '../widgets/app_header.dart';
+import '../widgets/app_bottom_nav.dart';
 import 'data_page.dart';
 import 'analysis_page.dart';
 import 'about_page.dart';
@@ -141,7 +143,7 @@ class _SettingsPageState extends State<SettingsPage> {
         child: SafeArea(
           child: Column(
             children: [
-              _buildHeader(colors),
+              AppHeader(title: '设置', showBackButton: true),
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(16),
@@ -168,7 +170,10 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
                 ),
               ),
-              _buildBottomNav(colors),
+              AppBottomNav(
+                activeTab: NavTab.settings,
+                onNavigate: (tab) => _handleNavTab(context, tab),
+              ),
             ],
           ),
         ),
@@ -176,31 +181,26 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  Widget _buildHeader(ThemeColors colors) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: ThemeDecorations.header(context, mode: context.themeMode),
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: () => Navigator.pop(context),
-            child: Text(
-              '←',
-              style: TextStyle(fontSize: 20, color: colors.textSecondary),
-            ),
-          ),
-          const SizedBox(width: 16),
-          Text(
-            '设置',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: colors.primary,
-            ),
-          ),
-        ],
-      ),
-    );
+  void _handleNavTab(BuildContext context, NavTab tab) {
+    switch (tab) {
+      case NavTab.home:
+        Navigator.pop(context);
+        break;
+      case NavTab.data:
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const DataPage()),
+        );
+        break;
+      case NavTab.analysis:
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const AnalysisPage()),
+        );
+        break;
+      case NavTab.settings:
+        break;
+    }
   }
 
   Widget _buildThemeButton(ThemeColors colors) {
@@ -619,66 +619,6 @@ class _SettingsPageState extends State<SettingsPage> {
             Icon(Icons.chevron_right, color: colors.textSecondary),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildBottomNav(ThemeColors colors) {
-    return Container(
-      decoration: ThemeDecorations.bottomNav(context, mode: context.themeMode),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _buildNavItem(
-              '🏠',
-              '首页',
-              false,
-              () => Navigator.pop(context),
-              colors,
-            ),
-            _buildNavItem('📊', '数据', false, const DataPage(), colors),
-            _buildNavItem('🤖', '分析', false, const AnalysisPage(), colors),
-            _buildNavItem('⚙️', '设置', true, null, colors),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNavItem(
-    String emoji,
-    String label,
-    bool isActive,
-    dynamic target,
-    ThemeColors colors,
-  ) {
-    return GestureDetector(
-      onTap: target != null
-          ? () {
-              if (target is VoidCallback) {
-                target();
-              } else if (target is Widget) {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => target),
-                );
-              }
-            }
-          : null,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(emoji, style: const TextStyle(fontSize: 20)),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 10,
-              color: isActive ? colors.primary : colors.textSecondary,
-            ),
-          ),
-        ],
       ),
     );
   }

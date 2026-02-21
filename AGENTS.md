@@ -98,6 +98,12 @@ dart format lib/         # 格式化代码
 
 **建议**: 在提交代码前运行检查，确保没有明显的代码质量问题。
 
+## 架构文档
+
+定位模块或发现架构问题时，主动查阅和更新：
+- `.trae/rules/architecture_index.md` - 项目架构索引
+- `.trae/rules/architecture_issues.md` - 架构问题清单
+
 ## 详细文档
 
 根据任务需要，查阅以下文档：

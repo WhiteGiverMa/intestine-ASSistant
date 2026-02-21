@@ -17,10 +17,11 @@ import '../widgets/error_dialog.dart';
 import '../widgets/compact_tab_switcher.dart';
 import '../widgets/stats_charts.dart';
 import '../widgets/record_cards.dart';
+import '../widgets/app_header.dart';
+import '../widgets/app_bottom_nav.dart';
 import '../providers/theme_provider.dart';
 import '../theme/theme_colors.dart';
 import '../theme/theme_decorations.dart';
-import 'data_page.dart';
 import 'analysis_page.dart';
 import 'settings_page.dart';
 
@@ -31,9 +32,8 @@ class DataOverviewPage extends StatefulWidget {
   State<DataOverviewPage> createState() => _DataOverviewPageState();
 }
 
-class _DataOverviewPageState extends State<DataOverviewPage>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+class _DataOverviewPageState extends State<DataOverviewPage> {
+  int _currentTab = 0;
 
   // Date range
   DateTime? _rangeStart;
@@ -71,24 +71,14 @@ class _DataOverviewPageState extends State<DataOverviewPage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-    _tabController.addListener(_onTabChanged);
     _initializeDateRange();
     _loadDailyCounts();
     _loadStats();
     _loadRecords();
   }
 
-  void _onTabChanged() {
-    if (_tabController.indexIsChanging) {
-      setState(() {});
-    }
-  }
-
   @override
   void dispose() {
-    _tabController.removeListener(_onTabChanged);
-    _tabController.dispose();
     super.dispose();
   }
 
@@ -102,9 +92,10 @@ class _DataOverviewPageState extends State<DataOverviewPage>
     try {
       final now = DateTime.now();
       final startDate = DateTime(now.year, now.month - 2);
+      final endDate = DateTime(now.year, now.month + 1, now.day);
       final counts = await ApiService.getDailyCounts(
         startDate: _formatDate(startDate),
-        endDate: _formatDate(now),
+        endDate: _formatDate(endDate),
       );
       setState(() {
         _dailyCounts = counts.dailyCounts;
@@ -345,14 +336,75 @@ class _DataOverviewPageState extends State<DataOverviewPage>
         child: SafeArea(
           child: Column(
             children: [
-              _buildHeader(colors),
-              Expanded(
-                child: TabBarView(
-                  controller: _tabController,
-                  children: [_buildStatsTab(colors), _buildRecordsTab(colors)],
+              AppHeader(
+                titleWidget: Row(
+                  children: [
+                    Text(
+                      '数据概览',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: colors.primary,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: CompactTabBar(
+                        currentIndex: _currentTab,
+                        onTabChanged: (index) =>
+                            setState(() => _currentTab = index),
+                        tabs: const [
+                          CompactTabItem(
+                            label: '统计',
+                            icon: Icons.bar_chart,
+                            content: SizedBox.shrink(),
+                          ),
+                          CompactTabItem(
+                            label: '记录',
+                            icon: Icons.list_alt,
+                            content: SizedBox.shrink(),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                showBackButton: true,
+                trailing: GestureDetector(
+                  onTap: _refreshAll,
+                  child: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: colors.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Icon(Icons.refresh, color: colors.primary, size: 18),
+                  ),
                 ),
               ),
-              _buildBottomNav(colors),
+              Expanded(
+                child: CompactTabContent(
+                  currentIndex: _currentTab,
+                  enableSwipe: true,
+                  onTabChanged: (index) => setState(() => _currentTab = index),
+                  tabs: [
+                    CompactTabItem(
+                      label: '统计',
+                      icon: Icons.bar_chart,
+                      content: _buildStatsTab(colors),
+                    ),
+                    CompactTabItem(
+                      label: '记录',
+                      icon: Icons.list_alt,
+                      content: _buildRecordsTab(colors),
+                    ),
+                  ],
+                ),
+              ),
+              AppBottomNav(
+                activeTab: NavTab.data,
+                onNavigate: (tab) => _handleNavTab(context, tab),
+              ),
             ],
           ),
         ),
@@ -360,58 +412,26 @@ class _DataOverviewPageState extends State<DataOverviewPage>
     );
   }
 
-  Widget _buildHeader(ThemeColors colors) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: ThemeDecorations.header(context),
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: () => Navigator.pop(context),
-            child: Padding(
-              padding: const EdgeInsets.all(4),
-              child: Icon(
-                Icons.arrow_back,
-                size: 20,
-                color: colors.textSecondary,
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            '数据概览',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: colors.primary,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: CompactTabSwitcher(
-              currentIndex: _tabController.index,
-              tabs: const [
-                CompactTabItem(label: '统计', icon: Icons.bar_chart),
-                CompactTabItem(label: '记录', icon: Icons.list_alt),
-              ],
-              onTabChanged: (index) => _tabController.animateTo(index),
-            ),
-          ),
-          const SizedBox(width: 8),
-          GestureDetector(
-            onTap: _refreshAll,
-            child: Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: colors.primary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Icon(Icons.refresh, color: colors.primary, size: 18),
-            ),
-          ),
-        ],
-      ),
-    );
+  void _handleNavTab(BuildContext context, NavTab tab) {
+    switch (tab) {
+      case NavTab.home:
+        Navigator.pop(context);
+        break;
+      case NavTab.data:
+        break;
+      case NavTab.analysis:
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const AnalysisPage()),
+        );
+        break;
+      case NavTab.settings:
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const SettingsPage()),
+        );
+        break;
+    }
   }
 
   Widget _buildStatsTab(ThemeColors colors) {
@@ -886,66 +906,6 @@ class _DataOverviewPageState extends State<DataOverviewPage>
       error: _recordsError!,
       showCopyButton: _recordsError!.type != ErrorType.auth,
       onRetry: () => _loadRecords(refresh: true),
-    );
-  }
-
-  Widget _buildBottomNav(ThemeColors colors) {
-    return Container(
-      decoration: ThemeDecorations.bottomNav(context),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _buildNavItem(
-              '🏠',
-              '首页',
-              false,
-              () => Navigator.pop(context),
-              colors,
-            ),
-            _buildNavItem('📊', '数据', true, const DataPage(), colors),
-            _buildNavItem('🤖', '分析', false, const AnalysisPage(), colors),
-            _buildNavItem('⚙️', '设置', false, const SettingsPage(), colors),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNavItem(
-    String emoji,
-    String label,
-    bool isActive,
-    dynamic target,
-    ThemeColors colors,
-  ) {
-    return GestureDetector(
-      onTap: target != null
-          ? () {
-              if (target is VoidCallback) {
-                target();
-              } else if (target is Widget) {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => target),
-                );
-              }
-            }
-          : null,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(emoji, style: const TextStyle(fontSize: 20)),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 10,
-              color: isActive ? colors.primary : colors.textSecondary,
-            ),
-          ),
-        ],
-      ),
     );
   }
 

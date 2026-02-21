@@ -6,6 +6,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
 import '../widgets/date_input_field.dart';
 import '../widgets/record_form_selectors.dart';
+import '../widgets/app_header.dart';
+import '../widgets/app_bottom_nav.dart';
 import '../providers/theme_provider.dart';
 import '../theme/theme_colors.dart';
 import '../theme/theme_decorations.dart';
@@ -179,7 +181,7 @@ class _RecordPageState extends State<RecordPage> {
         child: SafeArea(
           child: Column(
             children: [
-              _buildHeader(colors),
+              AppHeader(title: '记录排便', showBackButton: true),
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(16),
@@ -193,7 +195,10 @@ class _RecordPageState extends State<RecordPage> {
                   ),
                 ),
               ),
-              _buildBottomNav(colors),
+              AppBottomNav(
+                activeTab: NavTab.home,
+                onNavigate: (tab) => _handleNavTab(context, tab),
+              ),
             ],
           ),
         ),
@@ -201,31 +206,30 @@ class _RecordPageState extends State<RecordPage> {
     );
   }
 
-  Widget _buildHeader(ThemeColors colors) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: ThemeDecorations.header(context),
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: () => Navigator.pop(context),
-            child: Text(
-              '←',
-              style: TextStyle(fontSize: 20, color: colors.textSecondary),
-            ),
-          ),
-          const SizedBox(width: 16),
-          Text(
-            '记录排便',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: colors.primary,
-            ),
-          ),
-        ],
-      ),
-    );
+  void _handleNavTab(BuildContext context, NavTab tab) {
+    switch (tab) {
+      case NavTab.home:
+        Navigator.pop(context);
+        break;
+      case NavTab.data:
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const DataPage()),
+        );
+        break;
+      case NavTab.analysis:
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const AnalysisPage()),
+        );
+        break;
+      case NavTab.settings:
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const SettingsPage()),
+        );
+        break;
+    }
   }
 
   Widget _buildModeToggle(ThemeColors colors) {
@@ -541,66 +545,6 @@ class _RecordPageState extends State<RecordPage> {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildBottomNav(ThemeColors colors) {
-    return Container(
-      decoration: ThemeDecorations.bottomNav(context),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _buildNavItem(
-              '🏠',
-              '首页',
-              false,
-              colors,
-              () => Navigator.pop(context),
-            ),
-            _buildNavItem('📊', '数据', false, colors, const DataPage()),
-            _buildNavItem('🤖', '分析', false, colors, const AnalysisPage()),
-            _buildNavItem('⚙️', '设置', false, colors, const SettingsPage()),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNavItem(
-    String emoji,
-    String label,
-    bool isActive,
-    ThemeColors colors, [
-    dynamic target,
-  ]) {
-    return GestureDetector(
-      onTap: target != null
-          ? () {
-              if (target is VoidCallback) {
-                target();
-              } else if (target is Widget) {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => target),
-                );
-              }
-            }
-          : null,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(emoji, style: const TextStyle(fontSize: 20)),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 10,
-              color: isActive ? colors.primary : colors.textSecondary,
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

@@ -11,6 +11,8 @@ import 'package:provider/provider.dart';
 import '../providers/theme_provider.dart';
 import '../theme/theme_colors.dart';
 import '../theme/theme_decorations.dart';
+import '../widgets/app_header.dart';
+import '../widgets/app_bottom_nav.dart';
 import 'record_page.dart';
 import 'data_overview_page.dart';
 import 'analysis_page.dart';
@@ -38,7 +40,7 @@ class _DataPageState extends State<DataPage> {
         child: SafeArea(
           child: Column(
             children: [
-              _buildHeader(colors),
+              AppHeader(title: '数据管理'),
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(16),
@@ -51,7 +53,10 @@ class _DataPageState extends State<DataPage> {
                   ),
                 ),
               ),
-              _buildBottomNav(colors),
+              AppBottomNav(
+                activeTab: NavTab.data,
+                onNavigate: (tab) => _handleNavTab(context, tab),
+              ),
             ],
           ),
         ),
@@ -59,23 +64,26 @@ class _DataPageState extends State<DataPage> {
     );
   }
 
-  Widget _buildHeader(ThemeColors colors) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: ThemeDecorations.header(context, mode: context.themeMode),
-      child: Row(
-        children: [
-          Text(
-            '数据管理',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: colors.primary,
-            ),
-          ),
-        ],
-      ),
-    );
+  void _handleNavTab(BuildContext context, NavTab tab) {
+    switch (tab) {
+      case NavTab.home:
+        Navigator.pop(context);
+        break;
+      case NavTab.data:
+        break;
+      case NavTab.analysis:
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const AnalysisPage()),
+        );
+        break;
+      case NavTab.settings:
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const SettingsPage()),
+        );
+        break;
+    }
   }
 
   Widget _buildWelcome(ThemeColors colors) {
@@ -188,75 +196,6 @@ class _DataPageState extends State<DataPage> {
                   ),
                 ],
               ),
-      ),
-    );
-  }
-
-  Widget _buildBottomNav(ThemeColors colors) {
-    return Container(
-      decoration: ThemeDecorations.bottomNav(context, mode: context.themeMode),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _buildNavItem(
-              '🏠',
-              '首页',
-              false,
-              colors,
-              callback: () => Navigator.pop(context),
-            ),
-            _buildNavItem('📊', '数据', true, colors),
-            _buildNavItem(
-              '🤖',
-              '分析',
-              false,
-              colors,
-              page: const AnalysisPage(),
-            ),
-            _buildNavItem(
-              '⚙️',
-              '设置',
-              false,
-              colors,
-              page: const SettingsPage(),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNavItem(
-    String emoji,
-    String label,
-    bool isActive,
-    ThemeColors colors, {
-    Widget? page,
-    VoidCallback? callback,
-  }) {
-    return GestureDetector(
-      onTap:
-          callback ??
-          (page != null
-              ? () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => page),
-                )
-              : null),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(emoji, style: const TextStyle(fontSize: 20)),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 10,
-              color: isActive ? colors.primary : colors.textSecondary,
-            ),
-          ),
-        ],
       ),
     );
   }

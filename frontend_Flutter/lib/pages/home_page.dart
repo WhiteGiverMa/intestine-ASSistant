@@ -4,6 +4,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/theme_provider.dart';
 import '../theme/theme_colors.dart';
 import '../theme/theme_decorations.dart';
+import '../widgets/app_header.dart';
+import '../widgets/app_bottom_nav.dart';
 import 'data_page.dart';
 import 'analysis_page.dart';
 import 'record_page.dart';
@@ -48,7 +50,40 @@ class _HomePageState extends State<HomePage> {
         child: SafeArea(
           child: Column(
             children: [
-              _buildHeader(colors),
+              AppHeader(
+                title: '肠道健康助手',
+                trailing: _token == null
+                    ? Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          TextButton(
+                            onPressed: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const LoginPage(),
+                              ),
+                            ),
+                            child: Text(
+                              '登录',
+                              style: TextStyle(color: colors.primary),
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const RegisterPage(),
+                              ),
+                            ),
+                            child: Text(
+                              '注册',
+                              style: TextStyle(color: colors.primary),
+                            ),
+                          ),
+                        ],
+                      )
+                    : null,
+              ),
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(16),
@@ -63,7 +98,10 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ),
               ),
-              _buildBottomNav(colors),
+              AppBottomNav(
+                activeTab: NavTab.home,
+                onNavigate: (tab) => _handleNavTab(context, tab),
+              ),
             ],
           ),
         ),
@@ -71,43 +109,29 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildHeader(ThemeColors colors) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: ThemeDecorations.header(context, mode: context.themeMode),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            '肠道健康助手',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: colors.primary,
-            ),
-          ),
-          if (_token == null)
-            Row(
-              children: [
-                TextButton(
-                  onPressed: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const LoginPage()),
-                  ),
-                  child: Text('登录', style: TextStyle(color: colors.primary)),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const RegisterPage()),
-                  ),
-                  child: Text('注册', style: TextStyle(color: colors.primary)),
-                ),
-              ],
-            ),
-        ],
-      ),
-    );
+  void _handleNavTab(BuildContext context, NavTab tab) {
+    switch (tab) {
+      case NavTab.home:
+        break;
+      case NavTab.data:
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const DataPage()),
+        );
+        break;
+      case NavTab.analysis:
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const AnalysisPage()),
+        );
+        break;
+      case NavTab.settings:
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const SettingsPage()),
+        );
+        break;
+    }
   }
 
   Widget _buildWelcome(ThemeColors colors) {
@@ -295,64 +319,6 @@ class _HomePageState extends State<HomePage> {
                 ],
               );
             }).toList(),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBottomNav(ThemeColors colors) {
-    return Container(
-      decoration: ThemeDecorations.bottomNav(context, mode: context.themeMode),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _buildNavItem('🏠', '首页', true, colors),
-            _buildNavItem('📊', '数据', false, colors, page: const DataPage()),
-            _buildNavItem(
-              '🤖',
-              '分析',
-              false,
-              colors,
-              page: const AnalysisPage(),
-            ),
-            _buildNavItem(
-              '⚙️',
-              '设置',
-              false,
-              colors,
-              page: const SettingsPage(),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNavItem(
-    String emoji,
-    String label,
-    bool isActive,
-    ThemeColors colors, {
-    Widget? page,
-  }) {
-    return GestureDetector(
-      onTap: page != null
-          ? () =>
-                Navigator.push(context, MaterialPageRoute(builder: (_) => page))
-          : null,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(emoji, style: const TextStyle(fontSize: 20)),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 10,
-              color: isActive ? colors.primary : colors.textSecondary,
-            ),
           ),
         ],
       ),

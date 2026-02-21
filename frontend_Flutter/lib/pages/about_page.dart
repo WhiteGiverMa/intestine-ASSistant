@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/theme_provider.dart';
 import '../theme/theme_colors.dart';
 import '../theme/theme_decorations.dart';
+import '../widgets/app_header.dart';
 
 const String appVersion = '0.2.0';
 
@@ -22,7 +23,7 @@ class AboutPage extends StatelessWidget {
         child: SafeArea(
           child: Column(
             children: [
-              _buildHeader(context, colors),
+              AppHeader(title: '关于', showBackButton: true),
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(16),
@@ -42,33 +43,6 @@ class AboutPage extends StatelessWidget {
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildHeader(BuildContext context, ThemeColors colors) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: ThemeDecorations.header(context),
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: () => Navigator.pop(context),
-            child: Text(
-              '←',
-              style: TextStyle(fontSize: 20, color: colors.textSecondary),
-            ),
-          ),
-          const SizedBox(width: 16),
-          Text(
-            '关于',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: colors.primary,
-            ),
-          ),
-        ],
       ),
     );
   }
