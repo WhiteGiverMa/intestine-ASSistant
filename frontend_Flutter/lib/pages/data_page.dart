@@ -3,8 +3,8 @@
 // @module: data_page
 // @type: page
 // @layer: frontend
-// @depends: [record_page, data_overview_page, analysis_page, settings_page]
-// @exports: [DataPage]
+// @depends: [record_page, data_overview_page]
+// @exports: [DataPage, DataPageContent]
 // @brief: 数据管理入口，提供记录排便和数据概览的快捷入口。
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -12,17 +12,23 @@ import '../providers/theme_provider.dart';
 import '../theme/theme_colors.dart';
 import '../theme/theme_decorations.dart';
 import '../widgets/app_header.dart';
-import '../widgets/app_bottom_nav.dart';
 import 'record_page.dart';
 import 'data_overview_page.dart';
-import 'analysis_page.dart';
-import 'settings_page.dart';
 
 class DataPage extends StatefulWidget {
   const DataPage({super.key});
 
   @override
   State<DataPage> createState() => _DataPageState();
+}
+
+class DataPageContent extends StatelessWidget {
+  const DataPageContent({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const DataPage();
+  }
 }
 
 class _DataPageState extends State<DataPage> {
@@ -40,7 +46,7 @@ class _DataPageState extends State<DataPage> {
         child: SafeArea(
           child: Column(
             children: [
-              AppHeader(title: '数据管理'),
+              const AppHeader(title: '数据管理'),
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(16),
@@ -53,37 +59,11 @@ class _DataPageState extends State<DataPage> {
                   ),
                 ),
               ),
-              AppBottomNav(
-                activeTab: NavTab.data,
-                onNavigate: (tab) => _handleNavTab(context, tab),
-              ),
             ],
           ),
         ),
       ),
     );
-  }
-
-  void _handleNavTab(BuildContext context, NavTab tab) {
-    switch (tab) {
-      case NavTab.home:
-        Navigator.pop(context);
-        break;
-      case NavTab.data:
-        break;
-      case NavTab.analysis:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const AnalysisPage()),
-        );
-        break;
-      case NavTab.settings:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const SettingsPage()),
-        );
-        break;
-    }
   }
 
   Widget _buildWelcome(ThemeColors colors) {

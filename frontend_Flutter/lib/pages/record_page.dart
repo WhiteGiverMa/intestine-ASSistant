@@ -7,13 +7,9 @@ import '../services/api_service.dart';
 import '../widgets/date_input_field.dart';
 import '../widgets/record_form_selectors.dart';
 import '../widgets/app_header.dart';
-import '../widgets/app_bottom_nav.dart';
 import '../providers/theme_provider.dart';
 import '../theme/theme_colors.dart';
 import '../theme/theme_decorations.dart';
-import 'data_page.dart';
-import 'analysis_page.dart';
-import 'settings_page.dart';
 import 'login_page.dart';
 
 class RecordPage extends StatefulWidget {
@@ -181,7 +177,7 @@ class _RecordPageState extends State<RecordPage> {
         child: SafeArea(
           child: Column(
             children: [
-              AppHeader(title: '记录排便', showBackButton: true),
+              const AppHeader(title: '记录排便', showBackButton: true),
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(16),
@@ -195,41 +191,11 @@ class _RecordPageState extends State<RecordPage> {
                   ),
                 ),
               ),
-              AppBottomNav(
-                activeTab: NavTab.home,
-                onNavigate: (tab) => _handleNavTab(context, tab),
-              ),
             ],
           ),
         ),
       ),
     );
-  }
-
-  void _handleNavTab(BuildContext context, NavTab tab) {
-    switch (tab) {
-      case NavTab.home:
-        Navigator.pop(context);
-        break;
-      case NavTab.data:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const DataPage()),
-        );
-        break;
-      case NavTab.analysis:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const AnalysisPage()),
-        );
-        break;
-      case NavTab.settings:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const SettingsPage()),
-        );
-        break;
-    }
   }
 
   Widget _buildModeToggle(ThemeColors colors) {

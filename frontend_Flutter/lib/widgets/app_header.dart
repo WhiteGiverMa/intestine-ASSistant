@@ -43,15 +43,26 @@ class AppHeader extends StatelessWidget {
     this.titleWidget,
     this.onBack,
     this.titleFontSize = 20,
-  }) : assert(title != null || titleWidget != null,
-            'Either title or titleWidget must be provided');
+  }) : assert(
+         title != null || titleWidget != null,
+         'Either title or titleWidget must be provided',
+       );
 
   @override
   Widget build(BuildContext context) {
     final colors = context.watch<ThemeProvider>().colors;
+    final mediaQuery = MediaQuery.of(context);
+    final topPadding = mediaQuery.padding.top;
+    final leftPadding = mediaQuery.padding.left;
+    final rightPadding = mediaQuery.padding.right;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: EdgeInsets.only(
+        top: topPadding + 12,
+        left: (leftPadding > 0 ? leftPadding : 16),
+        right: (rightPadding > 0 ? rightPadding : 16),
+        bottom: 12,
+      ),
       decoration: ThemeDecorations.header(context),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -75,7 +86,8 @@ class AppHeader extends StatelessWidget {
                 const SizedBox(width: 28),
               if (showBackButton) const SizedBox(width: 8),
               Expanded(
-                child: titleWidget ??
+                child:
+                    titleWidget ??
                     Text(
                       title!,
                       style: TextStyle(

@@ -1,0 +1,55 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/theme_provider.dart';
+import '../theme/theme_decorations.dart';
+import '../widgets/app_bottom_nav.dart';
+import 'home_page.dart';
+import 'data_page.dart';
+import 'analysis_page.dart';
+import 'settings_page.dart';
+
+class MainContainer extends StatefulWidget {
+  const MainContainer({super.key});
+
+  @override
+  State<MainContainer> createState() => _MainContainerState();
+}
+
+class _MainContainerState extends State<MainContainer> {
+  int _currentIndex = 0;
+
+  final List<Widget> _pages = const [
+    HomePage(),
+    DataPage(),
+    AnalysisPage(),
+    SettingsPage(),
+  ];
+
+  void _onNavigate(NavTab tab) {
+    setState(() {
+      _currentIndex = tab.index;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final themeProvider = context.watch<ThemeProvider>();
+
+    return Scaffold(
+      body: Container(
+        decoration: ThemeDecorations.backgroundGradient(
+          context,
+          mode: themeProvider.mode,
+        ),
+        child: IndexedStack(
+          index: _currentIndex,
+          children: _pages,
+        ),
+      ),
+      bottomNavigationBar: AppBottomNav(
+        activeTab: NavTab.values[_currentIndex],
+        onNavigate: _onNavigate,
+      ),
+    );
+  }
+}

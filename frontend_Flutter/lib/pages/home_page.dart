@@ -1,137 +1,218 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/theme_provider.dart';
+import '../providers/auth_provider.dart';
 import '../theme/theme_colors.dart';
 import '../theme/theme_decorations.dart';
 import '../widgets/app_header.dart';
 import '../widgets/app_bottom_nav.dart';
-import 'data_page.dart';
-import 'analysis_page.dart';
 import 'record_page.dart';
 import 'login_page.dart';
 import 'register_page.dart';
-import 'settings_page.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  final void Function(NavTab tab)? onNavigate;
+
+  const HomePage({super.key, this.onNavigate});
 
   @override
   State<HomePage> createState() => _HomePageState();
 }
 
 class _HomePageState extends State<HomePage> {
-  String? _token;
-
   @override
   void initState() {
     super.initState();
-    _checkAuth();
-  }
-
-  Future<void> _checkAuth() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _token = prefs.getString('token');
-    });
   }
 
   @override
   Widget build(BuildContext context) {
     final themeProvider = context.watch<ThemeProvider>();
+    final authProvider = context.watch<AuthProvider>();
     final colors = themeProvider.colors;
 
     return Scaffold(
-      body: Container(
-        decoration: ThemeDecorations.backgroundGradient(
-          context,
-          mode: themeProvider.mode,
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              AppHeader(
-                title: '肠道健康助手',
-                trailing: _token == null
-                    ? Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          TextButton(
-                            onPressed: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const LoginPage(),
-                              ),
-                            ),
-                            child: Text(
-                              '登录',
-                              style: TextStyle(color: colors.primary),
-                            ),
-                          ),
-                          TextButton(
-                            onPressed: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const RegisterPage(),
-                              ),
-                            ),
-                            child: Text(
-                              '注册',
-                              style: TextStyle(color: colors.primary),
-                            ),
-                          ),
-                        ],
-                      )
-                    : null,
-              ),
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    children: [
-                      _buildWelcome(colors),
-                      const SizedBox(height: 24),
-                      _buildMenuGrid(colors),
-                      const SizedBox(height: 24),
-                      _buildBristolChart(colors),
-                    ],
-                  ),
+      body: SafeArea(
+        child: Column(
+          children: [
+            AppHeader(
+              title: '肠道健康助手',
+              trailing: _buildTrailingWidget(authProvider, colors),
+            ),
+            if (authProvider.isOfflineMode)
+              _buildOfflineBanner(colors, authProvider),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    _buildWelcome(colors),
+                    const SizedBox(height: 24),
+                    _buildMenuGrid(colors),
+                    const SizedBox(height: 24),
+                    _buildBristolChart(colors),
+                  ],
                 ),
               ),
-              AppBottomNav(
-                activeTab: NavTab.home,
-                onNavigate: (tab) => _handleNavTab(context, tab),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  void _handleNavTab(BuildContext context, NavTab tab) {
-    switch (tab) {
-      case NavTab.home:
-        break;
-      case NavTab.data:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const DataPage()),
-        );
-        break;
-      case NavTab.analysis:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const AnalysisPage()),
-        );
-        break;
-      case NavTab.settings:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const SettingsPage()),
-        );
-        break;
+  Widget? _buildTrailingWidget(AuthProvider authProvider, ThemeColors colors) {
+    if (authProvider.isLoggedIn) {
+      return null;
     }
+    if (authProvider.isOfflineMode) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: colors.warning.withValues(alpha: 0.2),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: colors.warning, width: 1),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.offline_bolt, size: 16, color: colors.warning),
+            const SizedBox(width: 4),
+            Text(
+              '离线模式',
+              style: TextStyle(
+                color: colors.warning,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        TextButton(
+          onPressed: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const LoginPage()),
+          ),
+          child: Text('登录', style: TextStyle(color: colors.primary)),
+        ),
+        TextButton(
+          onPressed: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const RegisterPage()),
+          ),
+          child: Text('注册', style: TextStyle(color: colors.primary)),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildOfflineBanner(ThemeColors colors, AuthProvider authProvider) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: colors.warning.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: colors.warning.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.info_outline, color: colors.warning, size: 20),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '离线模式已启用',
+                  style: TextStyle(
+                    color: colors.textPrimary,
+                    fontWeight: FontWeight.w500,
+                    fontSize: 13,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  authProvider.unsyncedCount > 0
+                      ? '${authProvider.unsyncedCount} 条记录待同步'
+                      : '数据仅保存在本地',
+                  style: TextStyle(color: colors.textSecondary, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+          if (authProvider.unsyncedCount > 0)
+            TextButton(
+              onPressed: () => _showSyncDialog(context, authProvider),
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                minimumSize: Size.zero,
+              ),
+              child: Text(
+                '同步',
+                style: TextStyle(color: colors.primary, fontSize: 12),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  void _showSyncDialog(BuildContext context, AuthProvider authProvider) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('同步数据'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('将 ${authProvider.unsyncedCount} 条本地记录同步到服务器？'),
+            const SizedBox(height: 8),
+            if (!authProvider.isLoggedIn)
+              Text(
+                '请先登录后再同步数据',
+                style: TextStyle(color: colors(context).warning),
+              ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('取消'),
+          ),
+          if (authProvider.isLoggedIn)
+            ElevatedButton(
+              onPressed: () async {
+                Navigator.pop(ctx);
+                final result = await authProvider.syncLocalData();
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        '同步完成: ${result['success']} 成功, ${result['failed']} 失败',
+                      ),
+                    ),
+                  );
+                }
+              },
+              child: const Text('开始同步'),
+            ),
+        ],
+      ),
+    );
+  }
+
+  ThemeColors colors(BuildContext context) {
+    return context.watch<ThemeProvider>().colors;
   }
 
   Widget _buildWelcome(ThemeColors colors) {
@@ -176,8 +257,11 @@ class _HomePageState extends State<HomePage> {
                 '🤖',
                 'AI 分析',
                 '智能健康分析',
-                const AnalysisPage(),
+                null,
                 colors,
+                onTap: widget.onNavigate != null
+                    ? () => widget.onNavigate!(NavTab.analysis)
+                    : null,
               ),
             ),
           ],
@@ -190,13 +274,13 @@ class _HomePageState extends State<HomePage> {
     String emoji,
     String title,
     String subtitle,
-    Widget page,
+    Widget? page,
     ThemeColors colors, {
     bool fullWidth = false,
+    VoidCallback? onTap,
   }) {
     return GestureDetector(
-      onTap: () =>
-          Navigator.push(context, MaterialPageRoute(builder: (_) => page)),
+      onTap: onTap ?? (page != null ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => page)) : null),
       child: Container(
         padding: const EdgeInsets.all(20),
         decoration: ThemeDecorations.card(context, mode: context.themeMode),

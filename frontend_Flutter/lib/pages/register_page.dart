@@ -18,18 +18,11 @@ class RegisterPage extends StatefulWidget {
 class _RegisterPageState extends State<RegisterPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController();
   final _nicknameController = TextEditingController();
   bool _loading = false;
   bool _obscurePassword = true;
-  bool _obscureConfirmPassword = true;
 
   Future<void> _register() async {
-    if (_passwordController.text != _confirmPasswordController.text) {
-      ErrorDialog.show(context, title: '错误', message: '两次输入的密码不一致');
-      return;
-    }
-
     if (_passwordController.text.length < 6) {
       ErrorDialog.show(context, title: '错误', message: '密码长度至少6位');
       return;
@@ -70,7 +63,6 @@ class _RegisterPageState extends State<RegisterPage> {
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
-    _confirmPasswordController.dispose();
     _nicknameController.dispose();
     super.dispose();
   }
@@ -114,9 +106,10 @@ class _RegisterPageState extends State<RegisterPage> {
                   ),
                   const SizedBox(height: 16),
                   _buildTextField(
-                    '昵称（可选）',
+                    '昵称',
                     _nicknameController,
                     colors: colors,
+                    hintText: '可选，默认使用邮箱前缀',
                   ),
                   const SizedBox(height: 16),
                   _buildTextField(
@@ -127,17 +120,6 @@ class _RegisterPageState extends State<RegisterPage> {
                     isPassword: true,
                     onToggleVisibility: () =>
                         setState(() => _obscurePassword = !_obscurePassword),
-                  ),
-                  const SizedBox(height: 16),
-                  _buildTextField(
-                    '确认密码',
-                    _confirmPasswordController,
-                    colors: colors,
-                    obscureText: _obscureConfirmPassword,
-                    isPassword: true,
-                    onToggleVisibility: () => setState(
-                      () => _obscureConfirmPassword = !_obscureConfirmPassword,
-                    ),
                   ),
                   const SizedBox(height: 24),
                   SizedBox(
@@ -206,6 +188,7 @@ class _RegisterPageState extends State<RegisterPage> {
     TextInputType? keyboardType,
     VoidCallback? onToggleVisibility,
     bool isPassword = false,
+    String? hintText,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -243,6 +226,8 @@ class _RegisterPageState extends State<RegisterPage> {
               horizontal: 16,
               vertical: 14,
             ),
+            hintText: hintText,
+            hintStyle: TextStyle(color: colors.textHint, fontSize: 14),
             suffixIcon: isPassword
                 ? IconButton(
                     icon: Icon(

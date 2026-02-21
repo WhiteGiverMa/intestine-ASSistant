@@ -7,11 +7,9 @@ import '../widgets/error_dialog.dart';
 import '../widgets/compact_tab_switcher.dart';
 import '../widgets/analysis_result.dart';
 import '../widgets/app_header.dart';
-import '../widgets/app_bottom_nav.dart';
 import '../providers/theme_provider.dart';
 import '../theme/theme_colors.dart';
 import '../theme/theme_decorations.dart';
-import 'data_page.dart';
 import 'settings_page.dart';
 import 'login_page.dart';
 import 'chat_sidebar.dart';
@@ -23,6 +21,15 @@ class AnalysisPage extends StatefulWidget {
 
   @override
   State<AnalysisPage> createState() => _AnalysisPageState();
+}
+
+class AnalysisPageContent extends StatelessWidget {
+  const AnalysisPageContent({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const AnalysisPage();
+  }
 }
 
 class _AnalysisPageState extends State<AnalysisPage> {
@@ -53,8 +60,25 @@ class _AnalysisPageState extends State<AnalysisPage> {
   @override
   void initState() {
     super.initState();
-    _checkAiStatus();
+    _initPage();
+  }
+
+  Future<void> _initPage() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
     _loadChatSettings();
+    if (token != null) {
+      _checkAiStatus();
+    } else {
+      setState(() {
+        _aiStatus = AiStatus(
+          hasApiKey: false,
+          hasApiUrl: false,
+          hasModel: false,
+          isConfigured: false,
+        );
+      });
+    }
   }
 
   Future<void> _loadChatSettings() async {
@@ -579,10 +603,6 @@ class _AnalysisPageState extends State<AnalysisPage> {
                       ],
                     ),
                   ),
-                  AppBottomNav(
-                    activeTab: NavTab.analysis,
-                    onNavigate: (tab) => _handleNavTab(context, tab),
-                  ),
                 ],
               ),
               if (_currentTab == 0 && _aiStatus?.isConfigured == true)
@@ -592,28 +612,6 @@ class _AnalysisPageState extends State<AnalysisPage> {
         ),
       ),
     );
-  }
-
-  void _handleNavTab(BuildContext context, NavTab tab) {
-    switch (tab) {
-      case NavTab.home:
-        Navigator.pop(context);
-        break;
-      case NavTab.data:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const DataPage()),
-        );
-        break;
-      case NavTab.analysis:
-        break;
-      case NavTab.settings:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const SettingsPage()),
-        );
-        break;
-    }
   }
 
   Widget _buildChatLayout(ThemeColors colors) {
@@ -645,6 +643,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
     final isMobile = _isMobile();
     final screenWidth = MediaQuery.of(context).size.width;
     final sidebarWidth = isMobile ? screenWidth * 0.8 : 280.0;
+    const buttonTop = 72.0;
 
     return Stack(
       children: [
@@ -663,72 +662,45 @@ class _AnalysisPageState extends State<AnalysisPage> {
           top: 0,
           bottom: 0,
           width: sidebarWidth,
-          child: ClipRect(
-            child: Stack(
-              children: [
-                ConversationSidebar(
-                  isOpen: _sidebarOpen,
-                  onClose: _toggleSidebar,
-                  selectedConversationId: _conversationId,
-                  onConversationSelected: (id) {
-                    _loadConversation(id);
-                    if (isMobile) _toggleSidebar();
-                  },
-                  onNewConversation: _newConversation,
-                ),
-                Positioned(
-                  right: 8,
-                  top: 8,
-                  child: GestureDetector(
-                    onTap: _toggleSidebar,
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: colors.cardBackground,
-                        borderRadius: BorderRadius.circular(8),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.1),
-                            blurRadius: 4,
-                            offset: const Offset(2, 2),
-                          ),
-                        ],
-                      ),
-                      child: Icon(
-                        Icons.menu_open,
-                        color: colors.textSecondary,
-                        size: 20,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+          child: ConversationSidebar(
+            isOpen: _sidebarOpen,
+            onClose: _toggleSidebar,
+            selectedConversationId: _conversationId,
+            onConversationSelected: (id) {
+              _loadConversation(id);
+              if (isMobile) _toggleSidebar();
+            },
+            onNewConversation: _newConversation,
           ),
         ),
-        if (!_sidebarOpen)
-          Positioned(
-            left: 12,
-            top: 8,
-            child: GestureDetector(
-              onTap: _toggleSidebar,
-              child: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: colors.cardBackground,
-                  borderRadius: BorderRadius.circular(8),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.1),
-                      blurRadius: 4,
-                      offset: const Offset(2, 2),
-                    ),
-                  ],
-                ),
-                child: Icon(Icons.menu, color: colors.textSecondary, size: 20),
+        AnimatedPositioned(
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+          left: _sidebarOpen ? sidebarWidth + 8 : 12,
+          top: buttonTop,
+          child: GestureDetector(
+            onTap: _toggleSidebar,
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: colors.cardBackground,
+                borderRadius: BorderRadius.circular(8),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.1),
+                    blurRadius: 4,
+                    offset: const Offset(2, 2),
+                  ),
+                ],
+              ),
+              child: Icon(
+                _sidebarOpen ? Icons.menu_open : Icons.menu,
+                color: colors.textSecondary,
+                size: 20,
               ),
             ),
           ),
+        ),
       ],
     );
   }
@@ -828,8 +800,15 @@ class _AnalysisPageState extends State<AnalysisPage> {
 
   Widget _buildInputArea(ThemeColors colors) {
     final hasRecords = _recordsStartDate != null && _recordsEndDate != null;
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
+
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: EdgeInsets.only(
+        left: 12,
+        right: 12,
+        top: 12,
+        bottom: bottomPadding + 12,
+      ),
       decoration: BoxDecoration(
         color: colors.cardBackground,
         boxShadow: [
@@ -840,232 +819,223 @@ class _AnalysisPageState extends State<AnalysisPage> {
           ),
         ],
       ),
-      child: SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (hasRecords)
-              Container(
-                margin: const EdgeInsets.only(bottom: 8),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: colors.primaryLight.withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: colors.primaryLight),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.date_range, size: 14, color: colors.primary),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        '$_recordsStartDate 至 $_recordsEndDate',
-                        style: TextStyle(fontSize: 11, color: colors.primary),
-                      ),
-                    ),
-                    GestureDetector(
-                      onTap: _clearRecordsDateRange,
-                      child: Icon(Icons.close, size: 14, color: colors.primary),
-                    ),
-                  ],
-                ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (hasRecords)
+            Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: colors.primaryLight.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: colors.primaryLight),
               ),
-            Row(
-              children: [
-                GestureDetector(
-                  onTap: hasRecords
-                      ? _clearRecordsDateRange
-                      : _selectRecordsDateRange,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
+              child: Row(
+                children: [
+                  Icon(Icons.date_range, size: 14, color: colors.primary),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      '$_recordsStartDate 至 $_recordsEndDate',
+                      style: TextStyle(fontSize: 11, color: colors.primary),
                     ),
-                    decoration: BoxDecoration(
-                      color: hasRecords
-                          ? colors.primaryLight.withValues(alpha: 0.5)
-                          : colors.surfaceVariant,
-                      borderRadius: BorderRadius.circular(8),
-                      border: hasRecords
-                          ? Border.all(color: colors.primary)
-                          : null,
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.attach_file,
-                          size: 16,
+                  ),
+                  GestureDetector(
+                    onTap: _clearRecordsDateRange,
+                    child: Icon(Icons.close, size: 14, color: colors.primary),
+                  ),
+                ],
+              ),
+            ),
+          Row(
+            children: [
+              GestureDetector(
+                onTap: hasRecords
+                    ? _clearRecordsDateRange
+                    : _selectRecordsDateRange,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: hasRecords
+                        ? colors.primaryLight.withValues(alpha: 0.5)
+                        : colors.surfaceVariant,
+                    borderRadius: BorderRadius.circular(8),
+                    border: hasRecords
+                        ? Border.all(color: colors.primary)
+                        : null,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.attach_file,
+                        size: 16,
+                        color: hasRecords
+                            ? colors.primary
+                            : colors.textSecondary,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '发送记录',
+                        style: TextStyle(
                           color: hasRecords
                               ? colors.primary
                               : colors.textSecondary,
+                          fontSize: 12,
+                          fontWeight: hasRecords
+                              ? FontWeight.w600
+                              : FontWeight.normal,
                         ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '发送记录',
-                          style: TextStyle(
-                            color: hasRecords
-                                ? colors.primary
-                                : colors.textSecondary,
-                            fontSize: 12,
-                            fontWeight: hasRecords
-                                ? FontWeight.w600
-                                : FontWeight.normal,
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(width: 8),
-                GestureDetector(
-                  onTap: _toggleThinking,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: _thinkingEnabled
-                          ? Colors.orange.shade100
-                          : colors.surfaceVariant,
-                      borderRadius: BorderRadius.circular(8),
-                      border: _thinkingEnabled
-                          ? Border.all(color: Colors.orange.shade400)
-                          : null,
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.psychology,
-                          size: 16,
+              ),
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: _toggleThinking,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: _thinkingEnabled
+                        ? Colors.orange.shade100
+                        : colors.surfaceVariant,
+                    borderRadius: BorderRadius.circular(8),
+                    border: _thinkingEnabled
+                        ? Border.all(color: Colors.orange.shade400)
+                        : null,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.psychology,
+                        size: 16,
+                        color: _thinkingEnabled
+                            ? Colors.orange.shade800
+                            : colors.textSecondary,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '深度思考',
+                        style: TextStyle(
                           color: _thinkingEnabled
                               ? Colors.orange.shade800
                               : colors.textSecondary,
+                          fontSize: 12,
+                          fontWeight: _thinkingEnabled
+                              ? FontWeight.w600
+                              : FontWeight.normal,
                         ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '深度思考',
-                          style: TextStyle(
-                            color: _thinkingEnabled
-                                ? Colors.orange.shade800
-                                : colors.textSecondary,
-                            fontSize: 12,
-                            fontWeight: _thinkingEnabled
-                                ? FontWeight.w600
-                                : FontWeight.normal,
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(width: 8),
-                GestureDetector(
-                  onTap: _toggleStreaming,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: _streamingEnabled
-                          ? colors.primaryLight.withValues(alpha: 0.5)
-                          : colors.surfaceVariant,
-                      borderRadius: BorderRadius.circular(8),
-                      border: _streamingEnabled
-                          ? Border.all(color: colors.primary)
-                          : null,
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.stream,
-                          size: 16,
+              ),
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: _toggleStreaming,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: _streamingEnabled
+                        ? colors.primaryLight.withValues(alpha: 0.5)
+                        : colors.surfaceVariant,
+                    borderRadius: BorderRadius.circular(8),
+                    border: _streamingEnabled
+                        ? Border.all(color: colors.primary)
+                        : null,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.stream,
+                        size: 16,
+                        color: _streamingEnabled
+                            ? colors.primary
+                            : colors.textSecondary,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '流式输出',
+                        style: TextStyle(
                           color: _streamingEnabled
                               ? colors.primary
                               : colors.textSecondary,
+                          fontSize: 12,
+                          fontWeight: _streamingEnabled
+                              ? FontWeight.w600
+                              : FontWeight.normal,
                         ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '流式输出',
-                          style: TextStyle(
-                            color: _streamingEnabled
-                                ? colors.primary
-                                : colors.textSecondary,
-                            fontSize: 12,
-                            fontWeight: _streamingEnabled
-                                ? FontWeight.w600
-                                : FontWeight.normal,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _messageController,
-                    decoration: InputDecoration(
-                      hintText: '输入消息...',
-                      hintStyle: TextStyle(color: colors.textHint),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(24),
-                        borderSide: BorderSide.none,
                       ),
-                      filled: true,
-                      fillColor: colors.surfaceVariant,
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
-                      ),
-                    ),
-                    maxLines: null,
-                    textInputAction: TextInputAction.send,
-                    onSubmitted: (_) => _sendMessage(),
+                    ],
                   ),
                 ),
-                const SizedBox(width: 8),
-                GestureDetector(
-                  onTap: _chatLoading ? null : _sendMessage,
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: _chatLoading
-                          ? colors.surfaceVariant
-                          : colors.primary,
-                      shape: BoxShape.circle,
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _messageController,
+                  decoration: InputDecoration(
+                    hintText: '输入消息...',
+                    hintStyle: TextStyle(color: colors.textHint),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(24),
+                      borderSide: BorderSide.none,
                     ),
-                    child: _chatLoading
-                        ? SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: colors.textPrimary,
-                            ),
-                          )
-                        : Icon(
-                            Icons.send,
-                            color: colors.textOnPrimary,
-                            size: 20,
+                    filled: true,
+                    fillColor: colors.surfaceVariant,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                  ),
+                  maxLines: null,
+                  textInputAction: TextInputAction.send,
+                  onSubmitted: (_) => _sendMessage(),
+                ),
+              ),
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: _chatLoading ? null : _sendMessage,
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: _chatLoading
+                        ? colors.surfaceVariant
+                        : colors.primary,
+                    shape: BoxShape.circle,
+                  ),
+                  child: _chatLoading
+                      ? SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: colors.textPrimary,
                           ),
-                  ),
+                        )
+                      : Icon(Icons.send, color: colors.textOnPrimary, size: 20),
                 ),
-              ],
-            ),
-          ],
-        ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

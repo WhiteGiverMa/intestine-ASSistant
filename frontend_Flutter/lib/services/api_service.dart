@@ -177,11 +177,19 @@ class ApiService {
     return User.fromJson(data);
   }
 
-  static Future<User> login(String email, String password) async {
+  static Future<User> login(
+    String email,
+    String password, {
+    bool rememberMe = false,
+  }) async {
     final response = await http.post(
       Uri.parse('$baseUrl/auth/login'),
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'email': email, 'password': password}),
+      body: jsonEncode({
+        'email': email,
+        'password': password,
+        'remember_me': rememberMe,
+      }),
     );
 
     if (response.statusCode != 200) {
@@ -221,6 +229,36 @@ class ApiService {
       final error = jsonDecode(response.body);
       throw Exception(error['detail'] ?? '修改密码失败');
     }
+  }
+
+  static Future<String> updateEmail({
+    required String newEmail,
+    required String password,
+  }) async {
+    final headers = await _getHeaders();
+    final response = await http.put(
+      Uri.parse('$baseUrl/auth/email'),
+      headers: headers,
+      body: jsonEncode({'new_email': newEmail, 'password': password}),
+    );
+
+    if (response.statusCode != 200) {
+      final error = jsonDecode(response.body);
+      throw Exception(error['detail'] ?? '修改邮箱失败');
+    }
+
+    final data = jsonDecode(response.body);
+    final newEmailResult = data['data']['email'] as String;
+
+    final prefs = await SharedPreferences.getInstance();
+    final userJson = prefs.getString('user');
+    if (userJson != null) {
+      final userData = jsonDecode(userJson);
+      userData['email'] = newEmailResult;
+      await prefs.setString('user', jsonEncode(userData));
+    }
+
+    return newEmailResult;
   }
 
   static Future<void> deleteAccount() async {

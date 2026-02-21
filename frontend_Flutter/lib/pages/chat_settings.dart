@@ -162,8 +162,16 @@ class _ChatSettingsState extends State<ChatSettings> {
             Switch(
               value: _streamingEnabled,
               onChanged: _saveStreamingEnabled,
-              activeThumbColor: colors.primary,
-              activeTrackColor: colors.primary.withValues(alpha: 0.5),
+              thumbColor: WidgetStateProperty.resolveWith((states) {
+                if (states.contains(WidgetState.selected))
+                  return colors.primary;
+                return null;
+              }),
+              trackColor: WidgetStateProperty.resolveWith((states) {
+                if (states.contains(WidgetState.selected))
+                  return colors.primary.withValues(alpha: 0.5);
+                return null;
+              }),
             ),
           ],
         ),
@@ -191,8 +199,16 @@ class _ChatSettingsState extends State<ChatSettings> {
             Switch(
               value: _thinkingEnabled,
               onChanged: _saveThinkingEnabled,
-              activeThumbColor: colors.primary,
-              activeTrackColor: colors.primary.withValues(alpha: 0.5),
+              thumbColor: WidgetStateProperty.resolveWith((states) {
+                if (states.contains(WidgetState.selected))
+                  return colors.primary;
+                return null;
+              }),
+              trackColor: WidgetStateProperty.resolveWith((states) {
+                if (states.contains(WidgetState.selected))
+                  return colors.primary.withValues(alpha: 0.5);
+                return null;
+              }),
             ),
           ],
         ),
@@ -267,7 +283,8 @@ class _ChatSettingsState extends State<ChatSettings> {
             const Spacer(),
             TextButton(
               onPressed: _restoreDefaultPrompt,
-              style: TextButton.styleFrom(foregroundColor: colors.textSecondary),
+              style:
+                  TextButton.styleFrom(foregroundColor: colors.textSecondary),
               child: const Text('恢复默认'),
             ),
           ],
@@ -280,8 +297,10 @@ class _ChatSettingsState extends State<ChatSettings> {
               decoration: InputDecoration(
                 hintText: '自定义系统提示词',
                 hintStyle: TextStyle(color: colors.textHint),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                contentPadding: const EdgeInsets.only(left: 12, right: 40, top: 12, bottom: 12),
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                contentPadding: const EdgeInsets.only(
+                    left: 12, right: 40, top: 12, bottom: 12),
                 filled: true,
                 fillColor: colors.surface,
               ),
@@ -292,7 +311,8 @@ class _ChatSettingsState extends State<ChatSettings> {
               right: 4,
               top: 4,
               child: IconButton(
-                icon: Icon(Icons.open_in_full, size: 18, color: colors.textSecondary),
+                icon: Icon(Icons.open_in_full,
+                    size: 18, color: colors.textSecondary),
                 tooltip: '展开编辑',
                 onPressed: () => _showExpandedEditor(context, colors),
                 padding: const EdgeInsets.all(8),
@@ -318,7 +338,8 @@ class _ChatSettingsState extends State<ChatSettings> {
   }
 
   void _showExpandedEditor(BuildContext context, ThemeColors colors) {
-    final expandedController = TextEditingController(text: _promptController.text);
+    final expandedController =
+        TextEditingController(text: _promptController.text);
     showDialog(
       context: context,
       builder: (dialogContext) => Dialog(
@@ -332,7 +353,8 @@ class _ChatSettingsState extends State<ChatSettings> {
           child: Column(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                 decoration: BoxDecoration(
                   border: Border(bottom: BorderSide(color: colors.divider)),
                 ),
@@ -353,7 +375,8 @@ class _ChatSettingsState extends State<ChatSettings> {
                       onPressed: () {
                         expandedController.text = kDefaultSystemPrompt;
                       },
-                      style: TextButton.styleFrom(foregroundColor: colors.textSecondary),
+                      style: TextButton.styleFrom(
+                          foregroundColor: colors.textSecondary),
                       child: const Text('恢复默认'),
                     ),
                   ],
@@ -370,7 +393,8 @@ class _ChatSettingsState extends State<ChatSettings> {
                     decoration: InputDecoration(
                       hintText: '输入系统提示词...',
                       hintStyle: TextStyle(color: colors.textHint),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8)),
                       contentPadding: const EdgeInsets.all(16),
                       filled: true,
                       fillColor: colors.surface,
@@ -389,7 +413,8 @@ class _ChatSettingsState extends State<ChatSettings> {
                   children: [
                     TextButton(
                       onPressed: () => Navigator.pop(dialogContext),
-                      style: TextButton.styleFrom(foregroundColor: colors.textSecondary),
+                      style: TextButton.styleFrom(
+                          foregroundColor: colors.textSecondary),
                       child: const Text('取消'),
                     ),
                     const SizedBox(width: 12),

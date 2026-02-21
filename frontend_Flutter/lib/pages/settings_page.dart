@@ -7,9 +7,6 @@ import '../theme/theme_decorations.dart';
 import '../services/api_service.dart';
 import '../widgets/themed_switch.dart';
 import '../widgets/app_header.dart';
-import '../widgets/app_bottom_nav.dart';
-import 'data_page.dart';
-import 'analysis_page.dart';
 import 'about_page.dart';
 import 'login_page.dart';
 import 'misc_settings_page.dart';
@@ -25,6 +22,15 @@ class SettingsPage extends StatefulWidget {
   State<SettingsPage> createState() => _SettingsPageState();
 }
 
+class SettingsPageContent extends StatelessWidget {
+  const SettingsPageContent({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const SettingsPage();
+  }
+}
+
 class _SettingsPageState extends State<SettingsPage> {
   bool _devMode = false;
   bool _loading = true;
@@ -34,10 +40,10 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   void initState() {
     super.initState();
-    _loadSettings();
+    _initPage();
   }
 
-  Future<void> _loadSettings() async {
+  Future<void> _initPage() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token');
 
@@ -143,7 +149,7 @@ class _SettingsPageState extends State<SettingsPage> {
         child: SafeArea(
           child: Column(
             children: [
-              AppHeader(title: '设置', showBackButton: true),
+              const AppHeader(title: '设置', showBackButton: true),
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(16),
@@ -170,37 +176,11 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
                 ),
               ),
-              AppBottomNav(
-                activeTab: NavTab.settings,
-                onNavigate: (tab) => _handleNavTab(context, tab),
-              ),
             ],
           ),
         ),
       ),
     );
-  }
-
-  void _handleNavTab(BuildContext context, NavTab tab) {
-    switch (tab) {
-      case NavTab.home:
-        Navigator.pop(context);
-        break;
-      case NavTab.data:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const DataPage()),
-        );
-        break;
-      case NavTab.analysis:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const AnalysisPage()),
-        );
-        break;
-      case NavTab.settings:
-        break;
-    }
   }
 
   Widget _buildThemeButton(ThemeColors colors) {

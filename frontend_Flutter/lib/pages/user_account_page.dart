@@ -7,9 +7,6 @@ import '../widgets/app_header.dart';
 import '../providers/theme_provider.dart';
 import '../theme/theme_colors.dart';
 import '../theme/theme_decorations.dart';
-import 'data_page.dart';
-import 'analysis_page.dart';
-import 'settings_page.dart';
 import 'login_page.dart';
 
 class UserAccountPage extends StatefulWidget {
@@ -49,6 +46,151 @@ class _UserAccountPageState extends State<UserAccountPage> {
         _loading = false;
       });
     }
+  }
+
+  void _showChangeEmailDialog() {
+    final themeProvider = context.read<ThemeProvider>();
+    final colors = themeProvider.colors;
+    final newEmailController = TextEditingController();
+    final passwordController = TextEditingController();
+    bool obscurePassword = true;
+    bool saving = false;
+    String? errorMsg;
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('修改邮箱'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '当前邮箱: $_email',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: colors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: newEmailController,
+                      keyboardType: TextInputType.emailAddress,
+                      decoration: InputDecoration(
+                        labelText: '新邮箱',
+                        hintText: '请输入新邮箱地址',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: passwordController,
+                      obscureText: obscurePassword,
+                      decoration: InputDecoration(
+                        labelText: '密码',
+                        hintText: '请输入密码以确认',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            obscurePassword
+                                ? Icons.visibility_off
+                                : Icons.visibility,
+                          ),
+                          onPressed: () {
+                            setDialogState(() {
+                              obscurePassword = !obscurePassword;
+                            });
+                          },
+                        ),
+                      ),
+                    ),
+                    if (errorMsg != null) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        errorMsg!,
+                        style: TextStyle(color: colors.error, fontSize: 12),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: saving
+                      ? null
+                      : () {
+                          Navigator.pop(dialogContext);
+                        },
+                  child: const Text('取消'),
+                ),
+                ElevatedButton(
+                  onPressed: saving
+                      ? null
+                      : () async {
+                          final newEmail = newEmailController.text.trim();
+                          if (newEmail.isEmpty) {
+                            setDialogState(() {
+                              errorMsg = '请输入新邮箱';
+                            });
+                            return;
+                          }
+                          if (!newEmail.contains('@')) {
+                            setDialogState(() {
+                              errorMsg = '请输入有效的邮箱地址';
+                            });
+                            return;
+                          }
+                          if (passwordController.text.isEmpty) {
+                            setDialogState(() {
+                              errorMsg = '请输入密码';
+                            });
+                            return;
+                          }
+
+                          setDialogState(() {
+                            saving = true;
+                            errorMsg = null;
+                          });
+
+                          try {
+                            final updatedEmail = await ApiService.updateEmail(
+                              newEmail: newEmail,
+                              password: passwordController.text,
+                            );
+                            if (dialogContext.mounted) {
+                              Navigator.pop(dialogContext);
+                              setState(() {
+                                _email = updatedEmail;
+                              });
+                              _showSuccessDialog('邮箱修改成功');
+                            }
+                          } catch (e) {
+                            final errMsg = e.toString().replaceAll(
+                              'Exception: ',
+                              '',
+                            );
+                            setDialogState(() {
+                              saving = false;
+                              errorMsg = errMsg;
+                            });
+                          }
+                        },
+                  child: Text(saving ? '处理中...' : '确认修改'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
   void _showChangePasswordDialog() {
@@ -433,7 +575,6 @@ class _UserAccountPageState extends State<UserAccountPage> {
                   ),
                 ),
               ),
-              _buildBottomNav(colors),
             ],
           ),
         ),
@@ -522,6 +663,14 @@ class _UserAccountPageState extends State<UserAccountPage> {
 
     return Column(
       children: [
+        _buildActionButton(
+          icon: '📧',
+          title: '修改邮箱',
+          subtitle: '更改您的登录邮箱',
+          onTap: _showChangeEmailDialog,
+          colors: colors,
+        ),
+        const SizedBox(height: 12),
         _buildActionButton(
           icon: '🔐',
           title: '修改密码',
@@ -626,49 +775,4 @@ class _UserAccountPageState extends State<UserAccountPage> {
     );
   }
 
-  Widget _buildBottomNav(ThemeColors colors) {
-    return Container(
-      decoration: ThemeDecorations.bottomNav(context),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _buildNavItem('🏠', '首页', false, const SettingsPage(), colors),
-            _buildNavItem('📊', '数据', false, const DataPage(), colors),
-            _buildNavItem('🤖', '分析', false, const AnalysisPage(), colors),
-            _buildNavItem('⚙️', '设置', false, const SettingsPage(), colors),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNavItem(
-    String emoji,
-    String label,
-    bool isActive,
-    Widget? page,
-    ThemeColors colors,
-  ) {
-    return GestureDetector(
-      onTap: page != null
-          ? () =>
-                Navigator.push(context, MaterialPageRoute(builder: (_) => page))
-          : null,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(emoji, style: const TextStyle(fontSize: 20)),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 10,
-              color: isActive ? colors.primary : colors.textSecondary,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }

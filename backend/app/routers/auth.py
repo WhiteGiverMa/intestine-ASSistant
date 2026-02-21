@@ -13,6 +13,7 @@
   - GET /settings - 获取用户设置
   - PUT /settings - 更新用户设置
   - PUT /password - 修改密码
+  - PUT /email - 修改邮箱
   - DELETE /account - 注销账号
 """
 from datetime import datetime, timedelta
@@ -55,6 +56,7 @@ class Token(BaseModel):
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
+    remember_me: bool = False
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -67,9 +69,12 @@ def get_password_hash(password: str) -> str:
     return pwd_context.hash(password)
 
 
-def create_access_token(data: dict) -> str:
+def create_access_token(data: dict, *, remember_me: bool = False) -> str:
     to_encode = data.copy()
-    expire = datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    if remember_me:
+        expire = datetime.utcnow() + timedelta(days=settings.ACCESS_TOKEN_EXPIRE_REMEMBER_DAYS)
+    else:
+        expire = datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
@@ -81,10 +86,14 @@ async def register(user_data: UserCreate, db: AsyncSession = Depends(get_db)):
         if result.scalar_one_or_none():
             raise HTTPException(status_code=400, detail="邮箱已被注册")
 
+        nickname = user_data.nickname
+        if not nickname:
+            nickname = user_data.email.split("@")[0]
+
         user = User(
             email=user_data.email,
             password_hash=get_password_hash(user_data.password),
-            nickname=user_data.nickname,
+            nickname=nickname,
         )
         db.add(user)
         await db.commit()
@@ -109,7 +118,7 @@ async def login(user_data: UserLogin, db: AsyncSession = Depends(get_db)):
         if not user or not verify_password(user_data.password, user.password_hash):
             raise HTTPException(status_code=401, detail="邮箱或密码错误")
 
-        token = create_access_token({"sub": user.id})
+        token = create_access_token({"sub": user.id}, remember_me=user_data.remember_me)
         return UserResponse(user_id=user.id, email=user.email, nickname=user.nickname, token=token)
     except HTTPException:
         raise
@@ -175,6 +184,31 @@ class UserSettingsUpdate(BaseModel):
 class PasswordUpdate(BaseModel):
     current_password: str
     new_password: str
+
+
+class EmailUpdate(BaseModel):
+    new_email: EmailStr
+    password: str
+
+
+@router.put("/email", response_model=dict)
+async def update_email(
+    email_data: EmailUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if not verify_password(email_data.password, current_user.password_hash):
+        raise HTTPException(status_code=400, detail="密码错误")
+
+    result = await db.execute(select(User).where(User.email == email_data.new_email))
+    if result.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="该邮箱已被其他账号使用")
+
+    current_user.email = email_data.new_email
+    await db.commit()
+    await db.refresh(current_user)
+
+    return {"code": 200, "data": {"email": current_user.email, "message": "邮箱修改成功"}}
 
 
 @router.get("/settings", response_model=dict)

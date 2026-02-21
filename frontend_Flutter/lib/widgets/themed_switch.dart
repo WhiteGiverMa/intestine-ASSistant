@@ -28,8 +28,10 @@ class ThemedSwitch extends StatelessWidget {
     return Switch(
       value: value,
       onChanged: onChanged,
-      activeTrackColor: effectiveActiveColor,
-      inactiveTrackColor: effectiveInactiveColor,
+      trackColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.selected)) return effectiveActiveColor;
+        return effectiveInactiveColor;
+      }),
       thumbColor: WidgetStateProperty.all(effectiveThumbColor),
       trackOutlineColor: WidgetStateProperty.all(Colors.transparent),
     );

@@ -18,12 +18,9 @@ import '../widgets/compact_tab_switcher.dart';
 import '../widgets/stats_charts.dart';
 import '../widgets/record_cards.dart';
 import '../widgets/app_header.dart';
-import '../widgets/app_bottom_nav.dart';
 import '../providers/theme_provider.dart';
 import '../theme/theme_colors.dart';
 import '../theme/theme_decorations.dart';
-import 'analysis_page.dart';
-import 'settings_page.dart';
 
 class DataOverviewPage extends StatefulWidget {
   const DataOverviewPage({super.key});
@@ -401,37 +398,11 @@ class _DataOverviewPageState extends State<DataOverviewPage> {
                   ],
                 ),
               ),
-              AppBottomNav(
-                activeTab: NavTab.data,
-                onNavigate: (tab) => _handleNavTab(context, tab),
-              ),
             ],
           ),
         ),
       ),
     );
-  }
-
-  void _handleNavTab(BuildContext context, NavTab tab) {
-    switch (tab) {
-      case NavTab.home:
-        Navigator.pop(context);
-        break;
-      case NavTab.data:
-        break;
-      case NavTab.analysis:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const AnalysisPage()),
-        );
-        break;
-      case NavTab.settings:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const SettingsPage()),
-        );
-        break;
-    }
   }
 
   Widget _buildStatsTab(ThemeColors colors) {
