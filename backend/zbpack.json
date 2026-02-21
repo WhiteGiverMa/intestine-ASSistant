@@ -1,3 +1,5 @@
 {
-  "app_type": "docker"
+  "app_type": "docker",
+  "dockerfile": "Dockerfile",
+  "build_context": "."
 }
