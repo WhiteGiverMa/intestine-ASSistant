@@ -1,6 +1,6 @@
 {
   "app_dir": "backend",
-  "dockerfile": {
-    "path": "backend/Dockerfile"
+  "python": {
+    "entry": "app.main:app"
   }
 }
