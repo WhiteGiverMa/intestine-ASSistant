@@ -1,0 +1,15 @@
+{
+  "$schema": "https://schema.zeabur.app/zeabur.json",
+  "services": [
+    {
+      "name": "intestine-backend",
+      "type": "docker",
+      "source": {
+        "type": "git",
+        "url": "https://github.com/WhiteGiverMa/intestine-ASSistant",
+        "branch": "frontend-flutter"
+      },
+      "context": "backend"
+    }
+  ]
+}
