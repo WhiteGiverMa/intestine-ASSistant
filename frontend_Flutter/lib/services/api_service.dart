@@ -46,7 +46,9 @@ class ErrorHandler {
 
   static const List<String> _networkErrorKeywords = [
     'ClientFailed',
+    'ClientException',
     'SocketException',
+    'SocketConnection',
     'Connection refused',
     'Timeout',
     'Connection timed out',
@@ -55,6 +57,7 @@ class ErrorHandler {
     '连接失败',
     '网络',
     '无法连接',
+    'Operation not permitted',
   ];
 
   static bool isAuthError(String error) {
@@ -111,7 +114,12 @@ class ErrorHandler {
 }
 
 class ApiService {
-  static const String baseUrl = 'http://localhost:8001/api/v1';
+  static const String _defaultBaseUrl = 'http://43.156.73.168:8001/api/v1';
+
+  static Future<String> _getBaseUrl() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('api_url') ?? _defaultBaseUrl;
+  }
 
   static Future<String?> _getToken() async {
     final prefs = await SharedPreferences.getInstance();
@@ -155,6 +163,7 @@ class ApiService {
     String password, {
     String? nickname,
   }) async {
+    final baseUrl = await _getBaseUrl();
     final body = <String, dynamic>{'email': email, 'password': password};
     if (nickname != null) body['nickname'] = nickname;
 
@@ -182,6 +191,7 @@ class ApiService {
     String password, {
     bool rememberMe = false,
   }) async {
+    final baseUrl = await _getBaseUrl();
     final response = await http.post(
       Uri.parse('$baseUrl/auth/login'),
       headers: {'Content-Type': 'application/json'},
@@ -215,6 +225,7 @@ class ApiService {
     required String currentPassword,
     required String newPassword,
   }) async {
+    final baseUrl = await _getBaseUrl();
     final headers = await _getHeaders();
     final response = await http.put(
       Uri.parse('$baseUrl/auth/password'),
@@ -235,6 +246,7 @@ class ApiService {
     required String newEmail,
     required String password,
   }) async {
+    final baseUrl = await _getBaseUrl();
     final headers = await _getHeaders();
     final response = await http.put(
       Uri.parse('$baseUrl/auth/email'),
@@ -262,6 +274,7 @@ class ApiService {
   }
 
   static Future<void> deleteAccount() async {
+    final baseUrl = await _getBaseUrl();
     final headers = await _getHeaders();
     final response = await http.delete(
       Uri.parse('$baseUrl/auth/account'),
@@ -289,6 +302,7 @@ class ApiService {
     List<String>? symptoms,
     String? notes,
   }) async {
+    final baseUrl = await _getBaseUrl();
     final headers = await _getHeaders();
     final body = <String, dynamic>{
       'record_date': recordDate,
@@ -323,6 +337,7 @@ class ApiService {
     int page = 1,
     int limit = 20,
   }) async {
+    final baseUrl = await _getBaseUrl();
     final headers = await _getHeaders();
     final params = <String, String>{
       'page': page.toString(),
@@ -347,6 +362,7 @@ class ApiService {
   }
 
   static Future<void> deleteRecord(String recordId) async {
+    final baseUrl = await _getBaseUrl();
     final headers = await _getHeaders();
     final response = await http.delete(
       Uri.parse('$baseUrl/records/$recordId'),
@@ -364,6 +380,7 @@ class ApiService {
     String? startDate,
     String? endDate,
   }) async {
+    final baseUrl = await _getBaseUrl();
     final headers = await _getHeaders();
     final params = <String, String>{};
     if (startDate != null && endDate != null) {
@@ -392,6 +409,7 @@ class ApiService {
     String? startDate,
     String? endDate,
   }) async {
+    final baseUrl = await _getBaseUrl();
     final headers = await _getHeaders();
     final params = <String, String>{};
     params['metric'] = metric;
@@ -420,6 +438,7 @@ class ApiService {
     String? startDate,
     String? endDate,
   }) async {
+    final baseUrl = await _getBaseUrl();
     final headers = await _getHeaders();
     final body = <String, dynamic>{'analysis_type': analysisType};
     if (startDate != null) body['start_date'] = startDate;
@@ -448,6 +467,7 @@ class ApiService {
   }
 
   static Future<List<AnalysisResult>> getAnalyses() async {
+    final baseUrl = await _getBaseUrl();
     final headers = await _getHeaders();
     final response = await http.get(
       Uri.parse('$baseUrl/ai/analyses'),
@@ -466,6 +486,7 @@ class ApiService {
   }
 
   static Future<Map<String, dynamic>> getUserSettings() async {
+    final baseUrl = await _getBaseUrl();
     final headers = await _getHeaders();
     final response = await http.get(
       Uri.parse('$baseUrl/auth/settings'),
@@ -488,6 +509,7 @@ class ApiService {
     String? aiModel,
     bool? aiAutoTitle,
   }) async {
+    final baseUrl = await _getBaseUrl();
     final headers = await _getHeaders();
     final body = <String, dynamic>{};
     if (devMode != null) body['dev_mode'] = devMode;
@@ -509,6 +531,7 @@ class ApiService {
   }
 
   static Future<void> markNoBowel(String date) async {
+    final baseUrl = await _getBaseUrl();
     final headers = await _getHeaders();
     http.Response response;
     try {
@@ -532,6 +555,7 @@ class ApiService {
   }
 
   static Future<void> unmarkNoBowel(String date) async {
+    final baseUrl = await _getBaseUrl();
     final headers = await _getHeaders();
     http.Response response;
     try {
@@ -557,6 +581,7 @@ class ApiService {
     String startDate,
     String endDate,
   ) async {
+    final baseUrl = await _getBaseUrl();
     final headers = await _getHeaders();
     http.Response response;
     try {
@@ -586,6 +611,7 @@ class ApiService {
     String startDate,
     String endDate,
   ) async {
+    final baseUrl = await _getBaseUrl();
     final headers = await _getHeaders();
     http.Response response;
     try {
@@ -615,6 +641,7 @@ class ApiService {
     String startDate,
     String endDate,
   ) async {
+    final baseUrl = await _getBaseUrl();
     final headers = await _getHeaders();
     http.Response response;
     try {
@@ -644,6 +671,7 @@ class ApiService {
     String? startDate,
     String? endDate,
   }) async {
+    final baseUrl = await _getBaseUrl();
     final headers = await _getHeaders();
     final params = <String, String>{};
     if (startDate != null) params['start_date'] = startDate;
@@ -673,6 +701,7 @@ class ApiService {
     String? systemPrompt,
     String? thinkingIntensity,
   }) async {
+    final baseUrl = await _getBaseUrl();
     final headers = await _getHeaders();
     final body = <String, dynamic>{'message': message};
     if (conversationId != null) body['conversation_id'] = conversationId;
@@ -705,6 +734,7 @@ class ApiService {
     String? systemPrompt,
     String? thinkingIntensity,
   }) async* {
+    final baseUrl = await _getBaseUrl();
     final headers = await _getHeaders();
     final body = <String, dynamic>{'message': message};
     if (conversationId != null) body['conversation_id'] = conversationId;
@@ -731,10 +761,9 @@ class ApiService {
       throw Exception(errorMsg);
     }
 
-    await for (final line
-        in streamedResponse.stream
-            .transform(utf8.decoder)
-            .transform(const LineSplitter())) {
+    await for (final line in streamedResponse.stream
+        .transform(utf8.decoder)
+        .transform(const LineSplitter())) {
       if (line.startsWith('data: ')) {
         final jsonStr = line.substring(6);
         if (jsonStr.trim().isEmpty) continue;
@@ -750,6 +779,7 @@ class ApiService {
   }
 
   static Future<ChatSession> getChatHistory({String? conversationId}) async {
+    final baseUrl = await _getBaseUrl();
     final headers = await _getHeaders();
     final params = <String, String>{};
     if (conversationId != null) params['conversation_id'] = conversationId;
@@ -768,6 +798,7 @@ class ApiService {
   }
 
   static Future<void> clearChatHistory({String? conversationId}) async {
+    final baseUrl = await _getBaseUrl();
     final headers = await _getHeaders();
     final params = <String, String>{};
     if (conversationId != null) params['conversation_id'] = conversationId;
@@ -784,6 +815,7 @@ class ApiService {
   }
 
   static Future<AiStatus> checkAiStatus() async {
+    final baseUrl = await _getBaseUrl();
     final headers = await _getHeaders();
     final response = await _safeRequest(
       () => http.get(Uri.parse('$baseUrl/ai/status'), headers: headers),
@@ -796,6 +828,7 @@ class ApiService {
   }
 
   static Future<List<ConversationSummary>> getConversations() async {
+    final baseUrl = await _getBaseUrl();
     final token = await _getToken();
     if (token == null) throw Exception('未登录');
 
@@ -821,6 +854,7 @@ class ApiService {
     String? systemPrompt,
     String? thinkingIntensity,
   }) async {
+    final baseUrl = await _getBaseUrl();
     final token = await _getToken();
     if (token == null) throw Exception('未登录');
 
@@ -847,6 +881,7 @@ class ApiService {
   static Future<void> deleteConversation({
     required String conversationId,
   }) async {
+    final baseUrl = await _getBaseUrl();
     final token = await _getToken();
     if (token == null) throw Exception('未登录');
 
