@@ -18,13 +18,6 @@ class MainContainer extends StatefulWidget {
 class _MainContainerState extends State<MainContainer> {
   int _currentIndex = 0;
 
-  final List<Widget> _pages = const [
-    HomePage(),
-    DataPage(),
-    AnalysisPage(),
-    SettingsPage(),
-  ];
-
   void _onNavigate(NavTab tab) {
     setState(() {
       _currentIndex = tab.index;
@@ -34,6 +27,12 @@ class _MainContainerState extends State<MainContainer> {
   @override
   Widget build(BuildContext context) {
     final themeProvider = context.watch<ThemeProvider>();
+    final pages = [
+      HomePage(onNavigate: _onNavigate),
+      const DataPage(),
+      const AnalysisPage(),
+      const SettingsPage(),
+    ];
 
     return Scaffold(
       body: Container(
@@ -41,7 +40,7 @@ class _MainContainerState extends State<MainContainer> {
           context,
           mode: themeProvider.mode,
         ),
-        child: IndexedStack(index: _currentIndex, children: _pages),
+        child: IndexedStack(index: _currentIndex, children: pages),
       ),
       bottomNavigationBar: AppBottomNav(
         activeTab: NavTab.values[_currentIndex],
