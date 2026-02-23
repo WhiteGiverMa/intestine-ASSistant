@@ -1,7 +1,7 @@
 // @module: database_service
 // @type: service
 // @layer: frontend
-// @depends: [sqflite, path, path_provider]
+// @depends: [sqflite, sqflite_common_ffi_web, path, path_provider]
 // @exports: [DatabaseService]
 // @tables:
 //   - local_users: 本地用户信息
@@ -10,7 +10,9 @@
 //   - chat_messages: AI对话消息
 //   - settings: 应用设置
 // @brief: SQLite数据库服务，管理本地数据存储
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:sqflite/sqflite.dart';
+import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -25,9 +27,21 @@ class DatabaseService {
     return _database!;
   }
 
+  static Future<String> _getDatabasePath() async {
+    if (kIsWeb) {
+      return _databaseName;
+    } else {
+      final documentsDirectory = await getApplicationDocumentsDirectory();
+      return join(documentsDirectory.path, _databaseName);
+    }
+  }
+
   static Future<Database> _initDatabase() async {
-    final documentsDirectory = await getApplicationDocumentsDirectory();
-    final path = join(documentsDirectory.path, _databaseName);
+    if (kIsWeb) {
+      databaseFactory = databaseFactoryFfiWeb;
+    }
+
+    final path = await _getDatabasePath();
 
     return await openDatabase(
       path,
