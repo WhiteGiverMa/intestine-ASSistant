@@ -71,7 +71,11 @@ class AppHeader extends StatelessWidget {
             children: [
               if (showBackButton)
                 GestureDetector(
-                  onTap: onBack ?? () => Navigator.pop(context),
+                  onTap: onBack ?? () {
+                    if (Navigator.of(context).canPop()) {
+                      Navigator.pop(context);
+                    }
+                  },
                   behavior: HitTestBehavior.opaque,
                   child: Padding(
                     padding: const EdgeInsets.all(4),

@@ -7,6 +7,7 @@ import '../services/api_service.dart';
 import '../widgets/error_dialog.dart';
 import 'home_page.dart';
 import 'login_page.dart';
+import 'main_container.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -171,7 +172,16 @@ class _RegisterPageState extends State<RegisterPage> {
                   ),
                   const SizedBox(height: 16),
                   GestureDetector(
-                    onTap: () => Navigator.pop(context),
+                    onTap: () {
+                      if (Navigator.of(context).canPop()) {
+                        Navigator.pop(context);
+                      } else {
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(builder: (_) => const MainContainer()),
+                        );
+                      }
+                    },
                     child: Text(
                       '← 返回首页',
                       style: TextStyle(color: colors.textHint, fontSize: 12),

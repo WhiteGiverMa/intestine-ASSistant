@@ -60,7 +60,7 @@ class _SettingsPageState extends State<SettingsPage> {
         child: SafeArea(
           child: Column(
             children: [
-              const AppHeader(title: '设置', showBackButton: true),
+              const AppHeader(title: '设置'),
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(16),
@@ -310,7 +310,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '数据导出导入等设置',
+                      '日期范围设置',
                       style: TextStyle(
                         fontSize: 12,
                         color: colors.textSecondary,
