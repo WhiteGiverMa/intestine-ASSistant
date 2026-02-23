@@ -83,9 +83,8 @@ class LocalRecord {
       color: json['color'],
       smellLevel: json['smell_level'],
       feeling: json['feeling'],
-      symptoms: json['symptoms'] != null
-          ? List<String>.from(json['symptoms'])
-          : null,
+      symptoms:
+          json['symptoms'] != null ? List<String>.from(json['symptoms']) : null,
       notes: json['notes'],
       isNoBowel: json['is_no_bowel'] ?? false,
       createdAt: json['created_at'],
@@ -196,9 +195,8 @@ class LocalStorageService {
   }) async {
     final prefs = await SharedPreferences.getInstance();
     final recordsJson = prefs.getString(_localRecordsKey);
-    final List<dynamic> records = recordsJson != null
-        ? jsonDecode(recordsJson)
-        : [];
+    final List<dynamic> records =
+        recordsJson != null ? jsonDecode(recordsJson) : [];
 
     final record = LocalRecord(
       localId: _generateId(),
@@ -233,14 +231,16 @@ class LocalStorageService {
     var localRecords = records.map((e) => LocalRecord.fromJson(e)).toList();
 
     if (startDate != null) {
-      localRecords = localRecords
-          .where((r) => r.recordDate.compareTo(startDate) >= 0)
-          .toList();
+      localRecords =
+          localRecords
+              .where((r) => r.recordDate.compareTo(startDate) >= 0)
+              .toList();
     }
     if (endDate != null) {
-      localRecords = localRecords
-          .where((r) => r.recordDate.compareTo(endDate) <= 0)
-          .toList();
+      localRecords =
+          localRecords
+              .where((r) => r.recordDate.compareTo(endDate) <= 0)
+              .toList();
     }
 
     localRecords.sort((a, b) => b.recordDate.compareTo(a.recordDate));
@@ -433,13 +433,15 @@ class LocalStorageService {
 
     final avgFrequencyPerDay = totalRecords / recordedDays;
 
-    final durations = nonNoBowelRecords
-        .where((r) => r.durationMinutes != null)
-        .map((r) => r.durationMinutes!)
-        .toList();
-    final avgDurationMinutes = durations.isNotEmpty
-        ? durations.reduce((a, b) => a + b) / durations.length
-        : 0.0;
+    final durations =
+        nonNoBowelRecords
+            .where((r) => r.durationMinutes != null)
+            .map((r) => r.durationMinutes!)
+            .toList();
+    final avgDurationMinutes =
+        durations.isNotEmpty
+            ? durations.reduce((a, b) => a + b) / durations.length
+            : 0.0;
 
     final Map<String, int> stoolTypeDistribution = {};
     for (final record in nonNoBowelRecords) {
@@ -472,12 +474,13 @@ class LocalStorageService {
       healthScore -= 10;
     }
 
-    final avgStoolType = stoolTypeDistribution.entries.isEmpty
-        ? 0.0
-        : stoolTypeDistribution.entries
-                  .map((e) => int.parse(e.key) * e.value)
-                  .reduce((a, b) => a + b) /
-              stoolTypeDistribution.values.reduce((a, b) => a + b);
+    final avgStoolType =
+        stoolTypeDistribution.entries.isEmpty
+            ? 0.0
+            : stoolTypeDistribution.entries
+                    .map((e) => int.parse(e.key) * e.value)
+                    .reduce((a, b) => a + b) /
+                stoolTypeDistribution.values.reduce((a, b) => a + b);
     if (avgStoolType >= 3 && avgStoolType <= 5) {
       healthScore += 10;
     } else if (avgStoolType < 2 || avgStoolType > 6) {

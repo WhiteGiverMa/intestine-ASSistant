@@ -170,12 +170,12 @@ class AnalysisResult {
     return AnalysisResult(
       analysisId: json['analysis_id'],
       healthScore: json['health_score'],
-      insights: (json['insights'] as List)
-          .map((e) => Insight.fromJson(e))
-          .toList(),
-      suggestions: (json['suggestions'] as List)
-          .map((e) => Suggestion.fromJson(e))
-          .toList(),
+      insights:
+          (json['insights'] as List).map((e) => Insight.fromJson(e)).toList(),
+      suggestions:
+          (json['suggestions'] as List)
+              .map((e) => Suggestion.fromJson(e))
+              .toList(),
       warnings:
           (json['warnings'] as List?)
               ?.map((e) => Warning.fromJson(e))

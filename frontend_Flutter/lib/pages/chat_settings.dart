@@ -163,13 +163,15 @@ class _ChatSettingsState extends State<ChatSettings> {
               value: _streamingEnabled,
               onChanged: _saveStreamingEnabled,
               thumbColor: WidgetStateProperty.resolveWith((states) {
-                if (states.contains(WidgetState.selected))
+                if (states.contains(WidgetState.selected)) {
                   return colors.primary;
+                }
                 return null;
               }),
               trackColor: WidgetStateProperty.resolveWith((states) {
-                if (states.contains(WidgetState.selected))
+                if (states.contains(WidgetState.selected)) {
                   return colors.primary.withValues(alpha: 0.5);
+                }
                 return null;
               }),
             ),
@@ -200,13 +202,15 @@ class _ChatSettingsState extends State<ChatSettings> {
               value: _thinkingEnabled,
               onChanged: _saveThinkingEnabled,
               thumbColor: WidgetStateProperty.resolveWith((states) {
-                if (states.contains(WidgetState.selected))
+                if (states.contains(WidgetState.selected)) {
                   return colors.primary;
+                }
                 return null;
               }),
               trackColor: WidgetStateProperty.resolveWith((states) {
-                if (states.contains(WidgetState.selected))
+                if (states.contains(WidgetState.selected)) {
                   return colors.primary.withValues(alpha: 0.5);
+                }
                 return null;
               }),
             ),
@@ -283,8 +287,9 @@ class _ChatSettingsState extends State<ChatSettings> {
             const Spacer(),
             TextButton(
               onPressed: _restoreDefaultPrompt,
-              style:
-                  TextButton.styleFrom(foregroundColor: colors.textSecondary),
+              style: TextButton.styleFrom(
+                foregroundColor: colors.textSecondary,
+              ),
               child: const Text('恢复默认'),
             ),
           ],
@@ -297,10 +302,15 @@ class _ChatSettingsState extends State<ChatSettings> {
               decoration: InputDecoration(
                 hintText: '自定义系统提示词',
                 hintStyle: TextStyle(color: colors.textHint),
-                border:
-                    OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
                 contentPadding: const EdgeInsets.only(
-                    left: 12, right: 40, top: 12, bottom: 12),
+                  left: 12,
+                  right: 40,
+                  top: 12,
+                  bottom: 12,
+                ),
                 filled: true,
                 fillColor: colors.surface,
               ),
@@ -311,8 +321,11 @@ class _ChatSettingsState extends State<ChatSettings> {
               right: 4,
               top: 4,
               child: IconButton(
-                icon: Icon(Icons.open_in_full,
-                    size: 18, color: colors.textSecondary),
+                icon: Icon(
+                  Icons.open_in_full,
+                  size: 18,
+                  color: colors.textSecondary,
+                ),
                 tooltip: '展开编辑',
                 onPressed: () => _showExpandedEditor(context, colors),
                 padding: const EdgeInsets.all(8),
@@ -338,105 +351,118 @@ class _ChatSettingsState extends State<ChatSettings> {
   }
 
   void _showExpandedEditor(BuildContext context, ThemeColors colors) {
-    final expandedController =
-        TextEditingController(text: _promptController.text);
+    final expandedController = TextEditingController(
+      text: _promptController.text,
+    );
     showDialog(
       context: context,
-      builder: (dialogContext) => Dialog(
-        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
-        child: Container(
-          height: MediaQuery.of(context).size.height * 0.8,
-          decoration: BoxDecoration(
-            color: colors.background,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Column(
-            children: [
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                decoration: BoxDecoration(
-                  border: Border(bottom: BorderSide(color: colors.divider)),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.edit_note, size: 24, color: colors.primary),
-                    const SizedBox(width: 12),
-                    Text(
-                      '系统提示词',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        color: colors.textPrimary,
-                      ),
-                    ),
-                    const Spacer(),
-                    TextButton(
-                      onPressed: () {
-                        expandedController.text = kDefaultSystemPrompt;
-                      },
-                      style: TextButton.styleFrom(
-                          foregroundColor: colors.textSecondary),
-                      child: const Text('恢复默认'),
-                    ),
-                  ],
-                ),
+      builder:
+          (dialogContext) => Dialog(
+            insetPadding: const EdgeInsets.symmetric(
+              horizontal: 24,
+              vertical: 40,
+            ),
+            child: Container(
+              height: MediaQuery.of(context).size.height * 0.8,
+              decoration: BoxDecoration(
+                color: colors.background,
+                borderRadius: BorderRadius.circular(16),
               ),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: TextField(
-                    controller: expandedController,
-                    maxLines: null,
-                    expands: true,
-                    textAlignVertical: TextAlignVertical.top,
-                    decoration: InputDecoration(
-                      hintText: '输入系统提示词...',
-                      hintStyle: TextStyle(color: colors.textHint),
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8)),
-                      contentPadding: const EdgeInsets.all(16),
-                      filled: true,
-                      fillColor: colors.surface,
+              child: Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 16,
                     ),
-                    style: TextStyle(fontSize: 15, color: colors.textPrimary),
+                    decoration: BoxDecoration(
+                      border: Border(bottom: BorderSide(color: colors.divider)),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.edit_note, size: 24, color: colors.primary),
+                        const SizedBox(width: 12),
+                        Text(
+                          '系统提示词',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            color: colors.textPrimary,
+                          ),
+                        ),
+                        const Spacer(),
+                        TextButton(
+                          onPressed: () {
+                            expandedController.text = kDefaultSystemPrompt;
+                          },
+                          style: TextButton.styleFrom(
+                            foregroundColor: colors.textSecondary,
+                          ),
+                          child: const Text('恢复默认'),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  border: Border(top: BorderSide(color: colors.divider)),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(dialogContext),
-                      style: TextButton.styleFrom(
-                          foregroundColor: colors.textSecondary),
-                      child: const Text('取消'),
-                    ),
-                    const SizedBox(width: 12),
-                    ElevatedButton(
-                      onPressed: () {
-                        _promptController.text = expandedController.text;
-                        _saveSystemPrompt(expandedController.text);
-                        Navigator.pop(dialogContext);
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: colors.primary,
-                        foregroundColor: colors.textOnPrimary,
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: TextField(
+                        controller: expandedController,
+                        maxLines: null,
+                        expands: true,
+                        textAlignVertical: TextAlignVertical.top,
+                        decoration: InputDecoration(
+                          hintText: '输入系统提示词...',
+                          hintStyle: TextStyle(color: colors.textHint),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          contentPadding: const EdgeInsets.all(16),
+                          filled: true,
+                          fillColor: colors.surface,
+                        ),
+                        style: TextStyle(
+                          fontSize: 15,
+                          color: colors.textPrimary,
+                        ),
                       ),
-                      child: const Text('保存'),
                     ),
-                  ],
-                ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      border: Border(top: BorderSide(color: colors.divider)),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(dialogContext),
+                          style: TextButton.styleFrom(
+                            foregroundColor: colors.textSecondary,
+                          ),
+                          child: const Text('取消'),
+                        ),
+                        const SizedBox(width: 12),
+                        ElevatedButton(
+                          onPressed: () {
+                            _promptController.text = expandedController.text;
+                            _saveSystemPrompt(expandedController.text);
+                            Navigator.pop(dialogContext);
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: colors.primary,
+                            foregroundColor: colors.textOnPrimary,
+                          ),
+                          child: const Text('保存'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
-      ),
     );
   }
 }
@@ -452,13 +478,14 @@ Future<void> showChatSettings(
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
     ),
-    builder: (context) => Padding(
-      padding: const EdgeInsets.all(16),
-      child: ChatSettings(
-        onThinkingChanged: onThinkingChanged,
-        onStreamingChanged: onStreamingChanged,
-        onClose: () => Navigator.pop(context),
-      ),
-    ),
+    builder:
+        (context) => Padding(
+          padding: const EdgeInsets.all(16),
+          child: ChatSettings(
+            onThinkingChanged: onThinkingChanged,
+            onStreamingChanged: onStreamingChanged,
+            onClose: () => Navigator.pop(context),
+          ),
+        ),
   );
 }

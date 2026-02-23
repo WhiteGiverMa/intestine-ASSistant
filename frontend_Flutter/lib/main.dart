@@ -12,10 +12,7 @@ void main() async {
   final authProvider = AuthProvider();
   await themeProvider.initialize();
   await authProvider.initialize();
-  runApp(MyApp(
-    themeProvider: themeProvider,
-    authProvider: authProvider,
-  ));
+  runApp(MyApp(themeProvider: themeProvider, authProvider: authProvider));
 }
 
 class MyApp extends StatelessWidget {

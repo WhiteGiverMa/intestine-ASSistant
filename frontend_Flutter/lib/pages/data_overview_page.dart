@@ -53,9 +53,6 @@ class _DataOverviewPageState extends State<DataOverviewPage> {
   List<BowelRecord> _records = [];
   bool _recordsLoading = true;
   AppError? _recordsError;
-  int _currentPage = 1;
-  bool _hasMore = true;
-  bool _loadingMore = false;
 
   // Date input fields
   String? _focusedDateField;
@@ -144,18 +141,12 @@ class _DataOverviewPageState extends State<DataOverviewPage> {
   Future<void> _loadRecords({bool refresh = false}) async {
     if (refresh) {
       setState(() {
-        _currentPage = 1;
-        _hasMore = true;
         _records = [];
       });
     }
 
     setState(() {
-      if (refresh) {
-        _recordsLoading = true;
-      } else {
-        _loadingMore = true;
-      }
+      _recordsLoading = true;
       _recordsError = null;
     });
 
@@ -179,14 +170,8 @@ class _DataOverviewPageState extends State<DataOverviewPage> {
       );
 
       setState(() {
-        if (refresh) {
-          _records = records;
-        } else {
-          _records.addAll(records);
-        }
-        _hasMore = records.length == 20;
+        _records = records;
         _recordsLoading = false;
-        _loadingMore = false;
       });
     } catch (e) {
       final appError = ErrorHandler.handleError(e);
@@ -198,7 +183,6 @@ class _DataOverviewPageState extends State<DataOverviewPage> {
       setState(() {
         _recordsError = appError;
         _recordsLoading = false;
-        _loadingMore = false;
       });
     }
   }
@@ -298,12 +282,10 @@ class _DataOverviewPageState extends State<DataOverviewPage> {
           _pendingRangeStart = date;
         });
       } else {
-        final start = date.isBefore(_pendingRangeStart!)
-            ? date
-            : _pendingRangeStart!;
-        final end = date.isBefore(_pendingRangeStart!)
-            ? _pendingRangeStart!
-            : date;
+        final start =
+            date.isBefore(_pendingRangeStart!) ? date : _pendingRangeStart!;
+        final end =
+            date.isBefore(_pendingRangeStart!) ? _pendingRangeStart! : date;
         _startDateKey.currentState?.setDate(start);
         _endDateKey.currentState?.setDate(end);
         setState(() {
@@ -347,8 +329,8 @@ class _DataOverviewPageState extends State<DataOverviewPage> {
                     Expanded(
                       child: CompactTabBar(
                         currentIndex: _currentTab,
-                        onTabChanged: (index) =>
-                            setState(() => _currentTab = index),
+                        onTabChanged:
+                            (index) => setState(() => _currentTab = index),
                         tabs: const [
                           CompactTabItem(
                             label: '统计',
@@ -754,25 +736,6 @@ class _DataOverviewPageState extends State<DataOverviewPage> {
                 onDelete: () => _deleteRecord(record.recordId),
               ),
             )),
-        if (_hasMore && _viewMode != 'single')
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: _loadingMore
-                ? CircularProgressIndicator(color: colors.primary)
-                : ElevatedButton(
-                    onPressed: () {
-                      _currentPage++;
-                      _loadRecords();
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: colors.primary,
-                    ),
-                    child: Text(
-                      '加载更多',
-                      style: TextStyle(color: colors.textOnPrimary),
-                    ),
-                  ),
-          ),
       ],
     );
   }
@@ -891,21 +854,22 @@ class _DataOverviewPageState extends State<DataOverviewPage> {
   Future<void> _deleteRecord(String recordId) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('确认删除'),
-        content: const Text('确定要删除这条记录吗？此操作不可撤销。'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('取消'),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('确认删除'),
+            content: const Text('确定要删除这条记录吗？此操作不可撤销。'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('取消'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                style: TextButton.styleFrom(foregroundColor: Colors.red),
+                child: const Text('删除'),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('删除'),
-          ),
-        ],
-      ),
     );
 
     if (confirmed == true) {

@@ -79,10 +79,7 @@ class LocalDbService {
 
   static Future<void> updateLocalUserNickname(String nickname) async {
     final db = await DatabaseService.database;
-    await db.update(
-      'local_users',
-      {'nickname': nickname},
-    );
+    await db.update('local_users', {'nickname': nickname});
   }
 
   // ==================== 排便记录 CRUD ====================
@@ -163,7 +160,9 @@ class LocalDbService {
       offset: offset,
     );
 
-    return results.map((row) => BowelRecord.fromJson(_mapRowToRecordJson(row))).toList();
+    return results
+        .map((row) => BowelRecord.fromJson(_mapRowToRecordJson(row)))
+        .toList();
   }
 
   static Future<BowelRecord?> getRecordById(String id) async {
@@ -192,9 +191,7 @@ class LocalDbService {
     bool? isNoBowel,
   }) async {
     final db = await DatabaseService.database;
-    final updates = <String, dynamic>{
-      'updated_at': _getNowIso(),
-    };
+    final updates = <String, dynamic>{'updated_at': _getNowIso()};
 
     if (recordDate != null) updates['record_date'] = recordDate;
     if (recordTime != null) updates['record_time'] = recordTime;
@@ -217,11 +214,7 @@ class LocalDbService {
 
   static Future<void> deleteRecord(String recordId) async {
     final db = await DatabaseService.database;
-    await db.delete(
-      'bowel_records',
-      where: 'id = ?',
-      whereArgs: [recordId],
-    );
+    await db.delete('bowel_records', where: 'id = ?', whereArgs: [recordId]);
   }
 
   static Future<void> markNoBowel(String date) async {
@@ -299,7 +292,11 @@ class LocalDbService {
         avgFrequencyPerDay: 0,
         avgDurationMinutes: 0,
         stoolTypeDistribution: {},
-        timeDistribution: TimeDistribution(morning: 0, afternoon: 0, evening: 0),
+        timeDistribution: TimeDistribution(
+          morning: 0,
+          afternoon: 0,
+          evening: 0,
+        ),
         healthScore: 0,
       );
     }
@@ -309,13 +306,15 @@ class LocalDbService {
     final recordedDays = uniqueDates.length;
     final avgFrequencyPerDay = totalRecords / recordedDays;
 
-    final durations = nonNoBowelRecords
-        .where((r) => r.durationMinutes != null)
-        .map((r) => r.durationMinutes!)
-        .toList();
-    final avgDurationMinutes = durations.isNotEmpty
-        ? durations.reduce((a, b) => a + b) / durations.length
-        : 0.0;
+    final durations =
+        nonNoBowelRecords
+            .where((r) => r.durationMinutes != null)
+            .map((r) => r.durationMinutes!)
+            .toList();
+    final avgDurationMinutes =
+        durations.isNotEmpty
+            ? durations.reduce((a, b) => a + b) / durations.length
+            : 0.0;
 
     final Map<String, int> stoolTypeDistribution = {};
     for (final record in nonNoBowelRecords) {
@@ -349,7 +348,8 @@ class LocalDbService {
     }
 
     if (stoolTypeDistribution.isNotEmpty) {
-      final avgStoolType = stoolTypeDistribution.entries
+      final avgStoolType =
+          stoolTypeDistribution.entries
               .map((e) => int.parse(e.key) * e.value)
               .reduce((a, b) => a + b) /
           stoolTypeDistribution.values.reduce((a, b) => a + b);
@@ -409,7 +409,10 @@ class LocalDbService {
       dailyCounts[row['record_date'] as String] = row['count'] as int;
     }
 
-    final noBowelDates = await getNoBowelDates(startDate: startDate, endDate: endDate);
+    final noBowelDates = await getNoBowelDates(
+      startDate: startDate,
+      endDate: endDate,
+    );
 
     return DailyCounts(dailyCounts: dailyCounts, noBowelDates: noBowelDates);
   }
@@ -449,7 +452,10 @@ class LocalDbService {
       'bowel_records',
       columns: ['record_date', 'COUNT(*) as count'],
       where: 'record_date >= ? AND record_date <= ? AND is_no_bowel = 0',
-      whereArgs: [start.toIso8601String().split('T')[0], end.toIso8601String().split('T')[0]],
+      whereArgs: [
+        start.toIso8601String().split('T')[0],
+        end.toIso8601String().split('T')[0],
+      ],
       groupBy: 'record_date',
       orderBy: 'record_date ASC',
     );
@@ -460,13 +466,19 @@ class LocalDbService {
     }
 
     final trends = <TrendPoint>[];
-    for (var d = start; d.isBefore(end) || d.isAtSameMomentAs(end); d = d.add(const Duration(days: 1))) {
+    for (
+      var d = start;
+      d.isBefore(end) || d.isAtSameMomentAs(end);
+      d = d.add(const Duration(days: 1))
+    ) {
       final dateStr = d.toIso8601String().split('T')[0];
-      trends.add(TrendPoint(
-        date: dateStr,
-        value: countsByDate[dateStr] ?? 0,
-        isRecorded: countsByDate.containsKey(dateStr),
-      ));
+      trends.add(
+        TrendPoint(
+          date: dateStr,
+          value: countsByDate[dateStr] ?? 0,
+          isRecorded: countsByDate.containsKey(dateStr),
+        ),
+      );
     }
 
     return StatsTrends(metric: metric, trends: trends);
@@ -516,20 +528,24 @@ class LocalDbService {
 
     final summaries = <ConversationSummary>[];
     for (final session in sessions) {
-      final messageCount = Sqflite.firstIntValue(
-        await db.rawQuery(
-          'SELECT COUNT(*) FROM chat_messages WHERE conversation_id = ?',
-          [session['id']],
-        ),
-      ) ?? 0;
+      final messageCount =
+          Sqflite.firstIntValue(
+            await db.rawQuery(
+              'SELECT COUNT(*) FROM chat_messages WHERE conversation_id = ?',
+              [session['id']],
+            ),
+          ) ??
+          0;
 
-      summaries.add(ConversationSummary(
-        conversationId: session['id'] as String,
-        title: session['title'] as String?,
-        createdAt: session['created_at'] as String,
-        updatedAt: session['updated_at'] as String,
-        messageCount: messageCount,
-      ));
+      summaries.add(
+        ConversationSummary(
+          conversationId: session['id'] as String,
+          title: session['title'] as String?,
+          createdAt: session['created_at'] as String,
+          updatedAt: session['updated_at'] as String,
+          messageCount: messageCount,
+        ),
+      );
     }
 
     return summaries;
@@ -559,7 +575,10 @@ class LocalDbService {
     );
   }
 
-  static Future<void> updateChatSessionTitle(String conversationId, String title) async {
+  static Future<void> updateChatSessionTitle(
+    String conversationId,
+    String title,
+  ) async {
     final db = await DatabaseService.database;
     await db.update(
       'chat_sessions',
@@ -571,8 +590,16 @@ class LocalDbService {
 
   static Future<void> deleteChatSession(String conversationId) async {
     final db = await DatabaseService.database;
-    await db.delete('chat_messages', where: 'conversation_id = ?', whereArgs: [conversationId]);
-    await db.delete('chat_sessions', where: 'id = ?', whereArgs: [conversationId]);
+    await db.delete(
+      'chat_messages',
+      where: 'conversation_id = ?',
+      whereArgs: [conversationId],
+    );
+    await db.delete(
+      'chat_sessions',
+      where: 'id = ?',
+      whereArgs: [conversationId],
+    );
   }
 
   // ==================== 聊天消息管理 ====================
@@ -623,14 +650,18 @@ class LocalDbService {
       orderBy: 'created_at ASC',
     );
 
-    return results.map((row) => ChatMessage(
-      messageId: row['id'] as String,
-      conversationId: row['conversation_id'] as String,
-      role: row['role'] as String,
-      content: row['content'] as String,
-      thinkingContent: row['thinking_content'] as String?,
-      createdAt: row['created_at'] as String,
-    )).toList();
+    return results
+        .map(
+          (row) => ChatMessage(
+            messageId: row['id'] as String,
+            conversationId: row['conversation_id'] as String,
+            role: row['role'] as String,
+            content: row['content'] as String,
+            thinkingContent: row['thinking_content'] as String?,
+            createdAt: row['created_at'] as String,
+          ),
+        )
+        .toList();
   }
 
   // ==================== 设置管理 ====================
@@ -652,11 +683,10 @@ class LocalDbService {
     if (value == null) {
       await db.delete('settings', where: 'key = ?', whereArgs: [key]);
     } else {
-      await db.insert(
-        'settings',
-        {'key': key, 'value': value},
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
+      await db.insert('settings', {
+        'key': key,
+        'value': value,
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
     }
   }
 
@@ -687,7 +717,10 @@ class LocalDbService {
     };
   }
 
-  static Future<void> importAllData(Map<String, dynamic> data, {bool overwrite = false}) async {
+  static Future<void> importAllData(
+    Map<String, dynamic> data, {
+    bool overwrite = false,
+  }) async {
     final db = await DatabaseService.database;
 
     if (overwrite) {
@@ -696,36 +729,51 @@ class LocalDbService {
 
     if (data['users'] != null) {
       for (final user in data['users'] as List) {
-        await db.insert('local_users', Map<String, dynamic>.from(user),
-            conflictAlgorithm: ConflictAlgorithm.replace);
+        await db.insert(
+          'local_users',
+          Map<String, dynamic>.from(user),
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
       }
     }
 
     if (data['bowel_records'] != null) {
       for (final record in data['bowel_records'] as List) {
-        await db.insert('bowel_records', Map<String, dynamic>.from(record),
-            conflictAlgorithm: ConflictAlgorithm.replace);
+        await db.insert(
+          'bowel_records',
+          Map<String, dynamic>.from(record),
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
       }
     }
 
     if (data['chat_sessions'] != null) {
       for (final session in data['chat_sessions'] as List) {
-        await db.insert('chat_sessions', Map<String, dynamic>.from(session),
-            conflictAlgorithm: ConflictAlgorithm.replace);
+        await db.insert(
+          'chat_sessions',
+          Map<String, dynamic>.from(session),
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
       }
     }
 
     if (data['chat_messages'] != null) {
       for (final message in data['chat_messages'] as List) {
-        await db.insert('chat_messages', Map<String, dynamic>.from(message),
-            conflictAlgorithm: ConflictAlgorithm.replace);
+        await db.insert(
+          'chat_messages',
+          Map<String, dynamic>.from(message),
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
       }
     }
 
     if (data['settings'] != null) {
       for (final setting in data['settings'] as List) {
-        await db.insert('settings', Map<String, dynamic>.from(setting),
-            conflictAlgorithm: ConflictAlgorithm.replace);
+        await db.insert(
+          'settings',
+          Map<String, dynamic>.from(setting),
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
       }
     }
   }

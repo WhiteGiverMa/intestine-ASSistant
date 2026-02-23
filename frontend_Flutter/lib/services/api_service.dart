@@ -11,8 +11,6 @@
 //   - 设置: getUserSettings, updateUserSettings (重定向到本地)
 // @brief: API服务层，已重构为本地优先，保留接口签名兼容性
 import 'dart:async';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/models.dart';
 import 'local_db_service.dart';
@@ -69,60 +67,9 @@ class ErrorHandler {
 }
 
 class ApiService {
-  static const String _defaultBaseUrl = 'http://localhost:8001/api/v1';
-
-  static Future<String> _getBaseUrl() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('api_base_url') ?? _defaultBaseUrl;
-  }
-
   static Future<void> setBaseUrl(String url) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('api_base_url', url);
-  }
-
-  static Future<String?> _getToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('token');
-  }
-
-  static Future<Map<String, String>> _getHeaders() async {
-    final token = await _getToken();
-    return {
-      'Content-Type': 'application/json',
-      if (token != null) 'Authorization': 'Bearer $token',
-    };
-  }
-
-  static Future<http.Response> _safeRequest(
-    Future<http.Response> Function() request,
-  ) async {
-    try {
-      return await request();
-    } catch (e) {
-      throw Exception('网络连接失败: ${e.toString()}');
-    }
-  }
-
-  static void _handleResponseError(
-    http.Response response,
-    String defaultMessage,
-  ) {
-    if (response.statusCode >= 200 && response.statusCode < 300) return;
-
-    String errorMsg = defaultMessage;
-    try {
-      final error = jsonDecode(response.body);
-      errorMsg = error['detail'] ?? error['message'] ?? errorMsg;
-    } catch (_) {}
-
-    if (response.statusCode == 401 || response.statusCode == 403) {
-      throw Exception('认证失败: $errorMsg');
-    } else if (response.statusCode >= 500) {
-      throw Exception('服务器错误: $errorMsg');
-    } else {
-      throw Exception(errorMsg);
-    }
   }
 
   // ==================== 认证 (本地模式) ====================
@@ -330,7 +277,7 @@ class ApiService {
     }
 
     await LocalDbService.saveMessage(
-      conversationId: conversationId!,
+      conversationId: conversationId,
       role: 'user',
       content: message,
     );

@@ -34,9 +34,10 @@ class _RegisterPageState extends State<RegisterPage> {
       await ApiService.register(
         _emailController.text,
         _passwordController.text,
-        nickname: _nicknameController.text.isNotEmpty
-            ? _nicknameController.text
-            : null,
+        nickname:
+            _nicknameController.text.isNotEmpty
+                ? _nicknameController.text
+                : null,
       );
       if (mounted) {
         Navigator.pushReplacement(
@@ -118,8 +119,10 @@ class _RegisterPageState extends State<RegisterPage> {
                     colors: colors,
                     obscureText: _obscurePassword,
                     isPassword: true,
-                    onToggleVisibility: () =>
-                        setState(() => _obscurePassword = !_obscurePassword),
+                    onToggleVisibility:
+                        () => setState(
+                          () => _obscurePassword = !_obscurePassword,
+                        ),
                   ),
                   const SizedBox(height: 24),
                   SizedBox(
@@ -149,10 +152,13 @@ class _RegisterPageState extends State<RegisterPage> {
                         style: TextStyle(color: colors.textSecondary),
                       ),
                       GestureDetector(
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => const LoginPage()),
-                        ),
+                        onTap:
+                            () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const LoginPage(),
+                              ),
+                            ),
                         child: Text(
                           '立即登录',
                           style: TextStyle(
@@ -228,15 +234,16 @@ class _RegisterPageState extends State<RegisterPage> {
             ),
             hintText: hintText,
             hintStyle: TextStyle(color: colors.textHint, fontSize: 14),
-            suffixIcon: isPassword
-                ? IconButton(
-                    icon: Icon(
-                      obscureText ? Icons.visibility_off : Icons.visibility,
-                      color: colors.textSecondary,
-                    ),
-                    onPressed: onToggleVisibility,
-                  )
-                : null,
+            suffixIcon:
+                isPassword
+                    ? IconButton(
+                      icon: Icon(
+                        obscureText ? Icons.visibility_off : Icons.visibility,
+                        color: colors.textSecondary,
+                      ),
+                      onPressed: onToggleVisibility,
+                    )
+                    : null,
           ),
         ),
       ],

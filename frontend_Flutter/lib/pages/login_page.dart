@@ -127,37 +127,38 @@ class _LoginPageState extends State<LoginPage> {
 
     showDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('启用生物识别登录'),
-        content: const Text('是否启用指纹/面容识别快速登录？下次登录时无需输入密码。'),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(dialogContext);
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (_) => const HomePage()),
-              );
-            },
-            child: const Text('暂不启用'),
+      builder:
+          (dialogContext) => AlertDialog(
+            title: const Text('启用生物识别登录'),
+            content: const Text('是否启用指纹/面容识别快速登录？下次登录时无需输入密码。'),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(dialogContext);
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (_) => const HomePage()),
+                  );
+                },
+                child: const Text('暂不启用'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  Navigator.pop(dialogContext);
+                  await BiometricService.enableBiometric(
+                    _emailController.text,
+                    _passwordController.text,
+                  );
+                  if (!mounted) return;
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (_) => const HomePage()),
+                  );
+                },
+                child: const Text('启用'),
+              ),
+            ],
           ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(dialogContext);
-              await BiometricService.enableBiometric(
-                _emailController.text,
-                _passwordController.text,
-              );
-              if (!mounted) return;
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (_) => const HomePage()),
-              );
-            },
-            child: const Text('启用'),
-          ),
-        ],
-      ),
     );
   }
 
@@ -217,8 +218,10 @@ class _LoginPageState extends State<LoginPage> {
                     focusNode: _passwordFocusNode,
                     obscureText: _obscurePassword,
                     isPassword: true,
-                    onToggleVisibility: () =>
-                        setState(() => _obscurePassword = !_obscurePassword),
+                    onToggleVisibility:
+                        () => setState(
+                          () => _obscurePassword = !_obscurePassword,
+                        ),
                     onSubmitted: (_) => _login(),
                   ),
                   const SizedBox(height: 24),
@@ -282,12 +285,13 @@ class _LoginPageState extends State<LoginPage> {
                         style: TextStyle(color: colors.textSecondary),
                       ),
                       GestureDetector(
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const RegisterPage(),
-                          ),
-                        ),
+                        onTap:
+                            () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const RegisterPage(),
+                              ),
+                            ),
                         child: Text(
                           '立即注册',
                           style: TextStyle(
@@ -364,15 +368,16 @@ class _LoginPageState extends State<LoginPage> {
               horizontal: 16,
               vertical: 14,
             ),
-            suffixIcon: isPassword
-                ? IconButton(
-                    icon: Icon(
-                      obscureText ? Icons.visibility_off : Icons.visibility,
-                      color: colors.textSecondary,
-                    ),
-                    onPressed: onToggleVisibility,
-                  )
-                : null,
+            suffixIcon:
+                isPassword
+                    ? IconButton(
+                      icon: Icon(
+                        obscureText ? Icons.visibility_off : Icons.visibility,
+                        color: colors.textSecondary,
+                      ),
+                      onPressed: onToggleVisibility,
+                    )
+                    : null,
           ),
         ),
       ],

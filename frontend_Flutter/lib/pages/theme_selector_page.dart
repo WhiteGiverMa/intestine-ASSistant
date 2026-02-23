@@ -21,13 +21,14 @@ class ThemeSelectorPage extends StatelessWidget {
         child: SafeArea(
           child: Column(
             children: [
-              AppHeader(title: '选择主题', showBackButton: true),
+              const AppHeader(title: '选择主题', showBackButton: true),
               Expanded(
                 child: ListView(
                   padding: const EdgeInsets.all(16),
-                  children: AppThemeMode.values.map((mode) {
-                    return _buildThemeCard(context, mode, themeProvider);
-                  }).toList(),
+                  children:
+                      AppThemeMode.values.map((mode) {
+                        return _buildThemeCard(context, mode, themeProvider);
+                      }).toList(),
                 ),
               ),
             ],
@@ -53,9 +54,10 @@ class ThemeSelectorPage extends StatelessWidget {
         decoration: BoxDecoration(
           color: themeColors.card,
           borderRadius: BorderRadius.circular(16),
-          border: isSelected
-              ? Border.all(color: themeProvider.colors.primary, width: 2)
-              : null,
+          border:
+              isSelected
+                  ? Border.all(color: themeProvider.colors.primary, width: 2)
+                  : null,
           boxShadow: [
             BoxShadow(
               color: themeColors.shadow,

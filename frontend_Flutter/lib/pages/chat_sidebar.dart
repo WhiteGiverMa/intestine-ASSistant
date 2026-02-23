@@ -52,21 +52,22 @@ class _ConversationSidebarState extends State<ConversationSidebar> {
     final colors = context.read<ThemeProvider>().colors;
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('删除对话'),
-        content: const Text('确定要删除这个对话吗？'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('取消'),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('删除对话'),
+            content: const Text('确定要删除这个对话吗？'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('取消'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                style: TextButton.styleFrom(foregroundColor: colors.error),
+                child: const Text('删除'),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: colors.error),
-            child: const Text('删除'),
-          ),
-        ],
-      ),
     );
     if (confirmed == true) {
       await ApiService.deleteConversation(conversationId: conversationId);
@@ -78,20 +79,21 @@ class _ConversationSidebarState extends State<ConversationSidebar> {
     final controller = TextEditingController(text: conversation.title ?? '新对话');
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('重命名对话'),
-        content: TextField(controller: controller, autofocus: true),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('取消'),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('重命名对话'),
+            content: TextField(controller: controller, autofocus: true),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('取消'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('确定'),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('确定'),
-          ),
-        ],
-      ),
     );
     if (confirmed == true && controller.text.isNotEmpty) {
       await ApiService.renameConversation(
@@ -209,10 +211,11 @@ class _ConversationSidebarState extends State<ConversationSidebar> {
               _deleteConversation(conversation.conversationId);
             }
           },
-          itemBuilder: (context) => [
-            const PopupMenuItem(value: 'rename', child: Text('重命名')),
-            const PopupMenuItem(value: 'delete', child: Text('删除')),
-          ],
+          itemBuilder:
+              (context) => [
+                const PopupMenuItem(value: 'rename', child: Text('重命名')),
+                const PopupMenuItem(value: 'delete', child: Text('删除')),
+              ],
         ),
       ),
     );

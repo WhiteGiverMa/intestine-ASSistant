@@ -41,10 +41,7 @@ class _MainContainerState extends State<MainContainer> {
           context,
           mode: themeProvider.mode,
         ),
-        child: IndexedStack(
-          index: _currentIndex,
-          children: _pages,
-        ),
+        child: IndexedStack(index: _currentIndex, children: _pages),
       ),
       bottomNavigationBar: AppBottomNav(
         activeTab: NavTab.values[_currentIndex],

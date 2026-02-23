@@ -37,15 +37,16 @@ class ErrorDialog extends StatelessWidget {
   }) {
     return showDialog(
       context: context,
-      builder: (context) => ErrorDialog(
-        title: title,
-        message: message,
-        details: details,
-        errorType: errorType,
-        onRetry: onRetry,
-        onLogin: onLogin,
-        showCopyButton: showCopyButton,
-      ),
+      builder:
+          (context) => ErrorDialog(
+            title: title,
+            message: message,
+            details: details,
+            errorType: errorType,
+            onRetry: onRetry,
+            onLogin: onLogin,
+            showCopyButton: showCopyButton,
+          ),
     );
   }
 
@@ -56,21 +57,24 @@ class ErrorDialog extends StatelessWidget {
   }) {
     return showDialog(
       context: context,
-      builder: (context) => ErrorDialog(
-        title: _getTitleForErrorType(error.type),
-        message: error.message,
-        details: error.details ?? error.originalError,
-        errorType: error.type,
-        onRetry:
-            error.type == ErrorType.network || error.type == ErrorType.server
-            ? onRetry
-            : null,
-        onLogin: error.type == ErrorType.auth
-            ? () {
-                Navigator.pop(context);
-              }
-            : null,
-      ),
+      builder:
+          (context) => ErrorDialog(
+            title: _getTitleForErrorType(error.type),
+            message: error.message,
+            details: error.details ?? error.originalError,
+            errorType: error.type,
+            onRetry:
+                error.type == ErrorType.network ||
+                        error.type == ErrorType.server
+                    ? onRetry
+                    : null,
+            onLogin:
+                error.type == ErrorType.auth
+                    ? () {
+                      Navigator.pop(context);
+                    }
+                    : null,
+          ),
     );
   }
 

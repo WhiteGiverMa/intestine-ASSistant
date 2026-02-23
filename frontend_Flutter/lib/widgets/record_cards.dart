@@ -354,92 +354,87 @@ class RecordDetailSheet extends StatelessWidget {
       minChildSize: 0.5,
       maxChildSize: 0.95,
       expand: false,
-      builder: (context, scrollController) => Container(
-        padding: const EdgeInsets.all(20),
-        child: SingleChildScrollView(
-          controller: scrollController,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: colors.divider,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      builder:
+          (context, scrollController) => Container(
+            padding: const EdgeInsets.all(20),
+            child: SingleChildScrollView(
+              controller: scrollController,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    record.isNoBowel ? '无排便记录' : '记录详情',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: colors.textPrimary,
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: colors.divider,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
                     ),
                   ),
-                  TextButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      onDelete();
-                    },
-                    style: TextButton.styleFrom(
-                      foregroundColor: colors.error,
-                    ),
-                    child: const Text('删除'),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        record.isNoBowel ? '无排便记录' : '记录详情',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: colors.textPrimary,
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          onDelete();
+                        },
+                        style: TextButton.styleFrom(
+                          foregroundColor: colors.error,
+                        ),
+                        child: const Text('删除'),
+                      ),
+                    ],
+                  ),
+                  Divider(color: colors.divider),
+                  if (record.lid != null) _buildLidRow(record.lid!, context),
+                  _buildDetailRow('📅 日期', record.recordDate),
+                  if (!record.isNoBowel) ...[
+                    if (record.recordTime != null)
+                      _buildDetailRow('⏰ 时间', record.recordTime!),
+                    if (record.durationMinutes != null)
+                      _buildDetailRow('⏱️ 时长', '${record.durationMinutes} 分钟'),
+                    if (record.stoolType != null)
+                      _buildDetailRow(
+                        '📊 粪便类型',
+                        '${kStoolTypeEmojis[record.stoolType] ?? ''} 类型 ${record.stoolType}',
+                      ),
+                    if (record.color != null)
+                      _buildDetailRow(
+                        '🎨 颜色',
+                        kColorLabels[record.color] ?? record.color!,
+                      ),
+                    if (record.smellLevel != null)
+                      _buildDetailRow('👃 气味等级', '${record.smellLevel}/5'),
+                    if (record.feeling != null)
+                      _buildDetailRow(
+                        '😊 感受',
+                        kFeelingLabels[record.feeling] ?? record.feeling!,
+                      ),
+                    if (record.symptoms != null && record.symptoms!.isNotEmpty)
+                      _buildDetailRow('🏥 伴随症状', record.symptoms!),
+                    if (record.notes != null && record.notes!.isNotEmpty)
+                      _buildDetailRow('📝 备注', record.notes!),
+                  ],
+                  const SizedBox(height: 16),
+                  Text(
+                    '创建时间: ${record.createdAt}',
+                    style: TextStyle(fontSize: 12, color: colors.textHint),
                   ),
                 ],
               ),
-              Divider(color: colors.divider),
-              if (record.lid != null) _buildLidRow(record.lid!, context),
-              _buildDetailRow('📅 日期', record.recordDate),
-              if (!record.isNoBowel) ...[
-                if (record.recordTime != null)
-                  _buildDetailRow('⏰ 时间', record.recordTime!),
-                if (record.durationMinutes != null)
-                  _buildDetailRow(
-                    '⏱️ 时长',
-                    '${record.durationMinutes} 分钟',
-                  ),
-                if (record.stoolType != null)
-                  _buildDetailRow(
-                    '📊 粪便类型',
-                    '${kStoolTypeEmojis[record.stoolType] ?? ''} 类型 ${record.stoolType}',
-                  ),
-                if (record.color != null)
-                  _buildDetailRow(
-                    '🎨 颜色',
-                    kColorLabels[record.color] ?? record.color!,
-                  ),
-                if (record.smellLevel != null)
-                  _buildDetailRow(
-                    '👃 气味等级',
-                    '${record.smellLevel}/5',
-                  ),
-                if (record.feeling != null)
-                  _buildDetailRow(
-                    '😊 感受',
-                    kFeelingLabels[record.feeling] ?? record.feeling!,
-                  ),
-                if (record.symptoms != null && record.symptoms!.isNotEmpty)
-                  _buildDetailRow('🏥 伴随症状', record.symptoms!),
-                if (record.notes != null && record.notes!.isNotEmpty)
-                  _buildDetailRow('📝 备注', record.notes!),
-              ],
-              const SizedBox(height: 16),
-              Text(
-                '创建时间: ${record.createdAt}',
-                style: TextStyle(fontSize: 12, color: colors.textHint),
-              ),
-            ],
+            ),
           ),
-        ),
-      ),
     );
   }
 
@@ -550,11 +545,12 @@ class RecordDetailSheet extends StatelessWidget {
         borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         side: BorderSide(color: colors.divider),
       ),
-      builder: (context) => RecordDetailSheet(
-        record: record,
-        colors: colors,
-        onDelete: onDelete,
-      ),
+      builder:
+          (context) => RecordDetailSheet(
+            record: record,
+            colors: colors,
+            onDelete: onDelete,
+          ),
     );
   }
 }

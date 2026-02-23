@@ -39,9 +39,8 @@ class StoolTypeSelector extends StatelessWidget {
                   margin: const EdgeInsets.symmetric(horizontal: 2),
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   decoration: BoxDecoration(
-                    color: value == type
-                        ? colors.primary
-                        : colors.surfaceVariant,
+                    color:
+                        value == type ? colors.primary : colors.surfaceVariant,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Column(
@@ -54,9 +53,10 @@ class StoolTypeSelector extends StatelessWidget {
                         '$type',
                         style: TextStyle(
                           fontSize: 12,
-                          color: value == type
-                              ? colors.textOnPrimary
-                              : colors.textSecondary,
+                          color:
+                              value == type
+                                  ? colors.textOnPrimary
+                                  : colors.textSecondary,
                         ),
                       ),
                     ],
@@ -110,43 +110,48 @@ class ColorSelector extends StatelessWidget {
         Wrap(
           spacing: 8,
           runSpacing: 8,
-          children: _options.map((c) {
-            final isSelected = value == c['value'];
-            return GestureDetector(
-              onTap: () => onChanged(c['value'] as String),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: colors.surfaceVariant,
-                  borderRadius: BorderRadius.circular(16),
-                  border: isSelected
-                      ? Border.all(color: colors.primary, width: 2)
-                      : null,
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 12,
-                      height: 12,
-                      decoration: BoxDecoration(
-                        color: c['color'] as Color,
-                        shape: BoxShape.circle,
-                      ),
+          children:
+              _options.map((c) {
+                final isSelected = value == c['value'];
+                return GestureDetector(
+                  onTap: () => onChanged(c['value'] as String),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
                     ),
-                    const SizedBox(width: 6),
-                    Text(
-                      c['label'] as String,
-                      style: TextStyle(fontSize: 12, color: colors.textPrimary),
+                    decoration: BoxDecoration(
+                      color: colors.surfaceVariant,
+                      borderRadius: BorderRadius.circular(16),
+                      border:
+                          isSelected
+                              ? Border.all(color: colors.primary, width: 2)
+                              : null,
                     ),
-                  ],
-                ),
-              ),
-            );
-          }).toList(),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 12,
+                          height: 12,
+                          decoration: BoxDecoration(
+                            color: c['color'] as Color,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          c['label'] as String,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: colors.textPrimary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }).toList(),
         ),
       ],
     );
@@ -191,9 +196,8 @@ class SmellSelector extends StatelessWidget {
                   margin: const EdgeInsets.symmetric(horizontal: 2),
                   padding: const EdgeInsets.symmetric(vertical: 10),
                   decoration: BoxDecoration(
-                    color: value == level
-                        ? colors.primary
-                        : colors.surfaceVariant,
+                    color:
+                        value == level ? colors.primary : colors.surfaceVariant,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
@@ -201,9 +205,10 @@ class SmellSelector extends StatelessWidget {
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 12,
-                      color: value == level
-                          ? colors.textOnPrimary
-                          : colors.textSecondary,
+                      color:
+                          value == level
+                              ? colors.textOnPrimary
+                              : colors.textSecondary,
                     ),
                   ),
                 ),
@@ -253,41 +258,44 @@ class FeelingSelector extends StatelessWidget {
         Wrap(
           spacing: 8,
           runSpacing: 8,
-          children: _feelings.map((f) {
-            final isSelected = value == f['value'];
-            return GestureDetector(
-              onTap: () => onChanged(f['value'] as String),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: isSelected ? colors.primary : colors.surfaceVariant,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      f['emoji'] as String,
-                      style: const TextStyle(fontSize: 16),
+          children:
+              _feelings.map((f) {
+                final isSelected = value == f['value'];
+                return GestureDetector(
+                  onTap: () => onChanged(f['value'] as String),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
                     ),
-                    const SizedBox(width: 4),
-                    Text(
-                      f['label'] as String,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: isSelected
-                            ? colors.textOnPrimary
-                            : colors.textSecondary,
-                      ),
+                    decoration: BoxDecoration(
+                      color:
+                          isSelected ? colors.primary : colors.surfaceVariant,
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                  ],
-                ),
-              ),
-            );
-          }).toList(),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          f['emoji'] as String,
+                          style: const TextStyle(fontSize: 16),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          f['label'] as String,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color:
+                                isSelected
+                                    ? colors.textOnPrimary
+                                    : colors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }).toList(),
         ),
       ],
     );
@@ -325,39 +333,42 @@ class SymptomsSelector extends StatelessWidget {
         Wrap(
           spacing: 8,
           runSpacing: 8,
-          children: _allSymptoms.map((s) {
-            final isSelected = value.contains(s);
-            return GestureDetector(
-              onTap: () {
-                final newList = List<String>.from(value);
-                if (isSelected) {
-                  newList.remove(s);
-                } else {
-                  newList.add(s);
-                }
-                onChanged(newList);
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: isSelected ? colors.primary : colors.surfaceVariant,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Text(
-                  s,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: isSelected
-                        ? colors.textOnPrimary
-                        : colors.textSecondary,
+          children:
+              _allSymptoms.map((s) {
+                final isSelected = value.contains(s);
+                return GestureDetector(
+                  onTap: () {
+                    final newList = List<String>.from(value);
+                    if (isSelected) {
+                      newList.remove(s);
+                    } else {
+                      newList.add(s);
+                    }
+                    onChanged(newList);
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color:
+                          isSelected ? colors.primary : colors.surfaceVariant,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Text(
+                      s,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color:
+                            isSelected
+                                ? colors.textOnPrimary
+                                : colors.textSecondary,
+                      ),
+                    ),
                   ),
-                ),
-              ),
-            );
-          }).toList(),
+                );
+              }).toList(),
         ),
       ],
     );

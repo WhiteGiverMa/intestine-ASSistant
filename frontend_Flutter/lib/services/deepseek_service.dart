@@ -28,7 +28,8 @@ class DeepSeekService {
   }
 
   static Future<String?> getApiUrl() async {
-    return await LocalDbService.getSetting('deepseek_api_url') ?? _defaultBaseUrl;
+    return await LocalDbService.getSetting('deepseek_api_url') ??
+        _defaultBaseUrl;
   }
 
   static Future<void> setApiUrl(String? apiUrl) async {
@@ -93,18 +94,20 @@ class DeepSeekService {
 
     messages.add({'role': 'user', 'content': message});
 
-    final response = await http.post(
-      Uri.parse('$apiUrl/v1/chat/completions'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $apiKey',
-      },
-      body: jsonEncode({
-        'model': model,
-        'messages': messages,
-        'stream': false,
-      }),
-    ).timeout(const Duration(seconds: 60));
+    final response = await http
+        .post(
+          Uri.parse('$apiUrl/v1/chat/completions'),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $apiKey',
+          },
+          body: jsonEncode({
+            'model': model,
+            'messages': messages,
+            'stream': false,
+          }),
+        )
+        .timeout(const Duration(seconds: 60));
 
     if (response.statusCode != 200) {
       final error = jsonDecode(response.body);
@@ -155,14 +158,19 @@ class DeepSeekService {
       // DeepSeek reasoner models support thinking
     }
 
-    final request = http.Request('POST', Uri.parse('$apiUrl/v1/chat/completions'));
+    final request = http.Request(
+      'POST',
+      Uri.parse('$apiUrl/v1/chat/completions'),
+    );
     request.headers.addAll({
       'Content-Type': 'application/json',
       'Authorization': 'Bearer $apiKey',
     });
     request.body = jsonEncode(requestBody);
 
-    final streamedResponse = await request.send().timeout(const Duration(seconds: 120));
+    final streamedResponse = await request.send().timeout(
+      const Duration(seconds: 120),
+    );
 
     if (streamedResponse.statusCode != 200) {
       final response = await http.Response.fromStream(streamedResponse);
@@ -252,12 +260,16 @@ class DeepSeekService {
     buffer.writeln('- 平均每日频率: ${stats.avgFrequencyPerDay.toStringAsFixed(2)}');
     buffer.writeln('- 平均时长: ${stats.avgDurationMinutes.toStringAsFixed(1)} 分钟');
     buffer.writeln('- 健康评分: ${stats.healthScore}');
-    buffer.writeln('- 时间分布: 上午 ${stats.timeDistribution.morning}, 下午 ${stats.timeDistribution.afternoon}, 晚上 ${stats.timeDistribution.evening}');
+    buffer.writeln(
+      '- 时间分布: 上午 ${stats.timeDistribution.morning}, 下午 ${stats.timeDistribution.afternoon}, 晚上 ${stats.timeDistribution.evening}',
+    );
     buffer.writeln('- 大便类型分布: ${stats.stoolTypeDistribution}');
     buffer.writeln();
     buffer.writeln('## 最近记录');
     for (final record in records.take(10)) {
-      buffer.writeln('- ${record.recordDate} ${record.recordTime ?? ""}: 类型${record.stoolType ?? "?"}, 时长${record.durationMinutes ?? "?"}分钟, 感受${record.feeling ?? "?"}');
+      buffer.writeln(
+        '- ${record.recordDate} ${record.recordTime ?? ""}: 类型${record.stoolType ?? "?"}, 时长${record.durationMinutes ?? "?"}分钟, 感受${record.feeling ?? "?"}',
+      );
     }
 
     return buffer.toString();
@@ -300,26 +312,28 @@ class DeepSeekService {
       final json = jsonDecode(jsonStr);
       return AnalysisResult(
         healthScore: json['health_score'] ?? 70,
-        insights: (json['insights'] as List?)
-            ?.map((e) => Insight.fromJson(e))
-            .toList() ?? [],
-        suggestions: (json['suggestions'] as List?)
-            ?.map((e) => Suggestion.fromJson(e))
-            .toList() ?? [],
-        warnings: (json['warnings'] as List?)
-            ?.map((e) => Warning.fromJson(e))
-            .toList() ?? [],
+        insights:
+            (json['insights'] as List?)
+                ?.map((e) => Insight.fromJson(e))
+                .toList() ??
+            [],
+        suggestions:
+            (json['suggestions'] as List?)
+                ?.map((e) => Suggestion.fromJson(e))
+                .toList() ??
+            [],
+        warnings:
+            (json['warnings'] as List?)
+                ?.map((e) => Warning.fromJson(e))
+                .toList() ??
+            [],
       );
     } catch (e) {
       // Fallback: return basic analysis
       return AnalysisResult(
         healthScore: 70,
         insights: [
-          Insight(
-            type: 'general',
-            title: '分析完成',
-            description: response,
-          ),
+          Insight(type: 'general', title: '分析完成', description: response),
         ],
         suggestions: [],
         warnings: [],

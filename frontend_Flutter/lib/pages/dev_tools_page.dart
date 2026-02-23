@@ -95,7 +95,7 @@ class _DevToolsPageState extends State<DevToolsPage> {
         child: SafeArea(
           child: Column(
             children: [
-              AppHeader(title: '开发者工具', showBackButton: true),
+              const AppHeader(title: '开发者工具', showBackButton: true),
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(16),

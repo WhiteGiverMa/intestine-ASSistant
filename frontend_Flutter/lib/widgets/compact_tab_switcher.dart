@@ -46,44 +46,45 @@ class CompactTabBar extends StatelessWidget {
           color: isSelected ? colors.primary : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
         ),
-        child: tab.icon != null
-            ? Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    tab.icon,
-                    size: 14,
-                    color: isSelected
-                        ? colors.textOnPrimary
-                        : colors.textSecondary,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    tab.label,
-                    style: TextStyle(
-                      color: isSelected
-                          ? colors.textOnPrimary
-                          : colors.textSecondary,
-                      fontSize: 12,
-                      fontWeight: isSelected
-                          ? FontWeight.w600
-                          : FontWeight.w500,
+        child:
+            tab.icon != null
+                ? Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      tab.icon,
+                      size: 14,
+                      color:
+                          isSelected
+                              ? colors.textOnPrimary
+                              : colors.textSecondary,
                     ),
+                    const SizedBox(width: 4),
+                    Text(
+                      tab.label,
+                      style: TextStyle(
+                        color:
+                            isSelected
+                                ? colors.textOnPrimary
+                                : colors.textSecondary,
+                        fontSize: 12,
+                        fontWeight:
+                            isSelected ? FontWeight.w600 : FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                )
+                : Text(
+                  tab.label,
+                  style: TextStyle(
+                    color:
+                        isSelected
+                            ? colors.textOnPrimary
+                            : colors.textSecondary,
+                    fontSize: 12,
+                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                   ),
-                ],
-              )
-            : Text(
-                tab.label,
-                style: TextStyle(
-                  color: isSelected
-                      ? colors.textOnPrimary
-                      : colors.textSecondary,
-                  fontSize: 12,
-                  fontWeight: isSelected
-                      ? FontWeight.w600
-                      : FontWeight.w500,
                 ),
-              ),
       ),
     );
   }
@@ -127,7 +128,8 @@ class CompactTabContentState extends State<CompactTabContent>
   @override
   void didUpdateWidget(CompactTabContent oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (_tabController != null && oldWidget.currentIndex != widget.currentIndex) {
+    if (_tabController != null &&
+        oldWidget.currentIndex != widget.currentIndex) {
       if (_tabController!.index != widget.currentIndex) {
         _tabController!.animateTo(widget.currentIndex);
       }
@@ -184,9 +186,5 @@ class CompactTabItem {
   final IconData? icon;
   final Widget content;
 
-  const CompactTabItem({
-    required this.label,
-    required this.content,
-    this.icon,
-  });
+  const CompactTabItem({required this.label, required this.content, this.icon});
 }

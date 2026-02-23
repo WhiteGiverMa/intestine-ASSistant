@@ -23,7 +23,7 @@ class AboutPage extends StatelessWidget {
         child: SafeArea(
           child: Column(
             children: [
-              AppHeader(title: '关于', showBackButton: true),
+              const AppHeader(title: '关于', showBackButton: true),
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(16),

@@ -260,15 +260,14 @@ class DateInputFieldState extends State<DateInputField> {
     final monthText = _monthController.text.trim();
     final dayText = _dayController.text.trim();
 
-    final year = yearText.isNotEmpty
-        ? int.tryParse(yearText)
-        : _currentDate.year;
-    final month = monthText.isNotEmpty
-        ? int.tryParse(monthText)
-        : _currentDate.month;
-    final day = widget.showDay && dayText.isNotEmpty
-        ? int.tryParse(dayText)
-        : _currentDate.day;
+    final year =
+        yearText.isNotEmpty ? int.tryParse(yearText) : _currentDate.year;
+    final month =
+        monthText.isNotEmpty ? int.tryParse(monthText) : _currentDate.month;
+    final day =
+        widget.showDay && dayText.isNotEmpty
+            ? int.tryParse(dayText)
+            : _currentDate.day;
 
     if (year == null || month == null || day == null) {
       return;

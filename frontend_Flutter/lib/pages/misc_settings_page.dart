@@ -98,7 +98,7 @@ class _MiscSettingsPageState extends State<MiscSettingsPage> {
         child: SafeArea(
           child: Column(
             children: [
-              AppHeader(title: '其他设置', showBackButton: true),
+              const AppHeader(title: '其他设置', showBackButton: true),
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(16),

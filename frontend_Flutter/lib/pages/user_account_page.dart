@@ -69,7 +69,7 @@ class _UserAccountPageState extends State<UserAccountPage> {
         child: SafeArea(
           child: Column(
             children: [
-              AppHeader(title: '用户信息', showBackButton: true),
+              const AppHeader(title: '用户信息', showBackButton: true),
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(16),
@@ -100,7 +100,7 @@ class _UserAccountPageState extends State<UserAccountPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          const Row(
             children: [
               Text('👤', style: TextStyle(fontSize: 20)),
               SizedBox(width: 8),
@@ -144,7 +144,7 @@ class _UserAccountPageState extends State<UserAccountPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          const Row(
             children: [
               Text('✏️', style: TextStyle(fontSize: 20)),
               SizedBox(width: 8),
@@ -193,9 +193,10 @@ class _UserAccountPageState extends State<UserAccountPage> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: isSuccess
-            ? colors.success.withValues(alpha: 0.1)
-            : colors.error.withValues(alpha: 0.1),
+        color:
+            isSuccess
+                ? colors.success.withValues(alpha: 0.1)
+                : colors.error.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(

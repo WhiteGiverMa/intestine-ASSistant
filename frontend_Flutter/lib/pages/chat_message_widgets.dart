@@ -265,9 +265,7 @@ class _CodeBlockWidgetState extends State<CodeBlockWidget> {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: const BoxDecoration(
               color: Color(0xFF2D2D2D),
-              borderRadius: BorderRadius.vertical(
-                top: Radius.circular(8),
-              ),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(8)),
             ),
             child: Row(
               children: [
@@ -286,17 +284,17 @@ class _CodeBlockWidgetState extends State<CodeBlockWidget> {
                       Icon(
                         _copied ? Icons.check : Icons.copy,
                         size: 16,
-                        color: _copied
-                            ? colors.success
-                            : const Color(0xFF808080),
+                        color:
+                            _copied ? colors.success : const Color(0xFF808080),
                       ),
                       const SizedBox(width: 4),
                       Text(
                         _copied ? '已复制' : '复制',
                         style: TextStyle(
-                          color: _copied
-                              ? colors.success
-                              : const Color(0xFF808080),
+                          color:
+                              _copied
+                                  ? colors.success
+                                  : const Color(0xFF808080),
                           fontSize: 12,
                         ),
                       ),
@@ -370,32 +368,21 @@ class _CodeBlockWidgetState extends State<CodeBlockWidget> {
 
     if (node is String) {
       spans.add(
-        TextSpan(
-          text: node,
-          style: const TextStyle(color: Colors.white),
-        ),
+        TextSpan(text: node, style: const TextStyle(color: Colors.white)),
       );
     } else if (node.className != null && node.className!.isNotEmpty) {
       final color = _getColorForClass(node.className!);
       if (node.children != null) {
         for (final child in node.children!) {
           if (child is String) {
-            spans.add(
-              TextSpan(
-                text: child,
-                style: TextStyle(color: color),
-              ),
-            );
+            spans.add(TextSpan(text: child, style: TextStyle(color: color)));
           } else {
             spans.addAll(_nodeToSpans(child));
           }
         }
       } else if (node.value != null) {
         spans.add(
-          TextSpan(
-            text: node.value.toString(),
-            style: TextStyle(color: color),
-          ),
+          TextSpan(text: node.value.toString(), style: TextStyle(color: color)),
         );
       }
     } else if (node.children != null) {

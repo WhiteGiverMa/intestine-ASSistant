@@ -9,7 +9,6 @@
 // @brief: Authentication state management for local-first mode
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../models/models.dart';
 import '../services/local_db_service.dart';
 import '../services/database_service.dart';
 

@@ -8,11 +8,7 @@ class TrendChart extends StatelessWidget {
   final StatsTrends? trends;
   final ThemeColors colors;
 
-  const TrendChart({
-    super.key,
-    required this.trends,
-    required this.colors,
-  });
+  const TrendChart({super.key, required this.trends, required this.colors});
 
   @override
   Widget build(BuildContext context) {
@@ -28,7 +24,8 @@ class TrendChart extends StatelessWidget {
 
     final spots = <FlSpot>[];
     for (int i = 0; i < trendsList.length; i++) {
-      final value = trendsList[i].isRecorded ? trendsList[i].value.toDouble() : 0.0;
+      final value =
+          trendsList[i].isRecorded ? trendsList[i].value.toDouble() : 0.0;
       spots.add(FlSpot(i.toDouble(), value));
     }
 
@@ -205,9 +202,10 @@ class TrendChart extends StatelessWidget {
                           TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
-                            color: t.isRecorded
-                                ? colors.primary
-                                : colors.textSecondary,
+                            color:
+                                t.isRecorded
+                                    ? colors.primary
+                                    : colors.textSecondary,
                           ),
                         );
                       }).toList();
@@ -259,8 +257,9 @@ class _StoolTypePieChartState extends State<StoolTypePieChart> {
     if (total == 0) return const SizedBox.shrink();
 
     final sections = <PieChartSectionData>[];
-    final sortedEntries = distribution.entries.toList()
-      ..sort((a, b) => int.parse(a.key).compareTo(int.parse(b.key)));
+    final sortedEntries =
+        distribution.entries.toList()
+          ..sort((a, b) => int.parse(a.key).compareTo(int.parse(b.key)));
 
     for (final entry in sortedEntries) {
       final typeNum = int.parse(entry.key);
@@ -317,9 +316,10 @@ class _StoolTypePieChartState extends State<StoolTypePieChart> {
                     if (touchedIndex >= 0 &&
                         touchedIndex < sortedEntries.length) {
                       setState(
-                        () => _selectedPieSection = int.parse(
-                          sortedEntries[touchedIndex].key,
-                        ),
+                        () =>
+                            _selectedPieSection = int.parse(
+                              sortedEntries[touchedIndex].key,
+                            ),
                       );
                     }
                   },
@@ -331,27 +331,31 @@ class _StoolTypePieChartState extends State<StoolTypePieChart> {
           Wrap(
             spacing: 8,
             runSpacing: 4,
-            children: sortedEntries.map((entry) {
-              final typeNum = int.parse(entry.key);
-              return Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 8,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      color: _chartColors[typeNum - 1],
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    'T$typeNum',
-                    style: TextStyle(fontSize: 10, color: widget.colors.textSecondary),
-                  ),
-                ],
-              );
-            }).toList(),
+            children:
+                sortedEntries.map((entry) {
+                  final typeNum = int.parse(entry.key);
+                  return Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          color: _chartColors[typeNum - 1],
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'T$typeNum',
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: widget.colors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  );
+                }).toList(),
           ),
         ],
       ),
@@ -489,11 +493,7 @@ class StatsGrid extends StatelessWidget {
   final StatsSummary? summary;
   final ThemeColors colors;
 
-  const StatsGrid({
-    super.key,
-    required this.summary,
-    required this.colors,
-  });
+  const StatsGrid({super.key, required this.summary, required this.colors});
 
   @override
   Widget build(BuildContext context) {

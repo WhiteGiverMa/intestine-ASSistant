@@ -106,9 +106,10 @@ class _RecordPageState extends State<RecordPage> {
       await ApiService.createRecord(
         recordDate: _getDateString(),
         recordTime: _timeController.text,
-        durationMinutes: _durationController.text.isNotEmpty
-            ? int.parse(_durationController.text)
-            : null,
+        durationMinutes:
+            _durationController.text.isNotEmpty
+                ? int.parse(_durationController.text)
+                : null,
         stoolType: _stoolType,
         color: _color,
         smellLevel: _smellLevel,
@@ -217,9 +218,10 @@ class _RecordPageState extends State<RecordPage> {
                   '手动输入',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: !_isTimerMode
-                        ? colors.textOnPrimary
-                        : colors.textSecondary,
+                    color:
+                        !_isTimerMode
+                            ? colors.textOnPrimary
+                            : colors.textSecondary,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -239,9 +241,10 @@ class _RecordPageState extends State<RecordPage> {
                   '计时器',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: _isTimerMode
-                        ? colors.textOnPrimary
-                        : colors.textSecondary,
+                    color:
+                        _isTimerMode
+                            ? colors.textOnPrimary
+                            : colors.textSecondary,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -395,11 +398,12 @@ class _RecordPageState extends State<RecordPage> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: _message!.contains('成功')
-                    ? colors.success.withValues(alpha: 0.1)
-                    : (_message!.contains('登录') || _message!.contains('过期'))
-                    ? colors.warning.withValues(alpha: 0.1)
-                    : colors.errorBackground,
+                color:
+                    _message!.contains('成功')
+                        ? colors.success.withValues(alpha: 0.1)
+                        : (_message!.contains('登录') || _message!.contains('过期'))
+                        ? colors.warning.withValues(alpha: 0.1)
+                        : colors.errorBackground,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Column(
@@ -408,12 +412,13 @@ class _RecordPageState extends State<RecordPage> {
                     _message!,
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: _message!.contains('成功')
-                          ? colors.success
-                          : (_message!.contains('登录') ||
-                                _message!.contains('过期'))
-                          ? colors.warning
-                          : colors.error,
+                      color:
+                          _message!.contains('成功')
+                              ? colors.success
+                              : (_message!.contains('登录') ||
+                                  _message!.contains('过期'))
+                              ? colors.warning
+                              : colors.error,
                       fontSize: 15,
                     ),
                   ),

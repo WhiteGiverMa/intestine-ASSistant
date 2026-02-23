@@ -195,9 +195,10 @@ class _CalendarWidgetState extends State<CalendarWidget> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
         color: colors.primary.withValues(alpha: 0.1),
-        borderRadius: widget.isExpanded
-            ? const BorderRadius.vertical(top: Radius.circular(16))
-            : BorderRadius.circular(16),
+        borderRadius:
+            widget.isExpanded
+                ? const BorderRadius.vertical(top: Radius.circular(16))
+                : BorderRadius.circular(16),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -256,29 +257,27 @@ class _CalendarWidgetState extends State<CalendarWidget> {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
-        children: weekdays.map((day) {
-          return Expanded(
-            child: Center(
-              child: Text(
-                day,
-                style: TextStyle(
-                  fontSize: 11,
-                  color: colors.textSecondary,
-                  fontWeight: FontWeight.w500,
+        children:
+            weekdays.map((day) {
+              return Expanded(
+                child: Center(
+                  child: Text(
+                    day,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: colors.textSecondary,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
                 ),
-              ),
-            ),
-          );
-        }).toList(),
+              );
+            }).toList(),
       ),
     );
   }
 
   Widget _buildCalendarGrid(ThemeColors colors) {
-    final firstDayOfMonth = DateTime(
-      _currentMonth.year,
-      _currentMonth.month,
-    );
+    final firstDayOfMonth = DateTime(_currentMonth.year, _currentMonth.month);
     final lastDayOfMonth = DateTime(
       _currentMonth.year,
       _currentMonth.month + 1,
@@ -379,12 +378,12 @@ class _CalendarWidgetState extends State<CalendarWidget> {
           borderRadius: BorderRadius.circular(6),
           border:
               isToday &&
-                  !isSelected &&
-                  !isRangeStart &&
-                  !isRangeEnd &&
-                  !isPendingStart
-              ? Border.all(color: colors.primary)
-              : null,
+                      !isSelected &&
+                      !isRangeStart &&
+                      !isRangeEnd &&
+                      !isPendingStart
+                  ? Border.all(color: colors.primary)
+                  : null,
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -404,12 +403,12 @@ class _CalendarWidgetState extends State<CalendarWidget> {
                 decoration: BoxDecoration(
                   color:
                       isSelected ||
-                          isRangeStart ||
-                          isRangeEnd ||
-                          isInRange ||
-                          isPendingStart
-                      ? colors.textOnPrimary.withValues(alpha: 0.3)
-                      : colors.primary.withValues(alpha: 0.2),
+                              isRangeStart ||
+                              isRangeEnd ||
+                              isInRange ||
+                              isPendingStart
+                          ? colors.textOnPrimary.withValues(alpha: 0.3)
+                          : colors.primary.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(3),
                 ),
                 child: Text(
@@ -419,11 +418,11 @@ class _CalendarWidgetState extends State<CalendarWidget> {
                     fontWeight: FontWeight.bold,
                     color:
                         isSelected ||
-                            isRangeStart ||
-                            isRangeEnd ||
-                            isPendingStart
-                        ? colors.textOnPrimary
-                        : colors.primary,
+                                isRangeStart ||
+                                isRangeEnd ||
+                                isPendingStart
+                            ? colors.textOnPrimary
+                            : colors.primary,
                   ),
                 ),
               )
@@ -433,8 +432,8 @@ class _CalendarWidgetState extends State<CalendarWidget> {
                 decoration: BoxDecoration(
                   color:
                       isSelected || isRangeStart || isRangeEnd || isPendingStart
-                      ? colors.textOnPrimary.withValues(alpha: 0.3)
-                      : colors.textHint.withValues(alpha: 0.2),
+                          ? colors.textOnPrimary.withValues(alpha: 0.3)
+                          : colors.textHint.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(3),
                 ),
                 child: Text(
@@ -444,11 +443,11 @@ class _CalendarWidgetState extends State<CalendarWidget> {
                     fontWeight: FontWeight.bold,
                     color:
                         isSelected ||
-                            isRangeStart ||
-                            isRangeEnd ||
-                            isPendingStart
-                        ? colors.textOnPrimary
-                        : colors.textHint,
+                                isRangeStart ||
+                                isRangeEnd ||
+                                isPendingStart
+                            ? colors.textOnPrimary
+                            : colors.textHint,
                   ),
                 ),
               ),

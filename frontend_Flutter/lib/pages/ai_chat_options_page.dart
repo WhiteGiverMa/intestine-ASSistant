@@ -45,7 +45,8 @@ class _AiChatOptionsPageState extends State<AiChatOptionsPage> {
       final settings = await ApiService.getUserSettings();
       setState(() {
         _aiApiKeyController.text = settings['ai_api_key'] ?? '';
-        _aiApiUrlController.text = settings['ai_api_url'] ?? 'https://api.deepseek.com';
+        _aiApiUrlController.text =
+            settings['ai_api_url'] ?? 'https://api.deepseek.com';
         _aiModelController.text = settings['ai_model'] ?? 'deepseek-chat';
         _systemPromptController.text = settings['default_system_prompt'] ?? '';
         _loading = false;
@@ -84,20 +85,21 @@ class _AiChatOptionsPageState extends State<AiChatOptionsPage> {
     final colors = context.read<ThemeProvider>().colors;
     final confirm = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('清除所有对话'),
-        content: const Text('确定要清除所有对话记录吗？此操作不可恢复。'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('取消'),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('清除所有对话'),
+            content: const Text('确定要清除所有对话记录吗？此操作不可恢复。'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('取消'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: Text('确定', style: TextStyle(color: colors.error)),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text('确定', style: TextStyle(color: colors.error)),
-          ),
-        ],
-      ),
     );
 
     if (confirm == true) {
@@ -145,7 +147,7 @@ class _AiChatOptionsPageState extends State<AiChatOptionsPage> {
         child: SafeArea(
           child: Column(
             children: [
-              AppHeader(title: 'AI对话选项', showBackButton: true),
+              const AppHeader(title: 'AI对话选项', showBackButton: true),
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(16),
@@ -210,8 +212,8 @@ class _AiChatOptionsPageState extends State<AiChatOptionsPage> {
                 icon: Icon(
                   _obscureApiKey ? Icons.visibility_off : Icons.visibility,
                 ),
-                onPressed: () =>
-                    setState(() => _obscureApiKey = !_obscureApiKey),
+                onPressed:
+                    () => setState(() => _obscureApiKey = !_obscureApiKey),
               ),
             ),
             obscureText: _obscureApiKey,
@@ -346,11 +348,7 @@ class _AiChatOptionsPageState extends State<AiChatOptionsPage> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        _buildLinkButton(
-          'DeepSeek 官网',
-          'https://deepseek.com',
-          colors.primary,
-        ),
+        _buildLinkButton('DeepSeek 官网', 'https://deepseek.com', colors.primary),
       ],
     );
   }
@@ -452,9 +450,10 @@ class _AiChatOptionsPageState extends State<AiChatOptionsPage> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: isSuccess
-            ? colors.success.withValues(alpha: 0.1)
-            : colors.errorBackground,
+        color:
+            isSuccess
+                ? colors.success.withValues(alpha: 0.1)
+                : colors.errorBackground,
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(

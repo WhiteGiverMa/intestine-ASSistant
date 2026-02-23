@@ -104,10 +104,7 @@ class _HomePageState extends State<HomePage> {
           ),
         ),
         const SizedBox(height: 8),
-        Text(
-          '记录您的肠道健康，智能分析守护您',
-          style: TextStyle(color: colors.textSecondary),
-        ),
+        Text('记录您的肠道健康，智能分析守护您', style: TextStyle(color: colors.textSecondary)),
       ],
     );
   }
@@ -134,9 +131,10 @@ class _HomePageState extends State<HomePage> {
                 '智能健康分析',
                 null,
                 colors,
-                onTap: widget.onNavigate != null
-                    ? () => widget.onNavigate!(NavTab.analysis)
-                    : null,
+                onTap:
+                    widget.onNavigate != null
+                        ? () => widget.onNavigate!(NavTab.analysis)
+                        : null,
               ),
             ),
           ],
@@ -155,57 +153,68 @@ class _HomePageState extends State<HomePage> {
     VoidCallback? onTap,
   }) {
     return GestureDetector(
-      onTap: onTap ?? (page != null ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => page)) : null),
+      onTap:
+          onTap ??
+          (page != null
+              ? () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => page),
+              )
+              : null),
       child: Container(
         padding: const EdgeInsets.all(20),
         decoration: ThemeDecorations.card(context, mode: context.themeMode),
-        child: fullWidth
-            ? Row(
-                children: [
-                  Text(emoji, style: const TextStyle(fontSize: 40)),
-                  const SizedBox(width: 16),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: colors.textPrimary,
+        child:
+            fullWidth
+                ? Row(
+                  children: [
+                    Text(emoji, style: const TextStyle(fontSize: 40)),
+                    const SizedBox(width: 16),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: colors.textPrimary,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        subtitle,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: colors.textSecondary,
+                        const SizedBox(height: 4),
+                        Text(
+                          subtitle,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: colors.textSecondary,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                ],
-              )
-            : Column(
-                children: [
-                  Text(emoji, style: const TextStyle(fontSize: 40)),
-                  const SizedBox(height: 12),
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: colors.textPrimary,
+                      ],
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    subtitle,
-                    style: TextStyle(fontSize: 12, color: colors.textSecondary),
-                  ),
-                ],
-              ),
+                  ],
+                )
+                : Column(
+                  children: [
+                    Text(emoji, style: const TextStyle(fontSize: 40)),
+                    const SizedBox(height: 12),
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: colors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: colors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
       ),
     );
   }
@@ -238,46 +247,50 @@ class _HomePageState extends State<HomePage> {
           const SizedBox(height: 16),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: types.map((t) {
-              final status = t['status'] as String;
-              Color statusColor;
-              if (status == '理想') {
-                statusColor = colors.success;
-              } else if (status == '正常') {
-                statusColor = colors.success.withValues(alpha: 0.7);
-              } else if (status.contains('便秘') || status.contains('腹泻')) {
-                statusColor = colors.error;
-              } else {
-                statusColor = colors.warning;
-              }
+            children:
+                types.map((t) {
+                  final status = t['status'] as String;
+                  Color statusColor;
+                  if (status == '理想') {
+                    statusColor = colors.success;
+                  } else if (status == '正常') {
+                    statusColor = colors.success.withValues(alpha: 0.7);
+                  } else if (status.contains('便秘') || status.contains('腹泻')) {
+                    statusColor = colors.error;
+                  } else {
+                    statusColor = colors.warning;
+                  }
 
-              return Column(
-                children: [
-                  Text(
-                    t['emoji'] as String,
-                    style: const TextStyle(fontSize: 24),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '类型${t['type']}',
-                    style: TextStyle(fontSize: 10, color: colors.textSecondary),
-                  ),
-                  Text(
-                    t['desc'] as String,
-                    style: TextStyle(fontSize: 10, color: colors.textHint),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    status,
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: statusColor,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              );
-            }).toList(),
+                  return Column(
+                    children: [
+                      Text(
+                        t['emoji'] as String,
+                        style: const TextStyle(fontSize: 24),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '类型${t['type']}',
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: colors.textSecondary,
+                        ),
+                      ),
+                      Text(
+                        t['desc'] as String,
+                        style: TextStyle(fontSize: 10, color: colors.textHint),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        status,
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: statusColor,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  );
+                }).toList(),
           ),
         ],
       ),

@@ -34,13 +34,14 @@ class YearMonthPicker extends StatefulWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => YearMonthPicker(
-        initialYear: initialYear,
-        initialMonth: initialMonth,
-        minYear: minYear,
-        maxYear: maxYear,
-        accentColor: accentColor,
-      ),
+      builder:
+          (context) => YearMonthPicker(
+            initialYear: initialYear,
+            initialMonth: initialMonth,
+            minYear: minYear,
+            maxYear: maxYear,
+            accentColor: accentColor,
+          ),
     );
   }
 
@@ -211,9 +212,8 @@ class _YearMonthPickerState extends State<YearMonthPicker> {
         children: [
           IconButton(
             icon: const Icon(Icons.chevron_left),
-            onPressed: _selectedYear > _minYear
-                ? () => _onYearChanged(-1)
-                : null,
+            onPressed:
+                _selectedYear > _minYear ? () => _onYearChanged(-1) : null,
             color: accentColor,
           ),
           Expanded(
@@ -229,9 +229,8 @@ class _YearMonthPickerState extends State<YearMonthPicker> {
                     '$year 年',
                     style: TextStyle(
                       fontSize: isSelected ? 24 : 20,
-                      fontWeight: isSelected
-                          ? FontWeight.bold
-                          : FontWeight.normal,
+                      fontWeight:
+                          isSelected ? FontWeight.bold : FontWeight.normal,
                       color: isSelected ? accentColor : colors.textSecondary,
                     ),
                   ),
@@ -241,9 +240,8 @@ class _YearMonthPickerState extends State<YearMonthPicker> {
           ),
           IconButton(
             icon: const Icon(Icons.chevron_right),
-            onPressed: _selectedYear < _maxYear
-                ? () => _onYearChanged(1)
-                : null,
+            onPressed:
+                _selectedYear < _maxYear ? () => _onYearChanged(1) : null,
             color: accentColor,
           ),
         ],

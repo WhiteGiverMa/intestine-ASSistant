@@ -9,11 +9,7 @@ class AppBottomNav extends StatelessWidget {
   final NavTab activeTab;
   final void Function(NavTab tab)? onNavigate;
 
-  const AppBottomNav({
-    super.key,
-    required this.activeTab,
-    this.onNavigate,
-  });
+  const AppBottomNav({super.key, required this.activeTab, this.onNavigate});
 
   static const List<_NavItem> _navItems = [
     _NavItem(NavTab.home, Icons.home_rounded, '首页'),
@@ -43,9 +39,8 @@ class AppBottomNav extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: _navItems
-                .map((item) => _buildNavItem(item, colors))
-                .toList(),
+            children:
+                _navItems.map((item) => _buildNavItem(item, colors)).toList(),
           ),
         ),
       ),

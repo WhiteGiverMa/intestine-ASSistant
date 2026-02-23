@@ -200,9 +200,8 @@ class _AnalysisPageState extends State<AnalysisPage> {
         conversationId: _conversationId,
         recordsStartDate: _recordsStartDate,
         recordsEndDate: _recordsEndDate,
-        thinkingIntensity: _thinkingEnabled
-            ? _thinkingIntensity.toApiValue()
-            : null,
+        thinkingIntensity:
+            _thinkingEnabled ? _thinkingIntensity.toApiValue() : null,
         systemPrompt: _systemPrompt,
       );
       setState(() {
@@ -281,9 +280,8 @@ class _AnalysisPageState extends State<AnalysisPage> {
         conversationId: _conversationId,
         recordsStartDate: _recordsStartDate,
         recordsEndDate: _recordsEndDate,
-        thinkingIntensity: _thinkingEnabled
-            ? _thinkingIntensity.toApiValue()
-            : null,
+        thinkingIntensity:
+            _thinkingEnabled ? _thinkingIntensity.toApiValue() : null,
         systemPrompt: _systemPrompt,
       )) {
         finalConversationId ??= chunk.conversationId;
@@ -301,10 +299,11 @@ class _AnalysisPageState extends State<AnalysisPage> {
               role: 'assistant',
               content: currentMessage.content + (chunk.content ?? ''),
               createdAt: currentMessage.createdAt,
-              thinkingContent: chunk.reasoningContent != null
-                  ? (currentMessage.thinkingContent ?? '') +
-                        chunk.reasoningContent!
-                  : currentMessage.thinkingContent,
+              thinkingContent:
+                  chunk.reasoningContent != null
+                      ? (currentMessage.thinkingContent ?? '') +
+                          chunk.reasoningContent!
+                      : currentMessage.thinkingContent,
             );
           }
         });
@@ -411,22 +410,23 @@ class _AnalysisPageState extends State<AnalysisPage> {
   void _showAuthError() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('登录已过期'),
-        content: const Text('请重新登录'),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (_) => const LoginPage()),
-              );
-            },
-            child: const Text('去登录'),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('登录已过期'),
+            content: const Text('请重新登录'),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (_) => const LoginPage()),
+                  );
+                },
+                child: const Text('去登录'),
+              ),
+            ],
           ),
-        ],
-      ),
     );
   }
 
@@ -437,9 +437,10 @@ class _AnalysisPageState extends State<AnalysisPage> {
 
     final startDate = await showDatePicker(
       context: context,
-      initialDate: _recordsStartDate != null
-          ? DateTime.parse(_recordsStartDate!)
-          : now.subtract(const Duration(days: 7)),
+      initialDate:
+          _recordsStartDate != null
+              ? DateTime.parse(_recordsStartDate!)
+              : now.subtract(const Duration(days: 7)),
       firstDate: firstDate,
       lastDate: lastDate,
       helpText: '选择开始日期',
@@ -449,9 +450,8 @@ class _AnalysisPageState extends State<AnalysisPage> {
 
     final endDate = await showDatePicker(
       context: context,
-      initialDate: _recordsEndDate != null
-          ? DateTime.parse(_recordsEndDate!)
-          : now,
+      initialDate:
+          _recordsEndDate != null ? DateTime.parse(_recordsEndDate!) : now,
       firstDate: startDate,
       lastDate: lastDate,
       helpText: '选择结束日期',
@@ -553,8 +553,8 @@ class _AnalysisPageState extends State<AnalysisPage> {
                         const SizedBox(width: 12),
                         CompactTabBar(
                           currentIndex: _currentTab,
-                          onTabChanged: (index) =>
-                              setState(() => _currentTab = index),
+                          onTabChanged:
+                              (index) => setState(() => _currentTab = index),
                           tabs: const [
                             CompactTabItem(
                               label: 'AI 对话',
@@ -568,29 +568,30 @@ class _AnalysisPageState extends State<AnalysisPage> {
                         ),
                       ],
                     ),
-                    trailing: _aiStatus?.isConfigured == true
-                        ? GestureDetector(
-                            onTap: _openSettings,
-                            child: Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: colors.cardBackground,
-                                borderRadius: BorderRadius.circular(8),
+                    trailing:
+                        _aiStatus?.isConfigured == true
+                            ? GestureDetector(
+                              onTap: _openSettings,
+                              child: Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: colors.cardBackground,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Icon(
+                                  Icons.settings,
+                                  color: colors.textSecondary,
+                                  size: 20,
+                                ),
                               ),
-                              child: Icon(
-                                Icons.settings,
-                                color: colors.textSecondary,
-                                size: 20,
-                              ),
-                            ),
-                          )
-                        : null,
+                            )
+                            : null,
                   ),
                   Expanded(
                     child: CompactTabContent(
                       currentIndex: _currentTab,
-                      onTabChanged: (index) =>
-                          setState(() => _currentTab = index),
+                      onTabChanged:
+                          (index) => setState(() => _currentTab = index),
                       tabs: [
                         CompactTabItem(
                           label: 'AI 对话',
@@ -851,22 +852,23 @@ class _AnalysisPageState extends State<AnalysisPage> {
           Row(
             children: [
               GestureDetector(
-                onTap: hasRecords
-                    ? _clearRecordsDateRange
-                    : _selectRecordsDateRange,
+                onTap:
+                    hasRecords
+                        ? _clearRecordsDateRange
+                        : _selectRecordsDateRange,
                 child: Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 12,
                     vertical: 8,
                   ),
                   decoration: BoxDecoration(
-                    color: hasRecords
-                        ? colors.primaryLight.withValues(alpha: 0.5)
-                        : colors.surfaceVariant,
+                    color:
+                        hasRecords
+                            ? colors.primaryLight.withValues(alpha: 0.5)
+                            : colors.surfaceVariant,
                     borderRadius: BorderRadius.circular(8),
-                    border: hasRecords
-                        ? Border.all(color: colors.primary)
-                        : null,
+                    border:
+                        hasRecords ? Border.all(color: colors.primary) : null,
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -874,21 +876,20 @@ class _AnalysisPageState extends State<AnalysisPage> {
                       Icon(
                         Icons.attach_file,
                         size: 16,
-                        color: hasRecords
-                            ? colors.primary
-                            : colors.textSecondary,
+                        color:
+                            hasRecords ? colors.primary : colors.textSecondary,
                       ),
                       const SizedBox(width: 4),
                       Text(
                         '发送记录',
                         style: TextStyle(
-                          color: hasRecords
-                              ? colors.primary
-                              : colors.textSecondary,
+                          color:
+                              hasRecords
+                                  ? colors.primary
+                                  : colors.textSecondary,
                           fontSize: 12,
-                          fontWeight: hasRecords
-                              ? FontWeight.w600
-                              : FontWeight.normal,
+                          fontWeight:
+                              hasRecords ? FontWeight.w600 : FontWeight.normal,
                         ),
                       ),
                     ],
@@ -904,13 +905,15 @@ class _AnalysisPageState extends State<AnalysisPage> {
                     vertical: 8,
                   ),
                   decoration: BoxDecoration(
-                    color: _thinkingEnabled
-                        ? Colors.orange.shade100
-                        : colors.surfaceVariant,
+                    color:
+                        _thinkingEnabled
+                            ? Colors.orange.shade100
+                            : colors.surfaceVariant,
                     borderRadius: BorderRadius.circular(8),
-                    border: _thinkingEnabled
-                        ? Border.all(color: Colors.orange.shade400)
-                        : null,
+                    border:
+                        _thinkingEnabled
+                            ? Border.all(color: Colors.orange.shade400)
+                            : null,
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -918,21 +921,24 @@ class _AnalysisPageState extends State<AnalysisPage> {
                       Icon(
                         Icons.psychology,
                         size: 16,
-                        color: _thinkingEnabled
-                            ? Colors.orange.shade800
-                            : colors.textSecondary,
+                        color:
+                            _thinkingEnabled
+                                ? Colors.orange.shade800
+                                : colors.textSecondary,
                       ),
                       const SizedBox(width: 4),
                       Text(
                         '深度思考',
                         style: TextStyle(
-                          color: _thinkingEnabled
-                              ? Colors.orange.shade800
-                              : colors.textSecondary,
+                          color:
+                              _thinkingEnabled
+                                  ? Colors.orange.shade800
+                                  : colors.textSecondary,
                           fontSize: 12,
-                          fontWeight: _thinkingEnabled
-                              ? FontWeight.w600
-                              : FontWeight.normal,
+                          fontWeight:
+                              _thinkingEnabled
+                                  ? FontWeight.w600
+                                  : FontWeight.normal,
                         ),
                       ),
                     ],
@@ -948,13 +954,15 @@ class _AnalysisPageState extends State<AnalysisPage> {
                     vertical: 8,
                   ),
                   decoration: BoxDecoration(
-                    color: _streamingEnabled
-                        ? colors.primaryLight.withValues(alpha: 0.5)
-                        : colors.surfaceVariant,
+                    color:
+                        _streamingEnabled
+                            ? colors.primaryLight.withValues(alpha: 0.5)
+                            : colors.surfaceVariant,
                     borderRadius: BorderRadius.circular(8),
-                    border: _streamingEnabled
-                        ? Border.all(color: colors.primary)
-                        : null,
+                    border:
+                        _streamingEnabled
+                            ? Border.all(color: colors.primary)
+                            : null,
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -962,21 +970,24 @@ class _AnalysisPageState extends State<AnalysisPage> {
                       Icon(
                         Icons.stream,
                         size: 16,
-                        color: _streamingEnabled
-                            ? colors.primary
-                            : colors.textSecondary,
+                        color:
+                            _streamingEnabled
+                                ? colors.primary
+                                : colors.textSecondary,
                       ),
                       const SizedBox(width: 4),
                       Text(
                         '流式输出',
                         style: TextStyle(
-                          color: _streamingEnabled
-                              ? colors.primary
-                              : colors.textSecondary,
+                          color:
+                              _streamingEnabled
+                                  ? colors.primary
+                                  : colors.textSecondary,
                           fontSize: 12,
-                          fontWeight: _streamingEnabled
-                              ? FontWeight.w600
-                              : FontWeight.normal,
+                          fontWeight:
+                              _streamingEnabled
+                                  ? FontWeight.w600
+                                  : FontWeight.normal,
                         ),
                       ),
                     ],
@@ -1016,21 +1027,25 @@ class _AnalysisPageState extends State<AnalysisPage> {
                 child: Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: _chatLoading
-                        ? colors.surfaceVariant
-                        : colors.primary,
+                    color:
+                        _chatLoading ? colors.surfaceVariant : colors.primary,
                     shape: BoxShape.circle,
                   ),
-                  child: _chatLoading
-                      ? SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: colors.textPrimary,
+                  child:
+                      _chatLoading
+                          ? SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: colors.textPrimary,
+                            ),
+                          )
+                          : Icon(
+                            Icons.send,
+                            color: colors.textOnPrimary,
+                            size: 20,
                           ),
-                        )
-                      : Icon(Icons.send, color: colors.textOnPrimary, size: 20),
                 ),
               ),
             ],
@@ -1053,12 +1068,13 @@ class _AnalysisPageState extends State<AnalysisPage> {
             AnalysisErrorCard(
               error: _error!,
               colors: colors,
-              onLogin: _isAuthError()
-                  ? () => Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(builder: (_) => const LoginPage()),
-                    )
-                  : null,
+              onLogin:
+                  _isAuthError()
+                      ? () => Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(builder: (_) => const LoginPage()),
+                      )
+                      : null,
             )
           else if (_result != null)
             AnalysisResultView(result: _result!, colors: colors)
@@ -1093,18 +1109,20 @@ class _AnalysisPageState extends State<AnalysisPage> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     decoration: BoxDecoration(
-                      color: _analysisType == 'weekly'
-                          ? colors.primary
-                          : colors.surfaceVariant,
+                      color:
+                          _analysisType == 'weekly'
+                              ? colors.primary
+                              : colors.surfaceVariant,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
                       '周分析',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        color: _analysisType == 'weekly'
-                            ? Colors.white
-                            : colors.textSecondary,
+                        color:
+                            _analysisType == 'weekly'
+                                ? Colors.white
+                                : colors.textSecondary,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -1118,18 +1136,20 @@ class _AnalysisPageState extends State<AnalysisPage> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     decoration: BoxDecoration(
-                      color: _analysisType == 'monthly'
-                          ? colors.primary
-                          : colors.surfaceVariant,
+                      color:
+                          _analysisType == 'monthly'
+                              ? colors.primary
+                              : colors.surfaceVariant,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
                       '月分析',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        color: _analysisType == 'monthly'
-                            ? Colors.white
-                            : colors.textSecondary,
+                        color:
+                            _analysisType == 'monthly'
+                                ? Colors.white
+                                : colors.textSecondary,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
