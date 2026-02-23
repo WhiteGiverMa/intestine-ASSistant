@@ -176,7 +176,6 @@ class _DataOverviewPageState extends State<DataOverviewPage> {
       final records = await ApiService.getRecords(
         startDate: startDate,
         endDate: endDate,
-        page: _currentPage,
       );
 
       setState(() {

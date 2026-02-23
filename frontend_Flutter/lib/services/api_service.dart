@@ -1,21 +1,22 @@
 // @module: api_service
 // @type: service
 // @layer: frontend
-// @depends: [models, http, shared_preferences]
+// @depends: [local_db_service, deepseek_service, http, shared_preferences, models]
 // @exports: [ApiService, ErrorHandler, AppError, ErrorType]
-// @baseUrl: http://localhost:8001/api/v1
 // @features:
-//   - 认证: register, login, logout
-//   - 记录: createRecord, getRecords, deleteRecord
-//   - 统计: getStatsSummary, getStatsTrends
-//   - AI: analyzeData, sendMessage, sendMessageStream
-//   - 设置: getUserSettings, updateUserSettings
-// @brief: API服务层，封装所有HTTP请求和错误处理
+//   - 认证: register, login, logout (保留签名，返回本地用户)
+//   - 记录: createRecord, getRecords, deleteRecord (重定向到本地)
+//   - 统计: getStatsSummary, getStatsTrends (重定向到本地)
+//   - AI: analyzeData, sendMessage, sendMessageStream (重定向到 DeepSeek)
+//   - 设置: getUserSettings, updateUserSettings (重定向到本地)
+// @brief: API服务层，已重构为本地优先，保留接口签名兼容性
 import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/models.dart';
+import 'local_db_service.dart';
+import 'deepseek_service.dart';
 
 enum ErrorType { auth, network, server, unknown }
 
@@ -34,91 +35,50 @@ class AppError {
 }
 
 class ErrorHandler {
-  static const List<String> _authErrorKeywords = [
-    '认证',
-    'token',
-    '令牌',
-    'authenticated',
-    'unauthorized',
-    '登录',
-    '过期',
-  ];
+  static AppError handleError(dynamic error, {String context = ''}) {
+    String message = '操作失败';
+    ErrorType type = ErrorType.unknown;
 
-  static const List<String> _networkErrorKeywords = [
-    'ClientFailed',
-    'ClientException',
-    'SocketException',
-    'SocketConnection',
-    'Connection refused',
-    'Timeout',
-    'Connection timed out',
-    'Network',
-    'network',
-    '连接失败',
-    '网络',
-    '无法连接',
-    'Operation not permitted',
-  ];
-
-  static bool isAuthError(String error) {
-    final lowerError = error.toLowerCase();
-    return _authErrorKeywords.any(
-      (keyword) => lowerError.contains(keyword.toLowerCase()),
-    );
-  }
-
-  static bool isNetworkError(String error) {
-    final lowerError = error.toLowerCase();
-    return _networkErrorKeywords.any(
-      (keyword) => lowerError.contains(keyword.toLowerCase()),
-    );
-  }
-
-  static String getFriendlyMessage(String error) {
-    if (isAuthError(error)) {
-      return '登录已过期，请重新登录';
+    if (error is AppError) {
+      return error;
     }
-    if (isNetworkError(error)) {
-      return '网络连接失败，请检查网络后重试';
-    }
-    if (error.contains('服务器') ||
-        error.contains('500') ||
-        error.contains('502') ||
-        error.contains('503')) {
-      return '服务器暂时不可用，请稍后重试';
-    }
-    return '操作失败，请稍后重试';
-  }
 
-  static AppError handleError(dynamic error) {
-    final errorStr = error.toString().replaceAll('Exception: ', '');
-
-    ErrorType type;
-    if (isAuthError(errorStr)) {
-      type = ErrorType.auth;
-    } else if (isNetworkError(errorStr)) {
-      type = ErrorType.network;
-    } else if (errorStr.contains('服务器') || errorStr.contains('500')) {
-      type = ErrorType.server;
-    } else {
-      type = ErrorType.unknown;
+    if (error is Exception) {
+      final errorStr = error.toString();
+      if (errorStr.contains('网络') || errorStr.contains('connection')) {
+        type = ErrorType.network;
+        message = '网络连接失败';
+      } else if (errorStr.contains('认证') ||
+          errorStr.contains('token') ||
+          errorStr.contains('登录')) {
+        type = ErrorType.auth;
+        message = '认证失败';
+      } else if (errorStr.contains('API') || errorStr.contains('Key')) {
+        type = ErrorType.server;
+        message = 'API调用失败';
+      }
     }
 
     return AppError(
       type: type,
-      message: getFriendlyMessage(errorStr),
-      details: errorStr.length > 100 ? errorStr : null,
-      originalError: errorStr,
+      message: message,
+      details: context.isNotEmpty ? context : null,
+      originalError: error.toString(),
     );
   }
 }
 
 class ApiService {
-  static const String _defaultBaseUrl = 'http://43.156.73.168:8001/api/v1';
+  static const String _defaultBaseUrl = 'http://localhost:8001/api/v1';
 
   static Future<String> _getBaseUrl() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('api_url') ?? _defaultBaseUrl;
+    return prefs.getString('api_base_url') ?? _defaultBaseUrl;
+  }
+
+  static Future<void> setBaseUrl(String url) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('api_base_url', url);
   }
 
   static Future<String?> _getToken() async {
@@ -144,75 +104,56 @@ class ApiService {
     }
   }
 
-  static void _handleResponseError(http.Response response, String defaultMsg) {
-    if (response.statusCode != 200) {
-      try {
-        final error = jsonDecode(response.body);
-        throw Exception(error['detail'] ?? defaultMsg);
-      } catch (e) {
-        if (e is Exception && !e.toString().contains('网络连接失败')) {
-          rethrow;
-        }
-        throw Exception('$defaultMsg (状态码: ${response.statusCode})');
-      }
+  static void _handleResponseError(
+    http.Response response,
+    String defaultMessage,
+  ) {
+    if (response.statusCode >= 200 && response.statusCode < 300) return;
+
+    String errorMsg = defaultMessage;
+    try {
+      final error = jsonDecode(response.body);
+      errorMsg = error['detail'] ?? error['message'] ?? errorMsg;
+    } catch (_) {}
+
+    if (response.statusCode == 401 || response.statusCode == 403) {
+      throw Exception('认证失败: $errorMsg');
+    } else if (response.statusCode >= 500) {
+      throw Exception('服务器错误: $errorMsg');
+    } else {
+      throw Exception(errorMsg);
     }
   }
+
+  // ==================== 认证 (本地模式) ====================
 
   static Future<User> register(
     String email,
     String password, {
     String? nickname,
   }) async {
-    final baseUrl = await _getBaseUrl();
-    final body = <String, dynamic>{'email': email, 'password': password};
-    if (nickname != null) body['nickname'] = nickname;
-
-    final response = await http.post(
-      Uri.parse('$baseUrl/auth/register'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode(body),
+    final user = await LocalDbService.createLocalUser(
+      nickname: nickname ?? 'Local User',
     );
-
-    if (response.statusCode != 200) {
-      final error = jsonDecode(response.body);
-      throw Exception(error['detail'] ?? '注册失败');
-    }
-
-    final data = jsonDecode(response.body);
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('token', data['token']);
-    await prefs.setString('user', jsonEncode(data));
-
-    return User.fromJson(data);
+    return User(
+      userId: user.userId,
+      email: email,
+      nickname: nickname,
+      token: 'local_token_${user.userId}',
+    );
   }
 
-  static Future<User> login(
-    String email,
-    String password, {
-    bool rememberMe = false,
-  }) async {
-    final baseUrl = await _getBaseUrl();
-    final response = await http.post(
-      Uri.parse('$baseUrl/auth/login'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'email': email,
-        'password': password,
-        'remember_me': rememberMe,
-      }),
-    );
-
-    if (response.statusCode != 200) {
-      final error = jsonDecode(response.body);
-      throw Exception(error['detail'] ?? '登录失败');
+  static Future<User> login(String email, String password) async {
+    var user = await LocalDbService.getLocalUser();
+    if (user == null) {
+      user = await LocalDbService.createLocalUser();
     }
-
-    final data = jsonDecode(response.body);
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('token', data['token']);
-    await prefs.setString('user', jsonEncode(data));
-
-    return User.fromJson(data);
+    return User(
+      userId: user.userId,
+      email: email,
+      nickname: user.nickname,
+      token: 'local_token_${user.userId}',
+    );
   }
 
   static Future<void> logout() async {
@@ -221,79 +162,11 @@ class ApiService {
     await prefs.remove('user');
   }
 
-  static Future<void> updatePassword({
-    required String currentPassword,
-    required String newPassword,
-  }) async {
-    final baseUrl = await _getBaseUrl();
-    final headers = await _getHeaders();
-    final response = await http.put(
-      Uri.parse('$baseUrl/auth/password'),
-      headers: headers,
-      body: jsonEncode({
-        'current_password': currentPassword,
-        'new_password': newPassword,
-      }),
-    );
-
-    if (response.statusCode != 200) {
-      final error = jsonDecode(response.body);
-      throw Exception(error['detail'] ?? '修改密码失败');
-    }
-  }
-
-  static Future<String> updateEmail({
-    required String newEmail,
-    required String password,
-  }) async {
-    final baseUrl = await _getBaseUrl();
-    final headers = await _getHeaders();
-    final response = await http.put(
-      Uri.parse('$baseUrl/auth/email'),
-      headers: headers,
-      body: jsonEncode({'new_email': newEmail, 'password': password}),
-    );
-
-    if (response.statusCode != 200) {
-      final error = jsonDecode(response.body);
-      throw Exception(error['detail'] ?? '修改邮箱失败');
-    }
-
-    final data = jsonDecode(response.body);
-    final newEmailResult = data['data']['email'] as String;
-
-    final prefs = await SharedPreferences.getInstance();
-    final userJson = prefs.getString('user');
-    if (userJson != null) {
-      final userData = jsonDecode(userJson);
-      userData['email'] = newEmailResult;
-      await prefs.setString('user', jsonEncode(userData));
-    }
-
-    return newEmailResult;
-  }
-
-  static Future<void> deleteAccount() async {
-    final baseUrl = await _getBaseUrl();
-    final headers = await _getHeaders();
-    final response = await http.delete(
-      Uri.parse('$baseUrl/auth/account'),
-      headers: headers,
-    );
-
-    if (response.statusCode != 200) {
-      final error = jsonDecode(response.body);
-      throw Exception(error['detail'] ?? '注销账号失败');
-    }
-
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('token');
-    await prefs.remove('user');
-  }
+  // ==================== 排便记录 (本地) ====================
 
   static Future<BowelRecord> createRecord({
     required String recordDate,
-    required String recordTime,
+    String? recordTime,
     int? durationMinutes,
     int? stoolType,
     String? color,
@@ -301,106 +174,90 @@ class ApiService {
     String? feeling,
     List<String>? symptoms,
     String? notes,
+    bool isNoBowel = false,
   }) async {
-    final baseUrl = await _getBaseUrl();
-    final headers = await _getHeaders();
-    final body = <String, dynamic>{
-      'record_date': recordDate,
-      'record_time': recordTime,
-    };
-    if (durationMinutes != null) body['duration_minutes'] = durationMinutes;
-    if (stoolType != null) body['stool_type'] = stoolType;
-    if (color != null) body['color'] = color;
-    if (smellLevel != null) body['smell_level'] = smellLevel;
-    if (feeling != null) body['feeling'] = feeling;
-    if (symptoms != null) body['symptoms'] = symptoms;
-    if (notes != null) body['notes'] = notes;
-
-    final response = await http.post(
-      Uri.parse('$baseUrl/records'),
-      headers: headers,
-      body: jsonEncode(body),
+    return await LocalDbService.createRecord(
+      recordDate: recordDate,
+      recordTime: recordTime,
+      durationMinutes: durationMinutes,
+      stoolType: stoolType,
+      color: color,
+      smellLevel: smellLevel,
+      feeling: feeling,
+      symptoms: symptoms,
+      notes: notes,
+      isNoBowel: isNoBowel,
     );
-
-    if (response.statusCode != 200) {
-      final error = jsonDecode(response.body);
-      throw Exception(error['detail'] ?? '创建记录失败');
-    }
-
-    final data = jsonDecode(response.body);
-    return BowelRecord.fromJson(data['data']);
   }
 
   static Future<List<BowelRecord>> getRecords({
     String? startDate,
     String? endDate,
-    int page = 1,
-    int limit = 20,
+    int? limit,
+    int? offset,
   }) async {
-    final baseUrl = await _getBaseUrl();
-    final headers = await _getHeaders();
-    final params = <String, String>{
-      'page': page.toString(),
-      'limit': limit.toString(),
-    };
-    if (startDate != null) params['start_date'] = startDate;
-    if (endDate != null) params['end_date'] = endDate;
-
-    final response = await _safeRequest(
-      () => http.get(
-        Uri.parse('$baseUrl/records').replace(queryParameters: params),
-        headers: headers,
-      ),
+    return await LocalDbService.getRecords(
+      startDate: startDate,
+      endDate: endDate,
+      limit: limit,
+      offset: offset,
     );
+  }
 
-    _handleResponseError(response, '获取记录失败');
+  static Future<BowelRecord?> getRecordById(String recordId) async {
+    return await LocalDbService.getRecordById(recordId);
+  }
 
-    final data = jsonDecode(response.body);
-    return (data['data']['records'] as List)
-        .map((e) => BowelRecord.fromJson(e))
-        .toList();
+  static Future<void> updateRecord({
+    required String recordId,
+    String? recordDate,
+    String? recordTime,
+    int? durationMinutes,
+    int? stoolType,
+    String? color,
+    int? smellLevel,
+    String? feeling,
+    List<String>? symptoms,
+    String? notes,
+    bool? isNoBowel,
+  }) async {
+    await LocalDbService.updateRecord(
+      recordId: recordId,
+      recordDate: recordDate,
+      recordTime: recordTime,
+      durationMinutes: durationMinutes,
+      stoolType: stoolType,
+      color: color,
+      smellLevel: smellLevel,
+      feeling: feeling,
+      symptoms: symptoms,
+      notes: notes,
+      isNoBowel: isNoBowel,
+    );
   }
 
   static Future<void> deleteRecord(String recordId) async {
-    final baseUrl = await _getBaseUrl();
-    final headers = await _getHeaders();
-    final response = await http.delete(
-      Uri.parse('$baseUrl/records/$recordId'),
-      headers: headers,
-    );
-
-    if (response.statusCode != 200) {
-      final error = jsonDecode(response.body);
-      throw Exception(error['detail'] ?? '删除记录失败');
-    }
+    await LocalDbService.deleteRecord(recordId);
   }
 
+  static Future<void> markNoBowel(String date) async {
+    await LocalDbService.markNoBowel(date);
+  }
+
+  static Future<void> unmarkNoBowel(String date) async {
+    await LocalDbService.unmarkNoBowel(date);
+  }
+
+  // ==================== 统计 (本地) ====================
+
   static Future<StatsSummary> getStatsSummary({
-    String period = 'week',
     String? startDate,
     String? endDate,
   }) async {
-    final baseUrl = await _getBaseUrl();
-    final headers = await _getHeaders();
-    final params = <String, String>{};
-    if (startDate != null && endDate != null) {
-      params['start_date'] = startDate;
-      params['end_date'] = endDate;
-    } else {
-      params['period'] = period;
-    }
-
-    final response = await _safeRequest(
-      () => http.get(
-        Uri.parse('$baseUrl/stats/summary').replace(queryParameters: params),
-        headers: headers,
-      ),
+    return await LocalDbService.getStatsSummary(
+      startDate: startDate,
+      endDate: endDate,
     );
-
-    _handleResponseError(response, '获取统计失败');
-
-    final data = jsonDecode(response.body);
-    return StatsSummary.fromJson(data['data']);
   }
 
   static Future<StatsTrends> getStatsTrends({
@@ -409,288 +266,36 @@ class ApiService {
     String? startDate,
     String? endDate,
   }) async {
-    final baseUrl = await _getBaseUrl();
-    final headers = await _getHeaders();
-    final params = <String, String>{};
-    params['metric'] = metric;
-    if (startDate != null && endDate != null) {
-      params['start_date'] = startDate;
-      params['end_date'] = endDate;
-    } else {
-      params['period'] = period;
-    }
-
-    final response = await _safeRequest(
-      () => http.get(
-        Uri.parse('$baseUrl/stats/trends').replace(queryParameters: params),
-        headers: headers,
-      ),
+    return await LocalDbService.getTrends(
+      metric: metric,
+      period: period,
+      startDate: startDate,
+      endDate: endDate,
     );
-
-    _handleResponseError(response, '获取趋势失败');
-
-    final data = jsonDecode(response.body);
-    return StatsTrends.fromJson(data['data']);
-  }
-
-  static Future<AnalysisResult> analyzeData({
-    String analysisType = 'weekly',
-    String? startDate,
-    String? endDate,
-  }) async {
-    final baseUrl = await _getBaseUrl();
-    final headers = await _getHeaders();
-    final body = <String, dynamic>{'analysis_type': analysisType};
-    if (startDate != null) body['start_date'] = startDate;
-    if (endDate != null) body['end_date'] = endDate;
-
-    final response = await http
-        .post(
-          Uri.parse('$baseUrl/ai/analyze'),
-          headers: headers,
-          body: jsonEncode(body),
-        )
-        .timeout(
-          const Duration(seconds: 15),
-          onTimeout: () {
-            throw Exception('分析请求超时，请稍后重试');
-          },
-        );
-
-    if (response.statusCode != 200) {
-      final error = jsonDecode(response.body);
-      throw Exception(error['detail'] ?? '分析失败');
-    }
-
-    final data = jsonDecode(response.body);
-    return AnalysisResult.fromJson(data['data']);
-  }
-
-  static Future<List<AnalysisResult>> getAnalyses() async {
-    final baseUrl = await _getBaseUrl();
-    final headers = await _getHeaders();
-    final response = await http.get(
-      Uri.parse('$baseUrl/ai/analyses'),
-      headers: headers,
-    );
-
-    if (response.statusCode != 200) {
-      final error = jsonDecode(response.body);
-      throw Exception(error['detail'] ?? '获取分析历史失败');
-    }
-
-    final data = jsonDecode(response.body);
-    return (data['data'] as List)
-        .map((e) => AnalysisResult.fromJson(e))
-        .toList();
-  }
-
-  static Future<Map<String, dynamic>> getUserSettings() async {
-    final baseUrl = await _getBaseUrl();
-    final headers = await _getHeaders();
-    final response = await http.get(
-      Uri.parse('$baseUrl/auth/settings'),
-      headers: headers,
-    );
-
-    if (response.statusCode != 200) {
-      final error = jsonDecode(response.body);
-      throw Exception(error['detail'] ?? '获取设置失败');
-    }
-
-    final data = jsonDecode(response.body);
-    return data['data'];
-  }
-
-  static Future<void> updateUserSettings({
-    bool? devMode,
-    String? aiApiKey,
-    String? aiApiUrl,
-    String? aiModel,
-    bool? aiAutoTitle,
-  }) async {
-    final baseUrl = await _getBaseUrl();
-    final headers = await _getHeaders();
-    final body = <String, dynamic>{};
-    if (devMode != null) body['dev_mode'] = devMode;
-    if (aiApiKey != null) body['ai_api_key'] = aiApiKey;
-    if (aiApiUrl != null) body['ai_api_url'] = aiApiUrl;
-    if (aiModel != null) body['ai_model'] = aiModel;
-    if (aiAutoTitle != null) body['ai_auto_title'] = aiAutoTitle;
-
-    final response = await http.put(
-      Uri.parse('$baseUrl/auth/settings'),
-      headers: headers,
-      body: jsonEncode(body),
-    );
-
-    if (response.statusCode != 200) {
-      final error = jsonDecode(response.body);
-      throw Exception(error['detail'] ?? '更新设置失败');
-    }
-  }
-
-  static Future<void> markNoBowel(String date) async {
-    final baseUrl = await _getBaseUrl();
-    final headers = await _getHeaders();
-    http.Response response;
-    try {
-      response = await http.post(
-        Uri.parse('$baseUrl/records/no-bowel'),
-        headers: headers,
-        body: jsonEncode({'date': date}),
-      );
-    } catch (e) {
-      throw Exception('网络连接失败: ${e.toString()}');
-    }
-
-    if (response.statusCode != 200) {
-      String errorMsg = '标注失败';
-      try {
-        final error = jsonDecode(response.body);
-        errorMsg = error['detail'] ?? errorMsg;
-      } catch (_) {}
-      throw Exception(errorMsg);
-    }
-  }
-
-  static Future<void> unmarkNoBowel(String date) async {
-    final baseUrl = await _getBaseUrl();
-    final headers = await _getHeaders();
-    http.Response response;
-    try {
-      response = await http.delete(
-        Uri.parse('$baseUrl/records/no-bowel/$date'),
-        headers: headers,
-      );
-    } catch (e) {
-      throw Exception('网络连接失败: ${e.toString()}');
-    }
-
-    if (response.statusCode != 200) {
-      String errorMsg = '取消标注失败';
-      try {
-        final error = jsonDecode(response.body);
-        errorMsg = error['detail'] ?? errorMsg;
-      } catch (_) {}
-      throw Exception(errorMsg);
-    }
-  }
-
-  static Future<Map<String, dynamic>> markNoBowelBatch(
-    String startDate,
-    String endDate,
-  ) async {
-    final baseUrl = await _getBaseUrl();
-    final headers = await _getHeaders();
-    http.Response response;
-    try {
-      response = await http.post(
-        Uri.parse('$baseUrl/records/no-bowel/batch'),
-        headers: headers,
-        body: jsonEncode({'start_date': startDate, 'end_date': endDate}),
-      );
-    } catch (e) {
-      throw Exception('网络连接失败: ${e.toString()}');
-    }
-
-    if (response.statusCode != 200) {
-      String errorMsg = '批量标注失败';
-      try {
-        final error = jsonDecode(response.body);
-        errorMsg = error['detail'] ?? errorMsg;
-      } catch (_) {}
-      throw Exception(errorMsg);
-    }
-
-    final data = jsonDecode(response.body);
-    return data['data'];
-  }
-
-  static Future<Map<String, dynamic>> deleteRecordsBatch(
-    String startDate,
-    String endDate,
-  ) async {
-    final baseUrl = await _getBaseUrl();
-    final headers = await _getHeaders();
-    http.Response response;
-    try {
-      response = await http.delete(
-        Uri.parse('$baseUrl/records/batch'),
-        headers: headers,
-        body: jsonEncode({'start_date': startDate, 'end_date': endDate}),
-      );
-    } catch (e) {
-      throw Exception('网络连接失败: ${e.toString()}');
-    }
-
-    if (response.statusCode != 200) {
-      String errorMsg = '批量删除失败';
-      try {
-        final error = jsonDecode(response.body);
-        errorMsg = error['detail'] ?? errorMsg;
-      } catch (_) {}
-      throw Exception(errorMsg);
-    }
-
-    final data = jsonDecode(response.body);
-    return data['data'];
-  }
-
-  static Future<Map<String, dynamic>> unmarkNoBowelBatch(
-    String startDate,
-    String endDate,
-  ) async {
-    final baseUrl = await _getBaseUrl();
-    final headers = await _getHeaders();
-    http.Response response;
-    try {
-      response = await http.delete(
-        Uri.parse('$baseUrl/records/no-bowel/batch'),
-        headers: headers,
-        body: jsonEncode({'start_date': startDate, 'end_date': endDate}),
-      );
-    } catch (e) {
-      throw Exception('网络连接失败: ${e.toString()}');
-    }
-
-    if (response.statusCode != 200) {
-      String errorMsg = '批量取消标注失败';
-      try {
-        final error = jsonDecode(response.body);
-        errorMsg = error['detail'] ?? errorMsg;
-      } catch (_) {}
-      throw Exception(errorMsg);
-    }
-
-    final data = jsonDecode(response.body);
-    return data['data'];
   }
 
   static Future<DailyCounts> getDailyCounts({
     String? startDate,
     String? endDate,
   }) async {
-    final baseUrl = await _getBaseUrl();
-    final headers = await _getHeaders();
-    final params = <String, String>{};
-    if (startDate != null) params['start_date'] = startDate;
-    if (endDate != null) params['end_date'] = endDate;
-
-    final response = await http.get(
-      Uri.parse(
-        '$baseUrl/records/daily-counts',
-      ).replace(queryParameters: params),
-      headers: headers,
+    return await LocalDbService.getDailyCounts(
+      startDate: startDate,
+      endDate: endDate,
     );
+  }
 
-    if (response.statusCode != 200) {
-      final error = jsonDecode(response.body);
-      throw Exception(error['detail'] ?? '获取每日统计失败');
-    }
+  // ==================== AI 分析 (DeepSeek) ====================
 
-    final data = jsonDecode(response.body);
-    return DailyCounts.fromJson(data['data']);
+  static Future<AnalysisResult> analyzeData({
+    String analysisType = 'weekly',
+    String? startDate,
+    String? endDate,
+  }) async {
+    return await DeepSeekService.analyzeRecords(
+      analysisType: analysisType,
+      startDate: startDate,
+      endDate: endDate,
+    );
   }
 
   static Future<ChatMessage> sendMessage({
@@ -701,29 +306,42 @@ class ApiService {
     String? systemPrompt,
     String? thinkingIntensity,
   }) async {
-    final baseUrl = await _getBaseUrl();
-    final headers = await _getHeaders();
-    final body = <String, dynamic>{'message': message};
-    if (conversationId != null) body['conversation_id'] = conversationId;
-    if (recordsStartDate != null) body['records_start_date'] = recordsStartDate;
-    if (recordsEndDate != null) body['records_end_date'] = recordsEndDate;
-    if (systemPrompt != null) body['system_prompt'] = systemPrompt;
-    if (thinkingIntensity != null) {
-      body['thinking_intensity'] = thinkingIntensity;
+    ChatSession? session;
+    if (conversationId != null) {
+      session = await LocalDbService.getChatSession(conversationId);
     }
 
-    final response = await _safeRequest(
-      () => http.post(
-        Uri.parse('$baseUrl/ai/chat'),
-        headers: headers,
-        body: jsonEncode(body),
-      ),
+    final response = await DeepSeekService.chat(
+      message: message,
+      systemPrompt: systemPrompt,
+      conversationId: conversationId,
+      history: session?.messages,
     );
 
-    _handleResponseError(response, '发送消息失败');
+    if (conversationId == null) {
+      final newSession = await LocalDbService.createChatSession(
+        systemPrompt: systemPrompt,
+        thinkingIntensity:
+            thinkingIntensity != null
+                ? ThinkingIntensity.fromApiValue(thinkingIntensity)
+                : ThinkingIntensity.medium,
+      );
+      conversationId = newSession.conversationId;
+    }
 
-    final data = jsonDecode(response.body);
-    return ChatMessage.fromJson(data['data']);
+    await LocalDbService.saveMessage(
+      conversationId: conversationId!,
+      role: 'user',
+      content: message,
+    );
+
+    final assistantMessage = await LocalDbService.saveMessage(
+      conversationId: conversationId,
+      role: 'assistant',
+      content: response,
+    );
+
+    return assistantMessage;
   }
 
   static Stream<StreamChatChunk> sendMessageStream({
@@ -734,118 +352,90 @@ class ApiService {
     String? systemPrompt,
     String? thinkingIntensity,
   }) async* {
-    final baseUrl = await _getBaseUrl();
-    final headers = await _getHeaders();
-    final body = <String, dynamic>{'message': message};
-    if (conversationId != null) body['conversation_id'] = conversationId;
-    if (recordsStartDate != null) body['records_start_date'] = recordsStartDate;
-    if (recordsEndDate != null) body['records_end_date'] = recordsEndDate;
-    if (systemPrompt != null) body['system_prompt'] = systemPrompt;
-    if (thinkingIntensity != null) {
-      body['thinking_intensity'] = thinkingIntensity;
+    ChatSession? session;
+    if (conversationId != null) {
+      session = await LocalDbService.getChatSession(conversationId);
     }
 
-    final request = http.Request('POST', Uri.parse('$baseUrl/ai/chat/stream'));
-    request.headers.addAll(headers);
-    request.body = jsonEncode(body);
+    final userMessage = await LocalDbService.saveMessage(
+      conversationId: conversationId ?? '',
+      role: 'user',
+      content: message,
+    );
 
-    final streamedResponse = await request.send();
+    String actualConversationId = conversationId ?? userMessage.conversationId;
 
-    if (streamedResponse.statusCode != 200) {
-      final response = await http.Response.fromStream(streamedResponse);
-      String errorMsg = '发送消息失败';
-      try {
-        final error = jsonDecode(response.body);
-        errorMsg = error['detail'] ?? errorMsg;
-      } catch (_) {}
-      throw Exception(errorMsg);
+    if (conversationId == null) {
+      await LocalDbService.createChatSession(
+        systemPrompt: systemPrompt,
+        thinkingIntensity:
+            thinkingIntensity != null
+                ? ThinkingIntensity.fromApiValue(thinkingIntensity)
+                : ThinkingIntensity.medium,
+      );
     }
 
-    await for (final line in streamedResponse.stream
-        .transform(utf8.decoder)
-        .transform(const LineSplitter())) {
-      if (line.startsWith('data: ')) {
-        final jsonStr = line.substring(6);
-        if (jsonStr.trim().isEmpty) continue;
+    final responseStream = DeepSeekService.chatStream(
+      message: message,
+      systemPrompt: systemPrompt,
+      history: session?.messages,
+      thinkingIntensity: thinkingIntensity,
+    );
 
-        try {
-          final json = jsonDecode(jsonStr);
-          yield StreamChatChunk.fromJson(json);
-        } catch (e) {
-          throw Exception('解析流式响应失败: ${e.toString()}');
-        }
+    String fullContent = '';
+    String? fullReasoningContent;
+
+    await for (final chunk in responseStream) {
+      if (chunk.content != null) {
+        fullContent += chunk.content!;
+      }
+      if (chunk.reasoningContent != null) {
+        fullReasoningContent =
+            (fullReasoningContent ?? '') + chunk.reasoningContent!;
+      }
+      yield chunk;
+    }
+
+    await LocalDbService.saveMessage(
+      conversationId: actualConversationId,
+      role: 'assistant',
+      content: fullContent,
+      thinkingContent: fullReasoningContent,
+    );
+  }
+
+  static Future<ChatSession> getChatHistory({String? conversationId}) async {
+    if (conversationId != null) {
+      final session = await LocalDbService.getChatSession(conversationId);
+      if (session != null) return session;
+    }
+    final sessions = await LocalDbService.getChatSessions(limit: 1);
+    if (sessions.isNotEmpty) {
+      return await LocalDbService.getChatSession(
+            sessions.first.conversationId,
+          ) ??
+          ChatSession(conversationId: '', createdAt: '', updatedAt: '');
+    }
+    return ChatSession(conversationId: '', createdAt: '', updatedAt: '');
+  }
+
+  static Future<void> clearChatHistory({String? conversationId}) async {
+    if (conversationId != null) {
+      await LocalDbService.deleteChatSession(conversationId);
+    } else {
+      final sessions = await LocalDbService.getChatSessions();
+      for (final session in sessions) {
+        await LocalDbService.deleteChatSession(session.conversationId);
       }
     }
   }
 
-  static Future<ChatSession> getChatHistory({String? conversationId}) async {
-    final baseUrl = await _getBaseUrl();
-    final headers = await _getHeaders();
-    final params = <String, String>{};
-    if (conversationId != null) params['conversation_id'] = conversationId;
-
-    final response = await _safeRequest(
-      () => http.get(
-        Uri.parse('$baseUrl/ai/chat/history').replace(queryParameters: params),
-        headers: headers,
-      ),
-    );
-
-    _handleResponseError(response, '获取对话历史失败');
-
-    final data = jsonDecode(response.body);
-    return ChatSession.fromJson(data['data']);
-  }
-
-  static Future<void> clearChatHistory({String? conversationId}) async {
-    final baseUrl = await _getBaseUrl();
-    final headers = await _getHeaders();
-    final params = <String, String>{};
-    if (conversationId != null) params['conversation_id'] = conversationId;
-
-    final response = await http.delete(
-      Uri.parse('$baseUrl/ai/chat').replace(queryParameters: params),
-      headers: headers,
-    );
-
-    if (response.statusCode != 200) {
-      final error = jsonDecode(response.body);
-      throw Exception(error['detail'] ?? '清除对话历史失败');
-    }
-  }
-
   static Future<AiStatus> checkAiStatus() async {
-    final baseUrl = await _getBaseUrl();
-    final headers = await _getHeaders();
-    final response = await _safeRequest(
-      () => http.get(Uri.parse('$baseUrl/ai/status'), headers: headers),
-    );
-
-    _handleResponseError(response, '获取AI状态失败');
-
-    final data = jsonDecode(response.body);
-    return AiStatus.fromJson(data['data']);
+    return await DeepSeekService.checkApiStatus();
   }
 
   static Future<List<ConversationSummary>> getConversations() async {
-    final baseUrl = await _getBaseUrl();
-    final token = await _getToken();
-    if (token == null) throw Exception('未登录');
-
-    final response = await _safeRequest(
-      () => http.get(
-        Uri.parse('$baseUrl/ai/conversations'),
-        headers: {'Authorization': 'Bearer $token'},
-      ),
-    );
-
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      final List conversations = data['data']['conversations'];
-      return conversations.map((e) => ConversationSummary.fromJson(e)).toList();
-    } else {
-      throw Exception('获取对话列表失败');
-    }
+    return await LocalDbService.getChatSessions();
   }
 
   static Future<void> renameConversation({
@@ -854,44 +444,110 @@ class ApiService {
     String? systemPrompt,
     String? thinkingIntensity,
   }) async {
-    final baseUrl = await _getBaseUrl();
-    final token = await _getToken();
-    if (token == null) throw Exception('未登录');
-
-    final body = <String, dynamic>{'title': title};
-    if (systemPrompt != null) body['system_prompt'] = systemPrompt;
-    if (thinkingIntensity != null) {
-      body['thinking_intensity'] = thinkingIntensity;
-    }
-
-    final response = await http.patch(
-      Uri.parse('$baseUrl/ai/conversations/$conversationId'),
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode(body),
-    );
-
-    if (response.statusCode != 200) {
-      throw Exception('重命名对话失败');
-    }
+    await LocalDbService.updateChatSessionTitle(conversationId, title);
   }
 
   static Future<void> deleteConversation({
     required String conversationId,
   }) async {
-    final baseUrl = await _getBaseUrl();
-    final token = await _getToken();
-    if (token == null) throw Exception('未登录');
+    await LocalDbService.deleteChatSession(conversationId);
+  }
 
-    final response = await http.delete(
-      Uri.parse('$baseUrl/ai/conversations/$conversationId'),
-      headers: {'Authorization': 'Bearer $token'},
+  // ==================== 设置 (本地) ====================
+
+  static Future<Map<String, dynamic>> getUserSettings() async {
+    final apiKey = await DeepSeekService.getApiKey();
+    final apiUrl = await DeepSeekService.getApiUrl();
+    final model = await DeepSeekService.getModel();
+    final systemPrompt = await DeepSeekService.getSystemPrompt();
+
+    return {
+      'ai_api_key': apiKey,
+      'ai_api_url': apiUrl,
+      'ai_model': model,
+      'default_system_prompt': systemPrompt,
+      'dev_mode': false,
+      'ai_auto_title': false,
+    };
+  }
+
+  static Future<void> updateUserSettings({
+    bool? devMode,
+    String? aiApiKey,
+    String? aiApiUrl,
+    String? aiModel,
+    bool? aiAutoTitle,
+    String? defaultSystemPrompt,
+  }) async {
+    if (aiApiKey != null) {
+      await DeepSeekService.setApiKey(aiApiKey);
+    }
+    if (aiApiUrl != null) {
+      await DeepSeekService.setApiUrl(aiApiUrl);
+    }
+    if (aiModel != null) {
+      await DeepSeekService.setModel(aiModel);
+    }
+    if (defaultSystemPrompt != null) {
+      await DeepSeekService.setSystemPrompt(defaultSystemPrompt);
+    }
+  }
+
+  // ==================== 批量操作 (本地) ====================
+
+  static Future<Map<String, dynamic>> markNoBowelBatch(
+    String startDate,
+    String endDate,
+  ) async {
+    final start = DateTime.parse(startDate);
+    final end = DateTime.parse(endDate);
+    var count = 0;
+
+    for (
+      var d = start;
+      d.isBefore(end) || d.isAtSameMomentAs(end);
+      d = d.add(const Duration(days: 1))
+    ) {
+      await LocalDbService.markNoBowel(d.toIso8601String().split('T')[0]);
+      count++;
+    }
+
+    return {'count': count};
+  }
+
+  static Future<Map<String, dynamic>> deleteRecordsBatch(
+    String startDate,
+    String endDate,
+  ) async {
+    final records = await LocalDbService.getRecords(
+      startDate: startDate,
+      endDate: endDate,
     );
 
-    if (response.statusCode != 200) {
-      throw Exception('删除对话失败');
+    for (final record in records) {
+      await LocalDbService.deleteRecord(record.recordId);
     }
+
+    return {'count': records.length};
+  }
+
+  static Future<Map<String, dynamic>> unmarkNoBowelBatch(
+    String startDate,
+    String endDate,
+  ) async {
+    final start = DateTime.parse(startDate);
+    final end = DateTime.parse(endDate);
+    var count = 0;
+
+    for (
+      var d = start;
+      d.isBefore(end) || d.isAtSameMomentAs(end);
+      d = d.add(const Duration(days: 1))
+    ) {
+      await LocalDbService.unmarkNoBowel(d.toIso8601String().split('T')[0]);
+      count++;
+    }
+
+    return {'count': count};
   }
 }

@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/theme_provider.dart';
+import '../providers/auth_provider.dart';
 import '../theme/theme_colors.dart';
 import '../theme/theme_decorations.dart';
-import '../services/api_service.dart';
 import '../widgets/themed_switch.dart';
 import '../widgets/app_header.dart';
 import 'about_page.dart';
-import 'login_page.dart';
 import 'misc_settings_page.dart';
 import 'dev_tools_page.dart';
 import 'user_account_page.dart';
@@ -33,112 +31,25 @@ class SettingsPageContent extends StatelessWidget {
 
 class _SettingsPageState extends State<SettingsPage> {
   bool _devMode = false;
-  bool _loading = true;
-  bool _saving = false;
-  String? _message;
 
   @override
   void initState() {
     super.initState();
-    _initPage();
+    _loadDevMode();
   }
 
-  Future<void> _initPage() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token');
-
-    if (token == null) {
-      setState(() => _loading = false);
-      return;
-    }
-
-    try {
-      final settings = await ApiService.getUserSettings();
-      setState(() {
-        _devMode = settings['dev_mode'] ?? false;
-        _loading = false;
-      });
-    } catch (e) {
-      final errorMsg = e.toString().replaceAll('Exception: ', '');
-      if (_isAuthError(errorMsg)) {
-        await _handleAuthError();
-      }
-      setState(() => _loading = false);
-    }
-  }
-
-  bool _isAuthError(String errorMsg) {
-    final lowerMsg = errorMsg.toLowerCase();
-    return lowerMsg.contains('认证') ||
-        lowerMsg.contains('token') ||
-        lowerMsg.contains('令牌') ||
-        lowerMsg.contains('authenticated') ||
-        lowerMsg.contains('unauthorized');
-  }
-
-  Future<void> _handleAuthError() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('token');
-    await prefs.remove('user');
-    if (mounted) {
-      setState(() => _message = '登录已过期，请重新登录');
-    }
-  }
-
-  Future<void> _handleDevModeToggle(bool value) async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token');
-
-    if (token == null) {
-      setState(() => _message = '请先登录');
-      return;
-    }
-
+  Future<void> _loadDevMode() async {
+    // Dev mode is stored locally
     setState(() {
-      _devMode = value;
-      _saving = true;
-      _message = null;
+      _devMode = false; // Default to false
     });
-
-    try {
-      await ApiService.updateUserSettings(devMode: value);
-    } catch (e) {
-      final errorMsg = e.toString().replaceAll('Exception: ', '');
-      if (_isAuthError(errorMsg)) {
-        await _handleAuthError();
-        setState(() => _devMode = !value);
-      } else {
-        setState(() {
-          _devMode = !value;
-          _message = errorMsg;
-        });
-      }
-    } finally {
-      setState(() => _saving = false);
-    }
   }
 
   @override
   Widget build(BuildContext context) {
     final themeProvider = context.watch<ThemeProvider>();
+    final authProvider = context.watch<AuthProvider>();
     final colors = themeProvider.colors;
-
-    if (_loading) {
-      return Scaffold(
-        body: Container(
-          decoration: ThemeDecorations.backgroundGradient(
-            context,
-            mode: themeProvider.mode,
-          ),
-          child: Center(
-            child: Text(
-              '加载中...',
-              style: TextStyle(color: colors.textSecondary),
-            ),
-          ),
-        ),
-      );
-    }
 
     return Scaffold(
       body: Container(
@@ -159,17 +70,13 @@ class _SettingsPageState extends State<SettingsPage> {
                       const SizedBox(height: 16),
                       _buildAiChatOptionsButton(colors),
                       const SizedBox(height: 16),
-                      _buildUserButton(colors),
+                      _buildUserButton(colors, authProvider),
                       const SizedBox(height: 16),
                       _buildMiscButton(colors),
                       const SizedBox(height: 16),
                       _buildDevModeToggle(colors),
                       const SizedBox(height: 16),
                       if (_devMode) _buildDevTools(colors),
-                      if (_message != null) ...[
-                        const SizedBox(height: 16),
-                        _buildMessage(colors),
-                      ],
                       const SizedBox(height: 16),
                       _buildAboutButton(colors),
                     ],
@@ -302,7 +209,7 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  Widget _buildUserButton(ThemeColors colors) {
+  Widget _buildUserButton(ThemeColors colors, AuthProvider authProvider) {
     return GestureDetector(
       onTap: () {
         Navigator.push(
@@ -344,7 +251,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '账号管理、修改密码、退出登录',
+                      authProvider.localUser?.nickname ?? '本地用户',
                       style: TextStyle(
                         fontSize: 12,
                         color: colors.textSecondary,
@@ -403,7 +310,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '系统记录最大年份等设置',
+                      '数据导出导入等设置',
                       style: TextStyle(
                         fontSize: 12,
                         color: colors.textSecondary,
@@ -423,7 +330,11 @@ class _SettingsPageState extends State<SettingsPage> {
   Widget _buildDevModeToggle(ThemeColors colors) {
     return ThemedSwitchWithTitle(
       value: _devMode,
-      onChanged: _saving ? null : _handleDevModeToggle,
+      onChanged: (value) {
+        setState(() {
+          _devMode = value;
+        });
+      },
       title: '开发者模式',
       subtitle: '启用测试和调试工具',
     );
@@ -484,62 +395,6 @@ class _SettingsPageState extends State<SettingsPage> {
             Icon(Icons.chevron_right, color: colors.textSecondary),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildMessage(ThemeColors colors) {
-    final isSuccess = _message!.contains('成功');
-    final isAuthError = _message!.contains('登录');
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: isSuccess
-            ? colors.success.withValues(alpha: 0.1)
-            : colors.error.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        children: [
-          Text(
-            _message!,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 12,
-              color: isSuccess ? colors.success : colors.error,
-            ),
-          ),
-          if (isAuthError) ...[
-            const SizedBox(height: 12),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (_) => const LoginPage()),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: colors.primary,
-                foregroundColor: colors.background,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 10,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text('🔑', style: TextStyle(fontSize: 14)),
-                  SizedBox(width: 6),
-                  Text('去登录', style: TextStyle(fontSize: 12)),
-                ],
-              ),
-            ),
-          ],
-        ],
       ),
     );
   }

@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/api_service.dart';
-import '../widgets/themed_switch.dart';
 import '../widgets/app_header.dart';
 import '../providers/theme_provider.dart';
 import '../theme/theme_colors.dart';
@@ -17,7 +15,6 @@ class AiChatOptionsPage extends StatefulWidget {
 }
 
 class _AiChatOptionsPageState extends State<AiChatOptionsPage> {
-  bool _aiAutoTitle = false;
   bool _loading = true;
   bool _saving = false;
   String? _message;
@@ -26,6 +23,7 @@ class _AiChatOptionsPageState extends State<AiChatOptionsPage> {
   final _aiApiKeyController = TextEditingController();
   final _aiApiUrlController = TextEditingController();
   final _aiModelController = TextEditingController();
+  final _systemPromptController = TextEditingController();
 
   @override
   void initState() {
@@ -38,99 +36,26 @@ class _AiChatOptionsPageState extends State<AiChatOptionsPage> {
     _aiApiKeyController.dispose();
     _aiApiUrlController.dispose();
     _aiModelController.dispose();
+    _systemPromptController.dispose();
     super.dispose();
   }
 
   Future<void> _loadSettings() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token');
-
-    if (token == null) {
-      setState(() => _loading = false);
-      return;
-    }
-
     try {
       final settings = await ApiService.getUserSettings();
       setState(() {
-        _aiAutoTitle = settings['ai_auto_title'] ?? false;
         _aiApiKeyController.text = settings['ai_api_key'] ?? '';
-        _aiApiUrlController.text = settings['ai_api_url'] ?? '';
-        _aiModelController.text = settings['ai_model'] ?? '';
+        _aiApiUrlController.text = settings['ai_api_url'] ?? 'https://api.deepseek.com';
+        _aiModelController.text = settings['ai_model'] ?? 'deepseek-chat';
+        _systemPromptController.text = settings['default_system_prompt'] ?? '';
         _loading = false;
       });
     } catch (e) {
-      final errorMsg = e.toString().replaceAll('Exception: ', '');
-      if (_isAuthError(errorMsg)) {
-        await _handleAuthError();
-      }
       setState(() => _loading = false);
-    }
-  }
-
-  bool _isAuthError(String errorMsg) {
-    final lowerMsg = errorMsg.toLowerCase();
-    return lowerMsg.contains('认证') ||
-        lowerMsg.contains('token') ||
-        lowerMsg.contains('令牌') ||
-        lowerMsg.contains('authenticated') ||
-        lowerMsg.contains('unauthorized');
-  }
-
-  Future<void> _handleAuthError() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('token');
-    await prefs.remove('user');
-    if (mounted) {
-      setState(() => _message = '登录已过期，请重新登录');
-    }
-  }
-
-  Future<void> _handleAiAutoTitleToggle(bool value) async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token');
-
-    if (token == null) {
-      setState(() => _message = '请先登录');
-      return;
-    }
-
-    setState(() {
-      _aiAutoTitle = value;
-      _saving = true;
-      _message = null;
-    });
-
-    try {
-      await ApiService.updateUserSettings(aiAutoTitle: value);
-      setState(() {
-        _message = value ? '已开启AI自动命名' : '已关闭AI自动命名，使用本地命名';
-      });
-    } catch (e) {
-      final errorMsg = e.toString().replaceAll('Exception: ', '');
-      if (_isAuthError(errorMsg)) {
-        await _handleAuthError();
-        setState(() => _aiAutoTitle = !value);
-      } else {
-        setState(() {
-          _aiAutoTitle = !value;
-          _message = errorMsg;
-        });
-      }
-    } finally {
-      setState(() => _saving = false);
     }
   }
 
   Future<void> _handleSaveAiConfig() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token');
-
-    if (token == null) {
-      setState(() => _message = '请先登录');
-      return;
-    }
-
     setState(() {
       _saving = true;
       _message = null;
@@ -141,20 +66,15 @@ class _AiChatOptionsPageState extends State<AiChatOptionsPage> {
         aiApiKey: _aiApiKeyController.text.trim(),
         aiApiUrl: _aiApiUrlController.text.trim(),
         aiModel: _aiModelController.text.trim(),
-        aiAutoTitle: _aiAutoTitle,
+        defaultSystemPrompt: _systemPromptController.text.trim(),
       );
       setState(() {
         _message = 'AI配置保存成功';
       });
     } catch (e) {
-      final errorMsg = e.toString().replaceAll('Exception: ', '');
-      if (_isAuthError(errorMsg)) {
-        await _handleAuthError();
-      } else {
-        setState(() {
-          _message = errorMsg;
-        });
-      }
+      setState(() {
+        _message = e.toString().replaceAll('Exception: ', '');
+      });
     } finally {
       setState(() => _saving = false);
     }
@@ -187,14 +107,9 @@ class _AiChatOptionsPageState extends State<AiChatOptionsPage> {
           _message = '所有对话已清除';
         });
       } catch (e) {
-        final errorMsg = e.toString().replaceAll('Exception: ', '');
-        if (_isAuthError(errorMsg)) {
-          await _handleAuthError();
-        } else {
-          setState(() {
-            _message = errorMsg;
-          });
-        }
+        setState(() {
+          _message = e.toString().replaceAll('Exception: ', '');
+        });
       }
     }
   }
@@ -238,6 +153,8 @@ class _AiChatOptionsPageState extends State<AiChatOptionsPage> {
                     children: [
                       _buildApiConfigSection(colors),
                       const SizedBox(height: 16),
+                      _buildSystemPromptSection(colors),
+                      const SizedBox(height: 16),
                       _buildClearChatSection(colors),
                       if (_message != null) ...[
                         const SizedBox(height: 16),
@@ -266,14 +183,14 @@ class _AiChatOptionsPageState extends State<AiChatOptionsPage> {
               Text('🔑', style: TextStyle(fontSize: 20)),
               SizedBox(width: 8),
               Text(
-                'API 配置',
+                'DeepSeek API 配置',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
             ],
           ),
           const Divider(height: 24),
           Text(
-            '配置AI API后，系统将使用AI进行智能分析；未配置则使用本地规则分析。',
+            '配置您的 DeepSeek API Key 后，即可使用 AI 智能分析功能。',
             style: TextStyle(fontSize: 12, color: colors.textSecondary),
           ),
           const SizedBox(height: 16),
@@ -281,7 +198,7 @@ class _AiChatOptionsPageState extends State<AiChatOptionsPage> {
             controller: _aiApiKeyController,
             decoration: InputDecoration(
               labelText: 'API 密钥',
-              hintText: '输入您的API密钥',
+              hintText: '输入您的 DeepSeek API Key',
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
               ),
@@ -304,7 +221,7 @@ class _AiChatOptionsPageState extends State<AiChatOptionsPage> {
             controller: _aiApiUrlController,
             decoration: InputDecoration(
               labelText: 'API URL',
-              hintText: '例如: https://api.deepseek.com/v1',
+              hintText: '默认: https://api.deepseek.com',
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
               ),
@@ -319,7 +236,7 @@ class _AiChatOptionsPageState extends State<AiChatOptionsPage> {
             controller: _aiModelController,
             decoration: InputDecoration(
               labelText: '模型名称',
-              hintText: '例如: deepseek-chat',
+              hintText: '默认: deepseek-chat',
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
               ),
@@ -340,7 +257,7 @@ class _AiChatOptionsPageState extends State<AiChatOptionsPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '支持的API格式：',
+                  '如何获取 API Key：',
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
@@ -349,9 +266,9 @@ class _AiChatOptionsPageState extends State<AiChatOptionsPage> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  '• DeepSeek: https://api.deepseek.com/v1\n'
-                  '• OpenAI兼容API: 填写对应的Base URL\n'
-                  '• 本地部署模型: 填写本地服务地址',
+                  '1. 访问 DeepSeek 官网注册账号\n'
+                  '2. 进入 API 管理页面创建 Key\n'
+                  '3. 复制 Key 粘贴到上方输入框',
                   style: TextStyle(
                     fontSize: 11,
                     color: colors.textSecondary,
@@ -361,8 +278,6 @@ class _AiChatOptionsPageState extends State<AiChatOptionsPage> {
               ],
             ),
           ),
-          const SizedBox(height: 16),
-          _buildAiAutoTitleToggle(colors),
           const SizedBox(height: 16),
           SizedBox(
             width: double.infinity,
@@ -376,7 +291,7 @@ class _AiChatOptionsPageState extends State<AiChatOptionsPage> {
                 ),
               ),
               child: Text(
-                _saving ? '保存中...' : '💾 保存AI配置',
+                _saving ? '保存中...' : '💾 保存配置',
                 style: TextStyle(fontSize: 14, color: colors.textOnPrimary),
               ),
             ),
@@ -388,17 +303,54 @@ class _AiChatOptionsPageState extends State<AiChatOptionsPage> {
     );
   }
 
+  Widget _buildSystemPromptSection(ThemeColors colors) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: ThemeDecorations.card(context),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Text('📝', style: TextStyle(fontSize: 20)),
+              SizedBox(width: 8),
+              Text(
+                '系统提示词',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          const Divider(height: 24),
+          Text(
+            '自定义 AI 对话的系统提示词，留空使用默认设置。',
+            style: TextStyle(fontSize: 12, color: colors.textSecondary),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _systemPromptController,
+            maxLines: 4,
+            decoration: InputDecoration(
+              hintText: '输入自定义系统提示词...',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              contentPadding: const EdgeInsets.all(12),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildApiLinks(ThemeColors colors) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         _buildLinkButton(
-          'SiliconFlow',
-          'https://siliconflow.cn',
-          colors.secondary,
+          'DeepSeek 官网',
+          'https://deepseek.com',
+          colors.primary,
         ),
-        const SizedBox(width: 16),
-        _buildLinkButton('DeepSeek', 'https://deepseek.com', colors.info),
       ],
     );
   }
@@ -434,15 +386,6 @@ class _AiChatOptionsPageState extends State<AiChatOptionsPage> {
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildAiAutoTitleToggle(ThemeColors colors) {
-    return ThemedSwitchWithTitle(
-      value: _aiAutoTitle,
-      onChanged: _saving ? null : _handleAiAutoTitleToggle,
-      title: 'AI自动命名对话',
-      subtitle: '开启后使用AI生成对话标题，关闭则使用消息前20字',
     );
   }
 
@@ -506,7 +449,6 @@ class _AiChatOptionsPageState extends State<AiChatOptionsPage> {
         _message!.contains('已清除') ||
         _message!.contains('已开启') ||
         _message!.contains('已关闭');
-    final isAuthError = _message!.contains('登录');
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -515,46 +457,13 @@ class _AiChatOptionsPageState extends State<AiChatOptionsPage> {
             : colors.errorBackground,
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Column(
-        children: [
-          Text(
-            _message!,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 12,
-              color: isSuccess ? colors.success : colors.error,
-            ),
-          ),
-          if (isAuthError) ...[
-            const SizedBox(height: 12),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: colors.primary,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 10,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text('🔑', style: TextStyle(fontSize: 14)),
-                  const SizedBox(width: 6),
-                  Text(
-                    '返回设置页',
-                    style: TextStyle(fontSize: 12, color: colors.textOnPrimary),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ],
+      child: Text(
+        _message!,
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          fontSize: 12,
+          color: isSuccess ? colors.success : colors.error,
+        ),
       ),
     );
   }
