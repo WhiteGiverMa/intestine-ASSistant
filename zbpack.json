@@ -1,6 +1,0 @@
-{
-  "app_dir": "backend",
-  "python": {
-    "entry": "app.main:app"
-  }
-}

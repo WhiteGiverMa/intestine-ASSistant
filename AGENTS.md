@@ -4,33 +4,28 @@
 
 Intestine ASSistant - 肠道健康助手，帮助用户记录和分析排便数据，通过AI分析提供个性化健康建议。
 
-**技术栈**: Flutter + FastAPI + SQLite + DeepSeek API
+**架构**: 本地优先 (Local-First)，无需后端服务器
+
+**技术栈**: Flutter + SQLite + DeepSeek API
 
 ## 关键目录
 
 ```
-backend/              # FastAPI 后端服务
-├── app/routers/      # API 路由
-├── app/services/     # 业务逻辑
-└── app/models.py     # 数据模型
-
-frontend_Flutter/     # Flutter 前端 (活跃开发)
+frontend_Flutter/     # Flutter 应用 (主项目)
 ├── lib/pages/        # 页面组件
-├── lib/services/     # API 服务
-└── lib/widgets/      # 通用组件
-
-frontend_ReactWeb/    # React Web 前端 (已弃用)
+├── lib/services/     # 服务层
+│   ├── database_service.dart    # SQLite 数据库初始化
+│   ├── local_db_service.dart    # 本地数据 CRUD 操作
+│   ├── deepseek_service.dart    # DeepSeek API 调用
+│   └── api_service.dart         # 统一 API 接口
+├── lib/providers/    # 状态管理
+├── lib/widgets/      # 通用组件
+└── lib/theme/        # 主题配置
 ```
 
 ## 开发命令
 
 ```bash
-# 后端
-cd backend
-pip install -r requirements.txt
-python start.py
-
-# 前端
 cd frontend_Flutter
 flutter pub get
 flutter run -d chrome --web-port=5174
@@ -38,42 +33,24 @@ flutter run -d chrome --web-port=5174
 
 ## 服务端口
 
-| 服务 | 端口 | 状态 |
+| 服务 | 端口 | 说明 |
 |------|------|------|
-| 后端 API | http://localhost:8001/api/v1 | 活跃 |
-| Flutter Web | http://localhost:5174 | 活跃 |
-| React Web | http://localhost:5173 | 已弃用 |
+| Flutter Web | http://localhost:5174 | 主应用 |
 
-## API 规范
+## 本地数据架构
 
-### 认证
-- 方式: JWT Bearer Token
-- Header: `Authorization: Bearer {token}`
+### 数据库 (SQLite)
+- 位置: 应用沙盒目录 `intestine_assistant.db`
+- 表: `local_users`, `bowel_records`, `chat_sessions`, `chat_messages`, `settings`
 
-### 响应结构
-- 登录/注册接口: 直接返回 `{ user_id, email, token }`，无 data 包装
-- 其他接口: 包装在 `data` 字段中
-- `time_distribution` 空数据返回 `{}`，需兼容处理
+### 用户模式
+- 本地用户，无需注册登录
+- 首次启动自动创建本地用户
 
-### 认证错误处理
-
-检测到认证错误时：清token + 友好提示 + 引导登录
-
-```javascript
-// React
-if (errorMsg.includes('认证') || errorMsg.includes('token')) {
-  localStorage.removeItem('token')
-  setError('登录已过期，请重新登录')
-}
-```
-
-```dart
-// Flutter
-if (errorMsg.contains('认证') || errorMsg.contains('token')) {
-  await prefs.remove('token');
-  setState(() => _message = '登录已过期，请重新登录');
-}
-```
+### AI 功能
+- 用户在设置页面配置 DeepSeek API Key
+- API Key 本地存储，不上传服务器
+- 仅 AI 分析功能需要网络连接
 
 ## 代码规范
 
@@ -83,15 +60,8 @@ if (errorMsg.contains('认证') || errorMsg.contains('token')) {
 
 ## 代码检查
 
-项目已配置 linter 和 formatter，修改代码后请运行检查：
-
 ```bash
-# 后端 (Python) - 在 backend/ 目录下运行
-ruff check app/          # 检查代码问题
-ruff check app/ --fix    # 自动修复问题
-ruff format app/         # 格式化代码
-
-# 前端 (Flutter) - 在 frontend_Flutter/ 目录下运行
+cd frontend_Flutter
 flutter analyze          # 检查代码问题
 dart format lib/         # 格式化代码
 ```

@@ -6,44 +6,31 @@
 
 - **排便记录** - 记录时间、时长、粪便形态（布里斯托分类）、颜色、感受等
 - **数据统计** - 可视化展示排便频率、时间分布、形态分布等
-- **AI分析** - 基于记录数据提供健康评分和个性化建议
+- **AI分析** - 基于记录数据提供健康评分和个性化建议（需配置 DeepSeek API Key）
 - **无排便标注** - 支持标注无排便日期，完善健康追踪
+- **本地优先** - 所有数据本地存储，无需部署服务器
+- **数据导出** - 支持 JSON 格式导出/导入，方便数据迁移
 
 ## 技术栈
 
 | 层级 | 技术 |
 |------|------|
 | 前端 | Flutter (跨平台) |
-| 后端 | FastAPI + SQLAlchemy |
-| 数据库 | SQLite |
-| AI | DeepSeek API |
+| 数据库 | SQLite (本地存储) |
+| AI | DeepSeek API (用户自备 API Key) |
 
 ## 项目结构
 
 ```
-├── backend/           # FastAPI 后端服务
-│   ├── app/
-│   │   ├── routers/   # API 路由
-│   │   ├── services/  # 业务逻辑
-│   │   └── models.py  # 数据模型
-│   └── requirements.txt
-├── frontend_Flutter/  # Flutter 前端 (活跃开发)
-└── frontend_ReactWeb/ # React Web 前端 (已弃用)
+├── frontend_Flutter/     # Flutter 应用 (主项目)
+│   ├── lib/pages/        # 页面组件
+│   ├── lib/services/     # 服务层 (数据库、AI等)
+│   └── lib/widgets/      # 通用组件
+├── 产品需求文档.md
+└── 技术需求文档.md
 ```
 
 ## 快速开始
-
-### 后端
-
-```bash
-cd backend
-pip install -r requirements.txt
-python start.py
-```
-
-后端服务运行在 `http://localhost:8001`
-
-### 前端
 
 ```bash
 cd frontend_Flutter
@@ -51,13 +38,15 @@ flutter pub get
 flutter run -d chrome --web-port=5174
 ```
 
+应用运行在 `http://localhost:5174`
+
 ## 分支说明
 
 | 分支 | 内容 |
 |------|------|
-| `master` | 后端代码 |
-| `frontend-flutter` | 完整项目（含 Flutter 前端） |
-| `frontend-react-web` | 完整项目（含 React 前端，已弃用） |
+| `master` | 无后端版本 (当前主分支) |
+| `frontend-flutter` | 前后端分离版本 (历史版本) |
+| `frontend-react-web` | React 前端 (已弃用) |
 
 ## 特别声明
 
