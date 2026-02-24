@@ -5,50 +5,75 @@ import 'providers/theme_provider.dart';
 import 'providers/auth_provider.dart';
 import 'theme/app_theme.dart';
 import 'pages/main_container.dart';
+import 'pages/splash_page.dart';
 
-void main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  final themeProvider = ThemeProvider();
-  final authProvider = AuthProvider();
-  await themeProvider.initialize();
-  await authProvider.initialize();
-  runApp(MyApp(themeProvider: themeProvider, authProvider: authProvider));
+  runApp(const App());
 }
 
-class MyApp extends StatelessWidget {
-  final ThemeProvider themeProvider;
-  final AuthProvider authProvider;
-
-  const MyApp({
-    super.key,
-    required this.themeProvider,
-    required this.authProvider,
-  });
+class App extends StatelessWidget {
+  const App({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider.value(value: themeProvider),
-        ChangeNotifierProvider.value(value: authProvider),
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
       ],
-      child: Consumer2<ThemeProvider, AuthProvider>(
-        builder: (context, theme, auth, child) {
-          return MaterialApp(
-            title: '肠道健康助手',
-            debugShowCheckedModeBanner: false,
-            localizationsDelegates: const [
-              GlobalMaterialLocalizations.delegate,
-              GlobalWidgetsLocalizations.delegate,
-              GlobalCupertinoLocalizations.delegate,
-            ],
-            supportedLocales: const [Locale('zh', 'CN'), Locale('en', 'US')],
-            locale: const Locale('zh', 'CN'),
-            theme: AppTheme.getTheme(theme.mode),
-            home: const MainContainer(),
-          );
-        },
-      ),
+      child: const AppInitializer(),
+    );
+  }
+}
+
+class AppInitializer extends StatefulWidget {
+  const AppInitializer({super.key});
+
+  @override
+  State<AppInitializer> createState() => _AppInitializerState();
+}
+
+class _AppInitializerState extends State<AppInitializer> {
+  bool _initialized = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _init();
+  }
+
+  Future<void> _init() async {
+    final themeProvider = context.read<ThemeProvider>();
+    final authProvider = context.read<AuthProvider>();
+    await Future.wait([
+      themeProvider.initialize(),
+      authProvider.initialize(),
+    ]);
+    if (mounted) {
+      setState(() {
+        _initialized = true;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final themeProvider = context.watch<ThemeProvider>();
+    return MaterialApp(
+      title: '肠道健康助手',
+      debugShowCheckedModeBanner: false,
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [Locale('zh', 'CN'), Locale('en', 'US')],
+      locale: const Locale('zh', 'CN'),
+      theme: AppTheme.getTheme(themeProvider.mode),
+      home: _initialized
+          ? const MainContainer()
+          : const SplashPage(),
     );
   }
 }

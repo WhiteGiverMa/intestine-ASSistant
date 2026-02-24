@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/theme_provider.dart';
 import '../theme/theme_decorations.dart';
+import '../utils/animations.dart';
 
 /// Application header widget with title, back button, and trailing widget support.
 ///
@@ -50,7 +51,8 @@ class AppHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.watch<ThemeProvider>().colors;
+    final themeProvider = context.watch<ThemeProvider>();
+    final colors = themeProvider.colors;
     final mediaQuery = MediaQuery.of(context);
     final topPadding = mediaQuery.padding.top;
     final leftPadding = mediaQuery.padding.left;
@@ -63,20 +65,21 @@ class AppHeader extends StatelessWidget {
         right: (rightPadding > 0 ? rightPadding : 16),
         bottom: 12,
       ),
-      decoration: ThemeDecorations.header(context),
+      decoration: ThemeDecorations.header(context, mode: themeProvider.mode),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Row(
             children: [
               if (showBackButton)
-                GestureDetector(
-                  onTap: onBack ?? () {
-                    if (Navigator.of(context).canPop()) {
-                      Navigator.pop(context);
-                    }
-                  },
-                  behavior: HitTestBehavior.opaque,
+                ScaleOnTap(
+                  onTap:
+                      onBack ??
+                      () {
+                        if (Navigator.of(context).canPop()) {
+                          Navigator.pop(context);
+                        }
+                      },
                   child: Padding(
                     padding: const EdgeInsets.all(4),
                     child: Icon(
@@ -97,7 +100,7 @@ class AppHeader extends StatelessWidget {
                       style: TextStyle(
                         fontSize: titleFontSize,
                         fontWeight: FontWeight.bold,
-                        color: colors.primary,
+                        color: colors.headerText,
                       ),
                     ),
               ),

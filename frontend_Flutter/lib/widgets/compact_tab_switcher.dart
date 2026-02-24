@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:provider/provider.dart';
 import '../providers/theme_provider.dart';
 import '../theme/theme_colors.dart';
@@ -138,7 +139,9 @@ class CompactTabContentState extends State<CompactTabContent>
 
   void _onTabControllerChanged() {
     if (_tabController!.indexIsChanging) {
-      widget.onTabChanged?.call(_tabController!.index);
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        widget.onTabChanged?.call(_tabController!.index);
+      });
     }
   }
 

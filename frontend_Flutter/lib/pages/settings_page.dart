@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/theme_provider.dart';
 import '../providers/auth_provider.dart';
+import '../services/local_db_service.dart';
 import '../theme/theme_colors.dart';
 import '../theme/theme_decorations.dart';
 import '../widgets/themed_switch.dart';
 import '../widgets/app_header.dart';
+import '../utils/animations.dart';
 import 'about_page.dart';
 import 'misc_settings_page.dart';
 import 'dev_tools_page.dart';
@@ -39,9 +41,9 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> _loadDevMode() async {
-    // Dev mode is stored locally
+    final savedValue = await LocalDbService.getSetting('dev_mode');
     setState(() {
-      _devMode = false; // Default to false
+      _devMode = savedValue == 'true';
     });
   }
 
@@ -66,19 +68,40 @@ class _SettingsPageState extends State<SettingsPage> {
                   padding: const EdgeInsets.all(16),
                   child: Column(
                     children: [
-                      _buildThemeButton(colors),
+                      AnimatedEntrance(
+                        child: _buildThemeButton(colors),
+                      ),
                       const SizedBox(height: 16),
-                      _buildAiChatOptionsButton(colors),
+                      AnimatedEntrance(
+                        delay: const Duration(milliseconds: 50),
+                        child: _buildAiChatOptionsButton(colors),
+                      ),
                       const SizedBox(height: 16),
-                      _buildUserButton(colors, authProvider),
+                      AnimatedEntrance(
+                        delay: const Duration(milliseconds: 100),
+                        child: _buildUserButton(colors, authProvider),
+                      ),
                       const SizedBox(height: 16),
-                      _buildMiscButton(colors),
+                      AnimatedEntrance(
+                        delay: const Duration(milliseconds: 150),
+                        child: _buildMiscButton(colors),
+                      ),
                       const SizedBox(height: 16),
-                      _buildDevModeToggle(colors),
+                      AnimatedEntrance(
+                        delay: const Duration(milliseconds: 200),
+                        child: _buildDevModeToggle(colors),
+                      ),
                       const SizedBox(height: 16),
-                      if (_devMode) _buildDevTools(colors),
-                      const SizedBox(height: 16),
-                      _buildAboutButton(colors),
+                      if (_devMode)
+                        AnimatedEntrance(
+                          delay: const Duration(milliseconds: 250),
+                          child: _buildDevTools(colors),
+                        ),
+                      if (_devMode) const SizedBox(height: 16),
+                      AnimatedEntrance(
+                        delay: const Duration(milliseconds: 300),
+                        child: _buildAboutButton(colors),
+                      ),
                     ],
                   ),
                 ),
@@ -94,10 +117,7 @@ class _SettingsPageState extends State<SettingsPage> {
     final themeProvider = context.watch<ThemeProvider>();
     return GestureDetector(
       onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const ThemeSelectorPage()),
-        );
+        navigateWithFade(context, const ThemeSelectorPage());
       },
       child: Container(
         padding: const EdgeInsets.all(20),
@@ -153,10 +173,7 @@ class _SettingsPageState extends State<SettingsPage> {
   Widget _buildAiChatOptionsButton(ThemeColors colors) {
     return GestureDetector(
       onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const AiChatOptionsPage()),
-        );
+        navigateWithFade(context, const AiChatOptionsPage());
       },
       child: Container(
         padding: const EdgeInsets.all(20),
@@ -330,7 +347,8 @@ class _SettingsPageState extends State<SettingsPage> {
   Widget _buildDevModeToggle(ThemeColors colors) {
     return ThemedSwitchWithTitle(
       value: _devMode,
-      onChanged: (value) {
+      onChanged: (value) async {
+        await LocalDbService.setSetting('dev_mode', value.toString());
         setState(() {
           _devMode = value;
         });
@@ -402,10 +420,7 @@ class _SettingsPageState extends State<SettingsPage> {
   Widget _buildAboutButton(ThemeColors colors) {
     return GestureDetector(
       onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const AboutPage()),
-        );
+        navigateWithFade(context, const AboutPage());
       },
       child: Container(
         padding: const EdgeInsets.all(20),

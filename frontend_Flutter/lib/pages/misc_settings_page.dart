@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/theme_provider.dart';
+import '../services/local_db_service.dart';
 import '../theme/theme_colors.dart';
 import '../theme/theme_decorations.dart';
 import '../widgets/app_header.dart';
@@ -32,9 +32,9 @@ class _MiscSettingsPageState extends State<MiscSettingsPage> {
   }
 
   Future<void> _loadSettings() async {
-    final prefs = await SharedPreferences.getInstance();
+    final savedValue = await LocalDbService.getSetting('max_year');
     setState(() {
-      _maxYear = prefs.getInt('max_year') ?? 2112;
+      _maxYear = int.tryParse(savedValue ?? '') ?? 2112;
       _yearController.text = _maxYear.toString();
       _loading = false;
     });
@@ -47,8 +47,7 @@ class _MiscSettingsPageState extends State<MiscSettingsPage> {
       return;
     }
 
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt('max_year', year);
+    await LocalDbService.setSetting('max_year', year.toString());
     setState(() => _maxYear = year);
     _showSuccess('最大年份已设置为 $year');
   }

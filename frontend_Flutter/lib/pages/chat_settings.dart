@@ -1,20 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../models/models.dart';
 import '../providers/theme_provider.dart';
+import '../services/local_db_service.dart';
 import '../theme/theme_colors.dart';
 import '../theme/theme_decorations.dart';
-
-const String kDefaultSystemPrompt =
-    '''You are a professional gut health consultant. You can have friendly conversations with users, answer questions about gut health, and provide professional advice.
-
-If the user shares bowel record data, please analyze and provide suggestions based on this data.
-
-Please reply in Chinese, maintaining a professional yet friendly tone.''';
+import '../services/deepseek_service.dart';
 
 class ChatSettings extends StatefulWidget {
-  final Function(bool enabled, ThinkingIntensity intensity)? onThinkingChanged;
+  final Function(ThinkingIntensity intensity)? onThinkingChanged;
   final Function(String? prompt)? onSystemPromptChanged;
   final Function(bool enabled)? onStreamingChanged;
   final VoidCallback? onClose;
@@ -32,9 +26,8 @@ class ChatSettings extends StatefulWidget {
 }
 
 class _ChatSettingsState extends State<ChatSettings> {
-  bool _thinkingEnabled = false;
   bool _streamingEnabled = false;
-  ThinkingIntensity _thinkingIntensity = ThinkingIntensity.medium;
+  ThinkingIntensity _thinkingIntensity = ThinkingIntensity.none;
   String? _systemPrompt;
   late TextEditingController _promptController;
 
@@ -52,52 +45,53 @@ class _ChatSettingsState extends State<ChatSettings> {
   }
 
   Future<void> _loadSettings() async {
-    final prefs = await SharedPreferences.getInstance();
+    final savedPrompt = await DeepSeekService.getSystemPrompt();
+    final streamingEnabled = await LocalDbService.getSetting(
+      'streaming_enabled',
+    );
+    final intensityStr = await LocalDbService.getSetting('thinking_intensity');
+    final thinkingEnabled = await LocalDbService.getSetting('thinking_enabled');
+
+    ThinkingIntensity intensity;
+    if (intensityStr != null) {
+      intensity = ThinkingIntensity.fromApiValue(intensityStr);
+    } else if (thinkingEnabled == 'true') {
+      intensity = ThinkingIntensity.medium;
+    } else {
+      intensity = ThinkingIntensity.none;
+    }
+
     setState(() {
-      _thinkingEnabled = prefs.getBool('thinking_enabled') ?? false;
-      _streamingEnabled = prefs.getBool('streaming_enabled') ?? false;
-      final intensityStr = prefs.getString('thinking_intensity') ?? 'medium';
-      _thinkingIntensity = ThinkingIntensity.fromApiValue(intensityStr);
-      _systemPrompt = prefs.getString('system_prompt');
-      _promptController.text = _systemPrompt ?? kDefaultSystemPrompt;
+      _streamingEnabled = streamingEnabled == 'true';
+      _thinkingIntensity = intensity;
+      _systemPrompt = savedPrompt;
+      _promptController.text =
+          _systemPrompt ?? DeepSeekService.kDefaultSystemPrompt;
     });
   }
 
-  Future<void> _saveThinkingEnabled(bool value) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('thinking_enabled', value);
-    setState(() => _thinkingEnabled = value);
-    widget.onThinkingChanged?.call(value, _thinkingIntensity);
-    if (mounted) {
-      widget.onClose?.call();
-    }
+  Future<void> _saveThinkingIntensity(ThinkingIntensity value) async {
+    await LocalDbService.setSetting('thinking_intensity', value.toApiValue());
+    setState(() => _thinkingIntensity = value);
+    widget.onThinkingChanged?.call(value);
   }
 
   Future<void> _saveStreamingEnabled(bool value) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('streaming_enabled', value);
+    await LocalDbService.setSetting('streaming_enabled', value.toString());
     setState(() => _streamingEnabled = value);
     widget.onStreamingChanged?.call(value);
   }
 
-  Future<void> _saveThinkingIntensity(ThinkingIntensity value) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('thinking_intensity', value.toApiValue());
-    setState(() => _thinkingIntensity = value);
-    widget.onThinkingChanged?.call(_thinkingEnabled, value);
-  }
-
   Future<void> _saveSystemPrompt(String? value) async {
-    final prefs = await SharedPreferences.getInstance();
     final trimmedValue = value?.trim();
     if (trimmedValue == null ||
         trimmedValue.isEmpty ||
-        trimmedValue == kDefaultSystemPrompt) {
-      await prefs.remove('system_prompt');
+        trimmedValue == DeepSeekService.kDefaultSystemPrompt) {
+      await DeepSeekService.setSystemPrompt(null);
       setState(() => _systemPrompt = null);
       widget.onSystemPromptChanged?.call(null);
     } else {
-      await prefs.setString('system_prompt', trimmedValue);
+      await DeepSeekService.setSystemPrompt(trimmedValue);
       setState(() => _systemPrompt = trimmedValue);
       widget.onSystemPromptChanged?.call(trimmedValue);
     }
@@ -107,7 +101,7 @@ class _ChatSettingsState extends State<ChatSettings> {
   }
 
   void _restoreDefaultPrompt() {
-    _promptController.text = kDefaultSystemPrompt;
+    _promptController.text = DeepSeekService.kDefaultSystemPrompt;
     setState(() {});
   }
 
@@ -190,80 +184,50 @@ class _ChatSettingsState extends State<ChatSettings> {
             Icon(Icons.psychology, size: 20, color: colors.textPrimary),
             const SizedBox(width: 8),
             Text(
-              '深度思考',
+              '思考强度',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w500,
                 color: colors.textPrimary,
               ),
             ),
-            const Spacer(),
-            Switch(
-              value: _thinkingEnabled,
-              onChanged: _saveThinkingEnabled,
-              thumbColor: WidgetStateProperty.resolveWith((states) {
+          ],
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          width: double.infinity,
+          child: SegmentedButton<ThinkingIntensity>(
+            segments: const [
+              ButtonSegment(value: ThinkingIntensity.none, label: Text('默认')),
+              ButtonSegment(value: ThinkingIntensity.low, label: Text('低')),
+              ButtonSegment(value: ThinkingIntensity.medium, label: Text('中')),
+              ButtonSegment(value: ThinkingIntensity.high, label: Text('高')),
+            ],
+            selected: {_thinkingIntensity},
+            onSelectionChanged: (Set<ThinkingIntensity> selection) {
+              _saveThinkingIntensity(selection.first);
+            },
+            style: ButtonStyle(
+              backgroundColor: WidgetStateProperty.resolveWith((states) {
                 if (states.contains(WidgetState.selected)) {
                   return colors.primary;
                 }
                 return null;
               }),
-              trackColor: WidgetStateProperty.resolveWith((states) {
+              foregroundColor: WidgetStateProperty.resolveWith((states) {
                 if (states.contains(WidgetState.selected)) {
-                  return colors.primary.withValues(alpha: 0.5);
+                  return colors.textOnPrimary;
                 }
                 return null;
               }),
             ),
-          ],
-        ),
-        if (_thinkingEnabled) ...[
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Text(
-                '强度',
-                style: TextStyle(fontSize: 14, color: colors.textPrimary),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: SegmentedButton<ThinkingIntensity>(
-                  segments: const [
-                    ButtonSegment(
-                      value: ThinkingIntensity.low,
-                      label: Text('低'),
-                    ),
-                    ButtonSegment(
-                      value: ThinkingIntensity.medium,
-                      label: Text('中'),
-                    ),
-                    ButtonSegment(
-                      value: ThinkingIntensity.high,
-                      label: Text('高'),
-                    ),
-                  ],
-                  selected: {_thinkingIntensity},
-                  onSelectionChanged: (Set<ThinkingIntensity> selection) {
-                    _saveThinkingIntensity(selection.first);
-                  },
-                  style: ButtonStyle(
-                    backgroundColor: WidgetStateProperty.resolveWith((states) {
-                      if (states.contains(WidgetState.selected)) {
-                        return colors.primary;
-                      }
-                      return null;
-                    }),
-                    foregroundColor: WidgetStateProperty.resolveWith((states) {
-                      if (states.contains(WidgetState.selected)) {
-                        return colors.textOnPrimary;
-                      }
-                      return null;
-                    }),
-                  ),
-                ),
-              ),
-            ],
           ),
-        ],
+        ),
+        const SizedBox(height: 8),
+        Text(
+          '默认: 不传递参数，使用模型默认设置',
+          style: TextStyle(fontSize: 12, color: colors.textSecondary),
+        ),
       ],
     );
   }
@@ -393,7 +357,8 @@ class _ChatSettingsState extends State<ChatSettings> {
                         const Spacer(),
                         TextButton(
                           onPressed: () {
-                            expandedController.text = kDefaultSystemPrompt;
+                            expandedController.text =
+                                DeepSeekService.kDefaultSystemPrompt;
                           },
                           style: TextButton.styleFrom(
                             foregroundColor: colors.textSecondary,
@@ -469,7 +434,7 @@ class _ChatSettingsState extends State<ChatSettings> {
 
 Future<void> showChatSettings(
   BuildContext context, {
-  Function(bool enabled, ThinkingIntensity intensity)? onThinkingChanged,
+  Function(ThinkingIntensity intensity)? onThinkingChanged,
   Function(bool enabled)? onStreamingChanged,
 }) async {
   await showModalBottomSheet(

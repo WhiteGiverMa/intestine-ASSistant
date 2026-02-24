@@ -42,6 +42,8 @@ class ThemeColors {
   final Color secondary;
   final Color accent;
   final Color shadow;
+  final Color headerBackground;
+  final Color headerText;
 
   const ThemeColors({
     required this.primary,
@@ -67,6 +69,8 @@ class ThemeColors {
     required this.secondary,
     required this.accent,
     required this.shadow,
+    required this.headerBackground,
+    required this.headerText,
   });
 
   static ThemeColors get greenClassic => const ThemeColors(
@@ -93,6 +97,8 @@ class ThemeColors {
     secondary: Color(0xFF7B1FA2),
     accent: Color(0xFFFFA726),
     shadow: Color(0x1A000000),
+    headerBackground: Color(0xFFFFFFFF),
+    headerText: Color(0xFF2E7D32),
   );
 
   static ThemeColors get whiteMinimal => const ThemeColors(
@@ -119,6 +125,8 @@ class ThemeColors {
     secondary: Color(0xFF7B1FA2),
     accent: Color(0xFFFFA726),
     shadow: Color(0x0D000000),
+    headerBackground: Color(0xFFFFFFFF),
+    headerText: Color(0xFF2E7D32),
   );
 
   static ThemeColors get darkOled => const ThemeColors(
@@ -145,6 +153,8 @@ class ThemeColors {
     secondary: Color(0xFFBA68C8),
     accent: Color(0xFFFFCC80),
     shadow: Color(0x00000000),
+    headerBackground: Color(0xFF1A1A1A),
+    headerText: Color(0xFFFFFFFF),
   );
 
   static ThemeColors forMode(AppThemeMode mode) {

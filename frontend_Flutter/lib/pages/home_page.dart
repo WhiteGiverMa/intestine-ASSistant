@@ -6,6 +6,7 @@ import '../theme/theme_colors.dart';
 import '../theme/theme_decorations.dart';
 import '../widgets/app_header.dart';
 import '../widgets/app_bottom_nav.dart';
+import '../utils/animations.dart';
 import 'record_page.dart';
 
 class HomePage extends StatefulWidget {
@@ -19,44 +20,33 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final authProvider = context.read<AuthProvider>();
-      authProvider.ensureLocalUser();
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
     final themeProvider = context.watch<ThemeProvider>();
     final authProvider = context.watch<AuthProvider>();
     final colors = themeProvider.colors;
 
-    return Scaffold(
-      body: SafeArea(
-        child: Column(
-          children: [
-            AppHeader(
-              title: '肠道健康助手',
-              trailing: _buildTrailingWidget(authProvider, colors),
-            ),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    _buildWelcome(colors, authProvider),
-                    const SizedBox(height: 24),
-                    _buildMenuGrid(colors),
-                    const SizedBox(height: 24),
-                    _buildBristolChart(colors),
-                  ],
-                ),
+    return SafeArea(
+      child: Column(
+        children: [
+          AppHeader(
+            title: '肠道健康助手',
+            trailing: _buildTrailingWidget(authProvider, colors),
+          ),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  _buildWelcome(colors, authProvider),
+                  const SizedBox(height: 24),
+                  _buildMenuGrid(colors),
+                  const SizedBox(height: 24),
+                  _buildBristolChart(colors),
+                ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -68,7 +58,7 @@ class _HomePageState extends State<HomePage> {
         decoration: BoxDecoration(
           color: colors.success.withValues(alpha: 0.2),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: colors.success, width: 1),
+          border: Border.all(color: colors.success),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -91,21 +81,24 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildWelcome(ThemeColors colors, AuthProvider authProvider) {
-    return Column(
-      children: [
-        const Text('🚽', style: TextStyle(fontSize: 64)),
-        const SizedBox(height: 16),
-        Text(
-          '你好，${authProvider.displayName}',
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: colors.textPrimary,
+    return AnimatedEntrance(
+      duration: AppAnimations.durationSlow,
+      child: Column(
+        children: [
+          const Text('🚽', style: TextStyle(fontSize: 64)),
+          const SizedBox(height: 16),
+          Text(
+            '你好，${authProvider.displayName}',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: colors.textPrimary,
+            ),
           ),
-        ),
-        const SizedBox(height: 8),
-        Text('记录您的肠道健康，智能分析守护您', style: TextStyle(color: colors.textSecondary)),
-      ],
+          const SizedBox(height: 8),
+          Text('记录您的肠道健康，智能分析守护您', style: TextStyle(color: colors.textSecondary)),
+        ],
+      ),
     );
   }
 
@@ -115,26 +108,32 @@ class _HomePageState extends State<HomePage> {
         Row(
           children: [
             Expanded(
-              child: _buildMenuItem(
-                '📝',
-                '记录排便',
-                '快速记录您的排便数据',
-                const RecordPage(),
-                colors,
+              child: AnimatedCard(
+                delay: const Duration(milliseconds: 100),
+                onTap:
+                    () => navigateWithFade(context, const RecordPage()),
+                child: _buildMenuItemContent(
+                  '📝',
+                  '记录排便',
+                  '快速记录您的排便数据',
+                  colors,
+                ),
               ),
             ),
             const SizedBox(width: 16),
             Expanded(
-              child: _buildMenuItem(
-                '🤖',
-                'AI 分析',
-                '智能健康分析',
-                null,
-                colors,
+              child: AnimatedCard(
+                delay: const Duration(milliseconds: 150),
                 onTap:
                     widget.onNavigate != null
                         ? () => widget.onNavigate!(NavTab.analysis)
                         : null,
+                child: _buildMenuItemContent(
+                  '🤖',
+                  'AI 分析',
+                  '智能健康分析',
+                  colors,
+                ),
               ),
             ),
           ],
@@ -143,156 +142,181 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildMenuItem(
+  Widget _buildMenuItemContent(
     String emoji,
     String title,
     String subtitle,
-    Widget? page,
     ThemeColors colors, {
     bool fullWidth = false,
-    VoidCallback? onTap,
   }) {
-    return GestureDetector(
-      onTap:
-          onTap ??
-          (page != null
-              ? () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => page),
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: ThemeDecorations.card(context, mode: context.themeMode),
+      child:
+          fullWidth
+              ? Row(
+                children: [
+                  Text(emoji, style: const TextStyle(fontSize: 40)),
+                  const SizedBox(width: 16),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: colors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: colors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               )
-              : null),
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: ThemeDecorations.card(context, mode: context.themeMode),
-        child:
-            fullWidth
-                ? Row(
-                  children: [
-                    Text(emoji, style: const TextStyle(fontSize: 40)),
-                    const SizedBox(width: 16),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          title,
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: colors.textPrimary,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          subtitle,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: colors.textSecondary,
-                          ),
-                        ),
-                      ],
+              : Column(
+                children: [
+                  Text(emoji, style: const TextStyle(fontSize: 40)),
+                  const SizedBox(height: 12),
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: colors.textPrimary,
                     ),
-                  ],
-                )
-                : Column(
-                  children: [
-                    Text(emoji, style: const TextStyle(fontSize: 40)),
-                    const SizedBox(height: 12),
-                    Text(
-                      title,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: colors.textPrimary,
-                      ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: colors.textSecondary,
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: colors.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-      ),
+                  ),
+                ],
+              ),
     );
   }
 
   Widget _buildBristolChart(ThemeColors colors) {
     final types = [
-      {'type': 1, 'emoji': '🪨', 'desc': '硬块', 'status': '便秘'},
-      {'type': 2, 'emoji': '🥜', 'desc': '结块', 'status': '轻便秘'},
-      {'type': 3, 'emoji': '🌭', 'desc': '有裂纹', 'status': '正常'},
-      {'type': 4, 'emoji': '🍌', 'desc': '光滑', 'status': '理想'},
-      {'type': 5, 'emoji': '🫘', 'desc': '断块', 'status': '缺纤维'},
-      {'type': 6, 'emoji': '🥣', 'desc': '糊状', 'status': '轻腹泻'},
-      {'type': 7, 'emoji': '💧', 'desc': '液体', 'status': '腹泻'},
+      {'type': 1, 'emoji': '🪨', 'label': '硬块', 'status': '便秘'},
+      {'type': 2, 'emoji': '🥜', 'label': '香肠结块', 'status': '轻便秘'},
+      {'type': 3, 'emoji': '🌭', 'label': '香肠裂纹', 'status': '正常'},
+      {'type': 4, 'emoji': '🍌', 'label': '香肠光滑', 'status': '理想'},
+      {'type': 5, 'emoji': '🫘', 'label': '柔软断块', 'status': '缺纤维'},
+      {'type': 6, 'emoji': '🥣', 'label': '糊状', 'status': '轻腹泻'},
+      {'type': 7, 'emoji': '💧', 'label': '液体', 'status': '腹泻'},
     ];
 
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: ThemeDecorations.card(context, mode: context.themeMode),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '布里斯托大便分类法',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: colors.textPrimary,
+    return AnimatedEntrance(
+      delay: const Duration(milliseconds: 200),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: ThemeDecorations.card(context, mode: context.themeMode),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '布里斯托大便分类法',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: colors.textPrimary,
+              ),
             ),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children:
-                types.map((t) {
-                  final status = t['status'] as String;
-                  Color statusColor;
-                  if (status == '理想') {
-                    statusColor = colors.success;
-                  } else if (status == '正常') {
-                    statusColor = colors.success.withValues(alpha: 0.7);
-                  } else if (status.contains('便秘') || status.contains('腹泻')) {
-                    statusColor = colors.error;
-                  } else {
-                    statusColor = colors.warning;
-                  }
+            const SizedBox(height: 6),
+            Text(
+              '类型3-5为健康范围，1-2提示便秘，6-7提示腹泻',
+              style: TextStyle(
+                fontSize: 11,
+                color: colors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: types.asMap().entries.map((entry) {
+                final index = entry.key;
+                final t = entry.value;
+                final status = t['status'] as String;
+                Color statusColor;
+                if (status == '理想') {
+                  statusColor = colors.success;
+                } else if (status == '正常') {
+                  statusColor = colors.success.withValues(alpha: 0.7);
+                } else if (status.contains('便秘') || status.contains('腹泻')) {
+                  statusColor = colors.error;
+                } else {
+                  statusColor = colors.warning;
+                }
 
-                  return Column(
-                    children: [
-                      Text(
-                        t['emoji'] as String,
-                        style: const TextStyle(fontSize: 24),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '类型${t['type']}',
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: colors.textSecondary,
+                return Expanded(
+                  child: Container(
+                    margin: EdgeInsets.only(left: index == 0 ? 0 : 3),
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: colors.surfaceVariant,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          t['emoji'] as String,
+                          style: const TextStyle(fontSize: 26),
                         ),
-                      ),
-                      Text(
-                        t['desc'] as String,
-                        style: TextStyle(fontSize: 10, color: colors.textHint),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        status,
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: statusColor,
-                          fontWeight: FontWeight.bold,
+                        const SizedBox(height: 6),
+                        Text(
+                          '${t['type']}',
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: colors.textPrimary,
+                          ),
                         ),
-                      ),
-                    ],
-                  );
-                }).toList(),
-          ),
-        ],
+                        const SizedBox(height: 3),
+                        Text(
+                          t['label'] as String,
+                          textAlign: TextAlign.center,
+                          maxLines: 2,
+                          style: TextStyle(
+                            fontSize: 13,
+                            height: 1.2,
+                            color: colors.textSecondary,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: statusColor.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(5),
+                          ),
+                          child: Text(
+                            status,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: statusColor,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
+        ),
       ),
     );
   }

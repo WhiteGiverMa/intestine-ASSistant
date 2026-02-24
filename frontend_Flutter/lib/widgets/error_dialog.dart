@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../services/api_service.dart';
-import '../pages/login_page.dart';
 import '../providers/theme_provider.dart';
 
 class ErrorDialog extends StatelessWidget {
@@ -11,7 +10,6 @@ class ErrorDialog extends StatelessWidget {
   final String? details;
   final ErrorType? errorType;
   final VoidCallback? onRetry;
-  final VoidCallback? onLogin;
   final bool showCopyButton;
 
   const ErrorDialog({
@@ -21,7 +19,6 @@ class ErrorDialog extends StatelessWidget {
     this.details,
     this.errorType,
     this.onRetry,
-    this.onLogin,
     this.showCopyButton = true,
   });
 
@@ -32,7 +29,6 @@ class ErrorDialog extends StatelessWidget {
     String? details,
     ErrorType? errorType,
     VoidCallback? onRetry,
-    VoidCallback? onLogin,
     bool showCopyButton = true,
   }) {
     return showDialog(
@@ -44,7 +40,6 @@ class ErrorDialog extends StatelessWidget {
             details: details,
             errorType: errorType,
             onRetry: onRetry,
-            onLogin: onLogin,
             showCopyButton: showCopyButton,
           ),
     );
@@ -67,12 +62,6 @@ class ErrorDialog extends StatelessWidget {
                 error.type == ErrorType.network ||
                         error.type == ErrorType.server
                     ? onRetry
-                    : null,
-            onLogin:
-                error.type == ErrorType.auth
-                    ? () {
-                      Navigator.pop(context);
-                    }
                     : null,
           ),
     );
@@ -211,16 +200,6 @@ class ErrorDialog extends StatelessWidget {
             icon: Icon(Icons.refresh, size: 18, color: colors.primary),
             label: Text('重试', style: TextStyle(color: colors.primary)),
           ),
-        if (onLogin != null)
-          ElevatedButton.icon(
-            onPressed: onLogin,
-            icon: const Icon(Icons.login, size: 18),
-            label: const Text('去登录'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: colors.primary,
-              foregroundColor: colors.textOnPrimary,
-            ),
-          ),
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
           child: Text('关闭', style: TextStyle(color: colors.textSecondary)),
@@ -330,34 +309,6 @@ class ErrorWidgetInline extends StatelessWidget {
             ),
           ],
           const SizedBox(height: 24),
-          if (error.type == ErrorType.auth)
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (_) => const LoginPage()),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: colors.primary,
-                foregroundColor: colors.textOnPrimary,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 32,
-                  vertical: 16,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text('🔑', style: TextStyle(fontSize: 18)),
-                  SizedBox(width: 8),
-                  Text('去登录', style: TextStyle(fontSize: 16)),
-                ],
-              ),
-            ),
           if (onRetry != null && error.type != ErrorType.auth) ...[
             const SizedBox(height: 12),
             ElevatedButton.icon(

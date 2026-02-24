@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../models/models.dart';
+import '../providers/theme_provider.dart';
 import '../theme/theme_colors.dart';
 import '../theme/theme_decorations.dart';
+import '../utils/animations.dart';
 
 class AnalysisResultView extends StatelessWidget {
   final AnalysisResult result;
@@ -17,17 +20,40 @@ class AnalysisResultView extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        HealthScoreCard(score: result.healthScore, colors: colors),
+        AnimatedEntrance(
+          child: HealthScoreCard(score: result.healthScore, colors: colors),
+        ),
         if (result.warnings.isNotEmpty) ...[
           const SizedBox(height: 16),
-          WarningsCard(warnings: result.warnings, colors: colors),
+          AnimatedEntrance(
+            delay: const Duration(milliseconds: AppAnimations.staggerIntervalMs),
+            child: WarningsCard(warnings: result.warnings, colors: colors),
+          ),
         ],
         const SizedBox(height: 16),
-        InsightsCard(insights: result.insights, colors: colors),
+        AnimatedEntrance(
+          delay: const Duration(
+            milliseconds: AppAnimations.staggerIntervalMs * 2,
+          ),
+          child: InsightsCard(insights: result.insights, colors: colors),
+        ),
         const SizedBox(height: 16),
-        SuggestionsCard(suggestions: result.suggestions, colors: colors),
+        AnimatedEntrance(
+          delay: const Duration(
+            milliseconds: AppAnimations.staggerIntervalMs * 3,
+          ),
+          child: SuggestionsCard(
+            suggestions: result.suggestions,
+            colors: colors,
+          ),
+        ),
         const SizedBox(height: 16),
-        const DisclaimerCard(),
+        const AnimatedEntrance(
+          delay: Duration(
+            milliseconds: AppAnimations.staggerIntervalMs * 4,
+          ),
+          child: DisclaimerCard(),
+        ),
       ],
     );
   }
@@ -292,17 +318,18 @@ class DisclaimerCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.watch<ThemeProvider>().colors;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.amber.shade50,
-        border: Border.all(color: Colors.amber.shade200),
+        color: colors.warning.withValues(alpha: 0.1),
+        border: Border.all(color: colors.warning.withValues(alpha: 0.3)),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
         '⚠️ 以上分析仅供参考，不能替代专业医疗诊断。如有不适，请及时就医。',
         textAlign: TextAlign.center,
-        style: TextStyle(color: Colors.amber[700], fontSize: 12),
+        style: TextStyle(color: colors.warning, fontSize: 12),
       ),
     );
   }

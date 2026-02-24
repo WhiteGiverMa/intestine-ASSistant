@@ -1,14 +1,13 @@
 // @module: auth_provider
 // @type: provider
 // @layer: frontend
-// @depends: [local_db_service, database_service, provider, shared_preferences]
+// @depends: [local_db_service, database_service, provider]
 // @exports: [AuthProvider]
 // @state:
 //   - isInitialized: bool (Whether provider is initialized)
 //   - localUser: LocalUser? (Local user info)
-// @brief: Authentication state management for local-first mode
+// @brief: Local user state management for local-first mode
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../services/local_db_service.dart';
 import '../services/database_service.dart';
 
@@ -38,15 +37,10 @@ class AuthProvider extends ChangeNotifier {
 
     _localUser = await LocalDbService.getLocalUser();
 
+    _localUser ??= await LocalDbService.createLocalUser();
+
     _initialized = true;
     notifyListeners();
-  }
-
-  Future<void> ensureLocalUser() async {
-    if (_localUser == null) {
-      _localUser = await LocalDbService.createLocalUser();
-      notifyListeners();
-    }
   }
 
   Future<void> updateNickname(String nickname) async {
@@ -57,11 +51,8 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> logout() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('token');
-    await prefs.remove('user');
-    _localUser = null;
+  Future<void> refreshUser() async {
+    _localUser = await LocalDbService.getLocalUser();
     notifyListeners();
   }
 }

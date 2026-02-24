@@ -4,41 +4,79 @@ import '../providers/theme_provider.dart';
 import '../theme/theme_colors.dart';
 import '../theme/theme_decorations.dart';
 import '../widgets/app_header.dart';
+import '../utils/animations.dart';
 
 class ThemeSelectorPage extends StatelessWidget {
   const ThemeSelectorPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = context.watch<ThemeProvider>();
+    final themeProvider = Provider.of<ThemeProvider>(context);
 
     return Scaffold(
-      body: Container(
-        decoration: ThemeDecorations.backgroundGradient(
-          context,
-          mode: themeProvider.mode,
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              const AppHeader(title: '选择主题', showBackButton: true),
-              Expanded(
-                child: ListView(
-                  padding: const EdgeInsets.all(16),
-                  children:
-                      AppThemeMode.values.map((mode) {
-                        return _buildThemeCard(context, mode, themeProvider);
-                      }).toList(),
+      body: AnimatedTheme(
+        data: Theme.of(context),
+        duration: AppAnimations.durationNormal,
+        child: Container(
+          decoration: ThemeDecorations.backgroundGradient(
+            context,
+            mode: themeProvider.mode,
+          ),
+          child: SafeArea(
+            child: Column(
+              children: [
+                const AppHeader(title: '选择主题', showBackButton: true),
+                Expanded(
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: AppThemeMode.values.length,
+                    itemBuilder: (context, index) {
+                      final mode = AppThemeMode.values[index];
+                      final delay = Duration(
+                        milliseconds: AppAnimations.staggerIntervalMs * index,
+                      );
+                      return _buildAnimatedThemeCard(
+                        context,
+                        mode,
+                        themeProvider,
+                        delay,
+                      );
+                    },
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildThemeCard(
+  Widget _buildAnimatedThemeCard(
+    BuildContext context,
+    AppThemeMode mode,
+    ThemeProvider themeProvider,
+    Duration delay,
+  ) {
+    return AnimatedCard(
+      key: ValueKey('theme_card_${mode.name}'),
+      delay: delay,
+      onTap: () => _handleThemeChange(context, themeProvider, mode),
+      child: _buildThemeCardContent(context, mode, themeProvider),
+    );
+  }
+
+  void _handleThemeChange(
+    BuildContext context,
+    ThemeProvider themeProvider,
+    AppThemeMode mode,
+  ) async {
+    if (themeProvider.mode == mode) return;
+
+    themeProvider.setMode(mode);
+  }
+
+  Widget _buildThemeCardContent(
     BuildContext context,
     AppThemeMode mode,
     ThemeProvider themeProvider,
@@ -46,74 +84,81 @@ class ThemeSelectorPage extends StatelessWidget {
     final isSelected = themeProvider.mode == mode;
     final themeColors = ThemeColors.forMode(mode);
 
-    return GestureDetector(
-      onTap: () => themeProvider.setMode(mode),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 16),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: themeColors.card,
-          borderRadius: BorderRadius.circular(16),
-          border:
-              isSelected
-                  ? Border.all(color: themeProvider.colors.primary, width: 2)
-                  : null,
-          boxShadow: [
-            BoxShadow(
-              color: themeColors.shadow,
-              blurRadius: 8,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                _buildThemePreview(mode),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Text(
-                            mode.label,
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: themeColors.textPrimary,
-                            ),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: themeColors.card,
+        borderRadius: BorderRadius.circular(16),
+        border:
+            isSelected
+                ? Border.all(color: themeProvider.colors.primary, width: 2)
+                : null,
+        boxShadow: [
+          BoxShadow(
+            color: themeColors.shadow,
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              _buildThemePreview(mode),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          mode.label,
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: themeColors.textPrimary,
                           ),
-                          if (isSelected) ...[
-                            const SizedBox(width: 8),
-                            Icon(
+                        ),
+                        if (isSelected) ...[
+                          const SizedBox(width: 8),
+                          AnimatedSwitcher(
+                            duration: AppAnimations.durationFast,
+                            transitionBuilder: (child, animation) {
+                              return ScaleTransition(
+                                scale: animation,
+                                child: child,
+                              );
+                            },
+                            child: Icon(
                               Icons.check_circle,
+                              key: ValueKey('selected_$isSelected'),
                               color: themeProvider.colors.primary,
                               size: 20,
                             ),
-                          ],
+                          ),
                         ],
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _getThemeDescription(mode),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: themeColors.textSecondary,
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        _getThemeDescription(mode),
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: themeColors.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            _buildColorPalette(themeColors),
-          ],
-        ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          _buildColorPalette(themeColors),
+        ],
       ),
     );
   }
@@ -170,18 +215,18 @@ class ThemeSelectorPage extends StatelessWidget {
   Widget _buildColorPalette(ThemeColors colors) {
     return Row(
       children: [
-        _buildColorDot(colors.primary, '主色'),
+        _buildColorDot(colors.primary, '主色', colors),
         const SizedBox(width: 8),
-        _buildColorDot(colors.card, '卡片'),
+        _buildColorDot(colors.card, '卡片', colors),
         const SizedBox(width: 8),
-        _buildColorDot(colors.textPrimary, '文字'),
+        _buildColorDot(colors.textPrimary, '文字', colors),
         const SizedBox(width: 8),
-        _buildColorDot(colors.background, '背景'),
+        _buildColorDot(colors.background, '背景', colors),
       ],
     );
   }
 
-  Widget _buildColorDot(Color color, String label) {
+  Widget _buildColorDot(Color color, String label, ThemeColors colors) {
     return Expanded(
       child: Column(
         children: [
@@ -190,11 +235,11 @@ class ThemeSelectorPage extends StatelessWidget {
             decoration: BoxDecoration(
               color: color,
               borderRadius: BorderRadius.circular(4),
-              border: Border.all(color: Colors.grey.withValues(alpha: 0.3)),
+              border: Border.all(color: colors.divider),
             ),
           ),
           const SizedBox(height: 4),
-          Text(label, style: const TextStyle(fontSize: 10, color: Colors.grey)),
+          Text(label, style: TextStyle(fontSize: 10, color: colors.textSecondary)),
         ],
       ),
     );

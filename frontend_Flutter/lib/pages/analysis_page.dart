@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
+import '../services/deepseek_service.dart';
+import '../services/local_db_service.dart';
 import '../models/models.dart';
 import '../widgets/error_dialog.dart';
 import '../widgets/compact_tab_switcher.dart';
@@ -10,14 +12,16 @@ import '../widgets/app_header.dart';
 import '../providers/theme_provider.dart';
 import '../theme/theme_colors.dart';
 import '../theme/theme_decorations.dart';
-import 'settings_page.dart';
-import 'login_page.dart';
+import '../utils/animations.dart';
+import '../widgets/app_bottom_nav.dart';
 import 'chat_sidebar.dart';
 import 'chat_message_widgets.dart';
 import 'chat_settings.dart';
 
 class AnalysisPage extends StatefulWidget {
-  const AnalysisPage({super.key});
+  final void Function(NavTab tab)? onNavigate;
+
+  const AnalysisPage({super.key, this.onNavigate});
 
   @override
   State<AnalysisPage> createState() => _AnalysisPageState();
@@ -41,6 +45,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
   bool _chatLoading = false;
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  String _currentRequestId = '';
 
   String _analysisType = 'weekly';
   bool _analysisLoading = false;
@@ -50,12 +55,18 @@ class _AnalysisPageState extends State<AnalysisPage> {
 
   String? _recordsStartDate;
   String? _recordsEndDate;
+  String? _actualRecordsStartDate;
+  bool _showRecordsAdjustedHint = false;
+  bool _showRequestDetails = false;
+  bool _showRequestDetailsButton = false;
 
   bool _sidebarOpen = false;
-  bool _thinkingEnabled = false;
-  ThinkingIntensity _thinkingIntensity = ThinkingIntensity.medium;
+  ThinkingIntensity _thinkingIntensity = ThinkingIntensity.none;
   String? _systemPrompt;
   bool _streamingEnabled = false;
+
+  final Map<String, _BackgroundChatState> _backgroundChats = {};
+  final Map<String, List<ChatMessage>> _conversationCache = {};
 
   @override
   void initState() {
@@ -64,31 +75,39 @@ class _AnalysisPageState extends State<AnalysisPage> {
   }
 
   Future<void> _initPage() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token');
     _loadChatSettings();
-    if (token != null) {
-      _checkAiStatus();
-    } else {
-      setState(() {
-        _aiStatus = AiStatus(
-          hasApiKey: false,
-          hasApiUrl: false,
-          hasModel: false,
-          isConfigured: false,
-        );
-      });
-    }
+    _loadShowRequestDetails();
+    _checkAiStatus();
+  }
+
+  Future<void> _loadShowRequestDetails() async {
+    final savedValue = await LocalDbService.getSetting('show_request_details');
+    setState(() {
+      _showRequestDetails = savedValue == 'true';
+    });
   }
 
   Future<void> _loadChatSettings() async {
-    final prefs = await SharedPreferences.getInstance();
+    final savedPrompt = await DeepSeekService.getSystemPrompt();
+    final streamingEnabled = await LocalDbService.getSetting(
+      'streaming_enabled',
+    );
+    final intensityStr = await LocalDbService.getSetting('thinking_intensity');
+    final thinkingEnabled = await LocalDbService.getSetting('thinking_enabled');
+
+    ThinkingIntensity intensity;
+    if (intensityStr != null) {
+      intensity = ThinkingIntensity.fromApiValue(intensityStr);
+    } else if (thinkingEnabled == 'true') {
+      intensity = ThinkingIntensity.medium;
+    } else {
+      intensity = ThinkingIntensity.none;
+    }
+
     setState(() {
-      _thinkingEnabled = prefs.getBool('thinking_enabled') ?? false;
-      final intensityStr = prefs.getString('thinking_intensity') ?? 'medium';
-      _thinkingIntensity = ThinkingIntensity.fromApiValue(intensityStr);
-      _systemPrompt = prefs.getString('system_prompt');
-      _streamingEnabled = prefs.getBool('streaming_enabled') ?? false;
+      _thinkingIntensity = intensity;
+      _systemPrompt = savedPrompt;
+      _streamingEnabled = streamingEnabled == 'true';
     });
   }
 
@@ -104,30 +123,15 @@ class _AnalysisPageState extends State<AnalysisPage> {
       }
     } catch (e) {
       final appError = ErrorHandler.handleError(e);
-      if (appError.type == ErrorType.auth) {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.remove('token');
-        await prefs.remove('user');
-        setState(() {
-          _statusError = appError;
-          _aiStatus = AiStatus(
-            hasApiKey: false,
-            hasApiUrl: false,
-            hasModel: false,
-            isConfigured: false,
-          );
-        });
-      } else {
-        setState(() {
-          _statusError = appError;
-          _aiStatus = AiStatus(
-            hasApiKey: false,
-            hasApiUrl: false,
-            hasModel: false,
-            isConfigured: false,
-          );
-        });
-      }
+      setState(() {
+        _statusError = appError;
+        _aiStatus = AiStatus(
+          hasApiKey: false,
+          hasApiUrl: false,
+          hasModel: false,
+          isConfigured: false,
+        );
+      });
     }
   }
 
@@ -137,9 +141,14 @@ class _AnalysisPageState extends State<AnalysisPage> {
         conversationId: _conversationId,
       );
       setState(() {
-        _messages = session.messages;
+        _messages = List<ChatMessage>.from(session.messages);
         if (_conversationId == null && session.conversationId.isNotEmpty) {
           _conversationId = session.conversationId;
+        }
+        if (_conversationId != null) {
+          _conversationCache[_conversationId!] = List<ChatMessage>.from(
+            _messages,
+          );
         }
       });
       _scrollToBottom();
@@ -149,18 +158,145 @@ class _AnalysisPageState extends State<AnalysisPage> {
   }
 
   Future<void> _loadConversation(String conversationId) async {
+    _currentRequestId = DateTime.now().millisecondsSinceEpoch.toString();
+
+    final hasBackgroundChat =
+        _backgroundChats.containsKey(conversationId) &&
+        !_backgroundChats[conversationId]!.isComplete;
+
+    final hasCache = _conversationCache.containsKey(conversationId);
+
     setState(() {
       _conversationId = conversationId;
-      _messages = [];
+      _messages =
+          hasCache ? List.from(_conversationCache[conversationId]!) : [];
+      _chatLoading = !hasCache && hasBackgroundChat;
+      _showRequestDetailsButton = false;
     });
-    await _loadChatHistory();
+
+    if (hasCache) {
+      _scrollToBottom();
+      _loadChatHistorySilent(conversationId);
+    } else {
+      await _loadChatHistory();
+    }
+
+    if (hasBackgroundChat) {
+      _syncBackgroundChatState(conversationId);
+    }
+  }
+
+  Future<void> _loadChatHistorySilent(String conversationId) async {
+    try {
+      final session = await ApiService.getChatHistory(
+        conversationId: conversationId,
+      );
+      final newMessages = List<ChatMessage>.from(session.messages);
+      final cachedMessages = _conversationCache[conversationId];
+      final hasChanged =
+          cachedMessages == null ||
+          newMessages.length != cachedMessages.length ||
+          _messagesChanged(newMessages, cachedMessages);
+
+      if (hasChanged && _conversationId == conversationId) {
+        setState(() {
+          _messages = newMessages;
+          _conversationCache[conversationId] = List<ChatMessage>.from(
+            newMessages,
+          );
+        });
+        _scrollToBottom();
+      } else if (hasChanged) {
+        _conversationCache[conversationId] = List<ChatMessage>.from(
+          newMessages,
+        );
+      }
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  bool _messagesChanged(List<ChatMessage> a, List<ChatMessage> b) {
+    if (a.length != b.length) return true;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i].messageId != b[i].messageId || a[i].content != b[i].content) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  void _syncBackgroundChatState(String conversationId) {
+    final bgState = _backgroundChats[conversationId];
+    if (bgState == null) return;
+
+    setState(() {
+      final tempIndex = _messages.indexWhere(
+        (m) => m.messageId.startsWith('temp-assistant-'),
+      );
+      if (tempIndex != -1) {
+        _messages[tempIndex] = ChatMessage(
+          messageId: bgState.messageId ?? _messages[tempIndex].messageId,
+          conversationId: conversationId,
+          role: 'assistant',
+          content: bgState.content,
+          createdAt: _messages[tempIndex].createdAt,
+          thinkingContent: bgState.thinkingContent,
+        );
+      } else if (bgState.content.isNotEmpty) {
+        _messages.add(
+          ChatMessage(
+            messageId:
+                bgState.messageId ?? 'temp-assistant-${bgState.requestId}',
+            conversationId: conversationId,
+            role: 'assistant',
+            content: bgState.content,
+            createdAt: DateTime.now().toIso8601String(),
+            thinkingContent: bgState.thinkingContent,
+          ),
+        );
+      }
+      _chatLoading = !bgState.isComplete;
+      if (bgState.isComplete) {
+        _showRequestDetailsButton = _showRequestDetails;
+        _backgroundChats.remove(conversationId);
+      }
+    });
+    _scrollToBottom();
   }
 
   void _newConversation() {
+    _currentRequestId = DateTime.now().millisecondsSinceEpoch.toString();
     setState(() {
       _conversationId = null;
       _messages = [];
       _sidebarOpen = false;
+      _showRequestDetailsButton = false;
+      _chatLoading = false;
+    });
+    ApiService.clearLastChatRequestDetails();
+  }
+
+  void _cancelCurrentRequest() {
+    ApiService.cancelCurrentRequest();
+    _currentRequestId = DateTime.now().millisecondsSinceEpoch.toString();
+
+    if (_conversationId != null &&
+        _backgroundChats.containsKey(_conversationId)) {
+      final bgState = _backgroundChats[_conversationId]!;
+      if (bgState.content.isNotEmpty) {
+        LocalDbService.saveMessage(
+          conversationId: _conversationId!,
+          role: 'assistant',
+          content: bgState.content,
+          thinkingContent: bgState.thinkingContent,
+        );
+      }
+      _backgroundChats.remove(_conversationId);
+    }
+
+    setState(() {
+      _chatLoading = false;
     });
   }
 
@@ -170,8 +306,12 @@ class _AnalysisPageState extends State<AnalysisPage> {
 
     _messageController.clear();
 
+    final requestId = DateTime.now().millisecondsSinceEpoch.toString();
+    _currentRequestId = requestId;
+    final isNewConversation = _conversationId == null;
+
     final tempUserMessage = ChatMessage(
-      messageId: 'temp-${DateTime.now().millisecondsSinceEpoch}',
+      messageId: 'temp-$requestId',
       conversationId: _conversationId ?? '',
       role: 'user',
       content: message,
@@ -180,36 +320,102 @@ class _AnalysisPageState extends State<AnalysisPage> {
     setState(() {
       _messages.add(tempUserMessage);
       _chatLoading = true;
+      _showRequestDetailsButton = false;
     });
     _scrollToBottom();
 
     if (_streamingEnabled) {
-      await _sendMessageStream(message, tempUserMessage);
+      await _sendMessageStream(
+        message,
+        tempUserMessage,
+        requestId,
+        isNewConversation,
+      );
     } else {
-      await _sendMessageNormal(message, tempUserMessage);
+      await _sendMessageNormal(
+        message,
+        tempUserMessage,
+        requestId,
+        isNewConversation,
+      );
+    }
+  }
+
+  String _generateTitleFromMessage(String message) {
+    final trimmed = message.trim();
+    if (trimmed.isEmpty) return '新对话';
+    if (trimmed.length <= 10) return trimmed;
+    return '${trimmed.substring(0, 10)}...';
+  }
+
+  Future<void> _autoRenameConversation(
+    String conversationId,
+    String message,
+  ) async {
+    final title = _generateTitleFromMessage(message);
+    try {
+      await ApiService.renameConversation(
+        conversationId: conversationId,
+        title: title,
+      );
+    } catch (e) {
+      // ignore
     }
   }
 
   Future<void> _sendMessageNormal(
     String message,
     ChatMessage tempUserMessage,
+    String requestId,
+    bool isNewConversation,
   ) async {
+    final tempAssistantMessageId = 'temp-assistant-$requestId';
+    final tempAssistantMessage = ChatMessage(
+      messageId: tempAssistantMessageId,
+      conversationId: _conversationId ?? '',
+      role: 'assistant',
+      content: '',
+      createdAt: DateTime.now().toIso8601String(),
+    );
+
+    setState(() {
+      _messages.add(tempAssistantMessage);
+    });
+    _scrollToBottom();
+
     try {
-      final response = await ApiService.sendMessage(
+      final result = await ApiService.sendMessage(
         message: message,
         conversationId: _conversationId,
         recordsStartDate: _recordsStartDate,
         recordsEndDate: _recordsEndDate,
         thinkingIntensity:
-            _thinkingEnabled ? _thinkingIntensity.toApiValue() : null,
+            _thinkingIntensity.shouldSendToApi
+                ? _thinkingIntensity.toApiValue()
+                : null,
         systemPrompt: _systemPrompt,
       );
+
+      if (_currentRequestId != requestId) {
+        return;
+      }
+
+      final response = result.message;
+      final actualStartDate = result.actualStartDate;
+
+      final wasAdjusted =
+          actualStartDate != null &&
+          _recordsStartDate != null &&
+          actualStartDate != _recordsStartDate;
+
+      final newConversationId = response.conversationId;
       setState(() {
         _messages.removeWhere((m) => m.messageId == tempUserMessage.messageId);
-        _conversationId ??= response.conversationId;
+        _messages.removeWhere((m) => m.messageId == tempAssistantMessageId);
+        _conversationId ??= newConversationId;
         final userMessage = ChatMessage(
-          messageId: 'user-${DateTime.now().millisecondsSinceEpoch}',
-          conversationId: response.conversationId,
+          messageId: 'user-$requestId',
+          conversationId: newConversationId,
           role: 'user',
           content: message,
           createdAt: response.createdAt,
@@ -217,29 +423,36 @@ class _AnalysisPageState extends State<AnalysisPage> {
         _messages.add(userMessage);
         _messages.add(response);
         _chatLoading = false;
+        _actualRecordsStartDate = actualStartDate;
+        _showRecordsAdjustedHint = wasAdjusted;
+        _showRequestDetailsButton = _showRequestDetails;
+        if (_conversationId != null) {
+          _conversationCache[_conversationId!] = List<ChatMessage>.from(
+            _messages,
+          );
+        }
       });
       _scrollToBottom();
+
+      if (isNewConversation && newConversationId.isNotEmpty) {
+        await _autoRenameConversation(newConversationId, message);
+      }
     } catch (e) {
+      if (_currentRequestId != requestId) {
+        return;
+      }
       final appError = ErrorHandler.handleError(e);
       setState(() {
         _messages.removeWhere((m) => m.messageId == tempUserMessage.messageId);
+        _messages.removeWhere((m) => m.messageId == tempAssistantMessageId);
         _chatLoading = false;
       });
-      if (appError.type == ErrorType.auth) {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.remove('token');
-        await prefs.remove('user');
-        if (mounted) {
-          _showAuthError();
-        }
-      } else {
-        if (mounted) {
-          ErrorDialog.showFromAppError(
-            context,
-            error: appError,
-            onRetry: () => _sendMessage(),
-          );
-        }
+      if (mounted) {
+        ErrorDialog.showFromAppError(
+          context,
+          error: appError,
+          onRetry: () => _sendMessage(),
+        );
       }
     }
   }
@@ -247,11 +460,12 @@ class _AnalysisPageState extends State<AnalysisPage> {
   Future<void> _sendMessageStream(
     String message,
     ChatMessage tempUserMessage,
+    String requestId,
+    bool isNewConversation,
   ) async {
-    String? finalConversationId;
     String? finalMessageId;
-    final tempAssistantMessageId =
-        'temp-assistant-${DateTime.now().millisecondsSinceEpoch}';
+    String? streamConversationId;
+    final tempAssistantMessageId = 'temp-assistant-$requestId';
     final tempAssistantMessage = ChatMessage(
       messageId: tempAssistantMessageId,
       conversationId: _conversationId ?? '',
@@ -263,7 +477,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
     setState(() {
       _messages.removeWhere((m) => m.messageId == tempUserMessage.messageId);
       final userMessage = ChatMessage(
-        messageId: 'user-${DateTime.now().millisecondsSinceEpoch}',
+        messageId: 'user-$requestId',
         conversationId: _conversationId ?? '',
         role: 'user',
         content: message,
@@ -281,71 +495,151 @@ class _AnalysisPageState extends State<AnalysisPage> {
         recordsStartDate: _recordsStartDate,
         recordsEndDate: _recordsEndDate,
         thinkingIntensity:
-            _thinkingEnabled ? _thinkingIntensity.toApiValue() : null,
+            _thinkingIntensity.shouldSendToApi
+                ? _thinkingIntensity.toApiValue()
+                : null,
         systemPrompt: _systemPrompt,
       )) {
-        finalConversationId ??= chunk.conversationId;
+        if (chunk.conversationId != null && streamConversationId == null) {
+          final convId = chunk.conversationId!;
+          streamConversationId = convId;
 
+          _backgroundChats[convId] = _BackgroundChatState(
+            conversationId: convId,
+            requestId: requestId,
+          );
+
+          if (_currentRequestId == requestId) {
+            setState(() {
+              _conversationId = streamConversationId;
+              final userMsgIndex = _messages.indexWhere(
+                (m) => m.role == 'user' && m.conversationId.isEmpty,
+              );
+              if (userMsgIndex != -1) {
+                _messages[userMsgIndex] = ChatMessage(
+                  messageId: _messages[userMsgIndex].messageId,
+                  conversationId: streamConversationId!,
+                  role: 'user',
+                  content: _messages[userMsgIndex].content,
+                  createdAt: _messages[userMsgIndex].createdAt,
+                );
+              }
+            });
+          }
+        }
+
+        if (chunk.actualStartDate != null && _actualRecordsStartDate == null) {
+          if (_currentRequestId == requestId) {
+            final wasAdjusted =
+                _recordsStartDate != null &&
+                chunk.actualStartDate != _recordsStartDate;
+            setState(() {
+              _actualRecordsStartDate = chunk.actualStartDate;
+              _showRecordsAdjustedHint = wasAdjusted;
+            });
+          }
+        }
+
+        if (chunk.content != null || chunk.reasoningContent != null) {
+          final bgState =
+              streamConversationId != null
+                  ? _backgroundChats[streamConversationId]
+                  : null;
+
+          if (bgState != null) {
+            bgState.content += chunk.content ?? '';
+            if (chunk.reasoningContent != null) {
+              bgState.thinkingContent =
+                  (bgState.thinkingContent ?? '') + chunk.reasoningContent!;
+            }
+          }
+
+          if (_currentRequestId == requestId) {
+            setState(() {
+              final index = _messages.indexWhere(
+                (m) => m.messageId == tempAssistantMessageId,
+              );
+              if (index != -1) {
+                final currentMessage = _messages[index];
+                _messages[index] = ChatMessage(
+                  messageId: chunk.messageId ?? tempAssistantMessageId,
+                  conversationId:
+                      streamConversationId ??
+                      _conversationId ??
+                      currentMessage.conversationId,
+                  role: 'assistant',
+                  content: currentMessage.content + (chunk.content ?? ''),
+                  createdAt: currentMessage.createdAt,
+                  thinkingContent:
+                      chunk.reasoningContent != null
+                          ? (currentMessage.thinkingContent ?? '') +
+                              chunk.reasoningContent!
+                          : currentMessage.thinkingContent,
+                );
+              }
+            });
+            _scrollToBottom();
+          }
+        }
+
+        if (chunk.done && chunk.messageId != null) {
+          finalMessageId = chunk.messageId;
+          if (streamConversationId != null &&
+              _backgroundChats.containsKey(streamConversationId)) {
+            _backgroundChats[streamConversationId]!.messageId = finalMessageId;
+            _backgroundChats[streamConversationId]!.isComplete = true;
+          }
+        }
+      }
+
+      if (_currentRequestId == requestId) {
         setState(() {
           final index = _messages.indexWhere(
             (m) => m.messageId == tempAssistantMessageId,
           );
-          if (index != -1) {
+          if (index != -1 && finalMessageId != null) {
             final currentMessage = _messages[index];
             _messages[index] = ChatMessage(
-              messageId: chunk.messageId ?? tempAssistantMessageId,
-              conversationId:
-                  chunk.conversationId ?? currentMessage.conversationId,
+              messageId: finalMessageId,
+              conversationId: currentMessage.conversationId,
               role: 'assistant',
-              content: currentMessage.content + (chunk.content ?? ''),
+              content: currentMessage.content,
               createdAt: currentMessage.createdAt,
-              thinkingContent:
-                  chunk.reasoningContent != null
-                      ? (currentMessage.thinkingContent ?? '') +
-                          chunk.reasoningContent!
-                      : currentMessage.thinkingContent,
+              thinkingContent: currentMessage.thinkingContent,
+            );
+          }
+          _chatLoading = false;
+          _showRequestDetailsButton = _showRequestDetails;
+          if (_conversationId != null) {
+            _conversationCache[_conversationId!] = List<ChatMessage>.from(
+              _messages,
             );
           }
         });
-        _scrollToBottom();
-
-        if (chunk.done && chunk.messageId != null) {
-          finalMessageId = chunk.messageId;
-        }
       }
 
-      setState(() {
-        _conversationId ??= finalConversationId;
-        final index = _messages.indexWhere(
-          (m) => m.messageId == tempAssistantMessageId,
-        );
-        if (index != -1 && finalMessageId != null) {
-          final currentMessage = _messages[index];
-          _messages[index] = ChatMessage(
-            messageId: finalMessageId,
-            conversationId: currentMessage.conversationId,
-            role: 'assistant',
-            content: currentMessage.content,
-            createdAt: currentMessage.createdAt,
-            thinkingContent: currentMessage.thinkingContent,
-          );
-        }
-        _chatLoading = false;
-      });
+      if (streamConversationId != null &&
+          _backgroundChats.containsKey(streamConversationId)) {
+        _backgroundChats.remove(streamConversationId);
+      }
+
+      if (isNewConversation && streamConversationId != null) {
+        await _autoRenameConversation(streamConversationId, message);
+      }
     } catch (e) {
       final appError = ErrorHandler.handleError(e);
-      setState(() {
-        _messages.removeWhere((m) => m.messageId == tempAssistantMessageId);
-        _chatLoading = false;
-      });
-      if (appError.type == ErrorType.auth) {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.remove('token');
-        await prefs.remove('user');
-        if (mounted) {
-          _showAuthError();
-        }
-      } else {
+
+      if (streamConversationId != null &&
+          _backgroundChats.containsKey(streamConversationId)) {
+        _backgroundChats[streamConversationId]!.error = e.toString();
+        _backgroundChats[streamConversationId]!.isComplete = true;
+      }
+
+      if (_currentRequestId == requestId) {
+        setState(() {
+          _messages.removeWhere((m) => m.messageId == tempAssistantMessageId);
+          _chatLoading = false;
+        });
         if (mounted) {
           ErrorDialog.showFromAppError(
             context,
@@ -364,34 +658,18 @@ class _AnalysisPageState extends State<AnalysisPage> {
     });
 
     try {
-      final result = await ApiService.analyzeData(analysisType: _analysisType);
+      final result = await LocalDbService.analyzeLocally(
+        analysisType: _analysisType,
+      );
       setState(() {
         _result = result;
         _analysisLoading = false;
       });
     } catch (e) {
-      final appError = ErrorHandler.handleError(e);
-      if (appError.type == ErrorType.auth) {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.remove('token');
-        await prefs.remove('user');
-        setState(() {
-          _error = appError.message;
-          _analysisLoading = false;
-        });
-      } else {
-        setState(() {
-          _error = appError.message;
-          _analysisLoading = false;
-        });
-        if (mounted) {
-          ErrorDialog.showFromAppError(
-            context,
-            error: appError,
-            onRetry: () => _analyze(),
-          );
-        }
-      }
+      setState(() {
+        _error = e.toString().replaceAll('Exception: ', '');
+        _analysisLoading = false;
+      });
     }
   }
 
@@ -405,29 +683,6 @@ class _AnalysisPageState extends State<AnalysisPage> {
         );
       }
     });
-  }
-
-  void _showAuthError() {
-    showDialog(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('登录已过期'),
-            content: const Text('请重新登录'),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (_) => const LoginPage()),
-                  );
-                },
-                child: const Text('去登录'),
-              ),
-            ],
-          ),
-    );
   }
 
   Future<void> _selectRecordsDateRange() async {
@@ -471,15 +726,13 @@ class _AnalysisPageState extends State<AnalysisPage> {
     setState(() {
       _recordsStartDate = null;
       _recordsEndDate = null;
+      _actualRecordsStartDate = null;
+      _showRecordsAdjustedHint = false;
     });
   }
 
   bool _isMobile() {
     return MediaQuery.of(context).size.width < 600;
-  }
-
-  bool _isAuthError() {
-    return _error != null && (_error!.contains('登录') || _error!.contains('过期'));
   }
 
   void _toggleSidebar() {
@@ -491,9 +744,8 @@ class _AnalysisPageState extends State<AnalysisPage> {
   void _openSettings() {
     showChatSettings(
       context,
-      onThinkingChanged: (enabled, intensity) {
+      onThinkingChanged: (intensity) {
         setState(() {
-          _thinkingEnabled = enabled;
           _thinkingIntensity = intensity;
         });
       },
@@ -505,22 +757,39 @@ class _AnalysisPageState extends State<AnalysisPage> {
     );
   }
 
-  Future<void> _toggleThinking() async {
-    final newValue = !_thinkingEnabled;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('thinking_enabled', newValue);
-    setState(() {
-      _thinkingEnabled = newValue;
-    });
-  }
-
   Future<void> _toggleStreaming() async {
     final newValue = !_streamingEnabled;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('streaming_enabled', newValue);
+    await LocalDbService.setSetting('streaming_enabled', newValue.toString());
     setState(() {
       _streamingEnabled = newValue;
     });
+  }
+
+  void _cycleThinkingIntensity() {
+    const values = ThinkingIntensity.values;
+    final currentIndex = values.indexOf(_thinkingIntensity);
+    final nextIndex = (currentIndex + 1) % values.length;
+    _saveThinkingIntensity(values[nextIndex]);
+  }
+
+  Future<void> _saveThinkingIntensity(ThinkingIntensity value) async {
+    await LocalDbService.setSetting('thinking_intensity', value.toApiValue());
+    setState(() {
+      _thinkingIntensity = value;
+    });
+  }
+
+  String _getThinkingLabel() {
+    switch (_thinkingIntensity) {
+      case ThinkingIntensity.none:
+        return '默认';
+      case ThinkingIntensity.low:
+        return '低';
+      case ThinkingIntensity.medium:
+        return '中';
+      case ThinkingIntensity.high:
+        return '高';
+    }
   }
 
   @override
@@ -547,7 +816,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
-                            color: colors.primary,
+                            color: colors.headerText,
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -652,13 +921,14 @@ class _AnalysisPageState extends State<AnalysisPage> {
           GestureDetector(
             onTap: _toggleSidebar,
             child: AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
+              duration: AppAnimations.durationNormal,
+              curve: AppAnimations.curveEnter,
               color: Colors.black.withValues(alpha: _sidebarOpen ? 0.5 : 0),
             ),
           ),
         AnimatedPositioned(
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOut,
+          duration: AppAnimations.durationSlow,
+          curve: AppAnimations.curveEnter,
           left: _sidebarOpen ? 0 : -sidebarWidth,
           top: 0,
           bottom: 0,
@@ -672,11 +942,13 @@ class _AnalysisPageState extends State<AnalysisPage> {
               if (isMobile) _toggleSidebar();
             },
             onNewConversation: _newConversation,
+            isLoading: _chatLoading,
+            loadingConversationId: _conversationId,
           ),
         ),
         AnimatedPositioned(
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOut,
+          duration: AppAnimations.durationNormal,
+          curve: AppAnimations.curveEnter,
           left: _sidebarOpen ? sidebarWidth + 8 : 12,
           top: buttonTop,
           child: GestureDetector(
@@ -743,10 +1015,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
             const SizedBox(height: 24),
             ElevatedButton(
               onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const SettingsPage()),
-                ).then((_) => _checkAiStatus());
+                widget.onNavigate?.call(NavTab.settings);
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: colors.primary,
@@ -788,14 +1057,174 @@ class _AnalysisPageState extends State<AnalysisPage> {
       );
     }
 
-    return ListView.builder(
-      controller: _scrollController,
-      padding: const EdgeInsets.all(16),
-      itemCount: _messages.length,
-      itemBuilder: (context, index) {
-        final message = _messages[index];
-        return MessageBubble(message: message);
-      },
+    return Column(
+      children: [
+        Expanded(
+          child: ListView.builder(
+            controller: _scrollController,
+            padding: const EdgeInsets.all(16),
+            itemCount: _messages.length,
+            itemBuilder: (context, index) {
+              final message = _messages[index];
+              final delay = Duration(
+                milliseconds: AppAnimations.staggerIntervalMs * (index % 10),
+              );
+              return AnimatedMessageBubble(
+                delay: delay,
+                child: MessageBubble(message: message),
+              );
+            },
+          ),
+        ),
+        if (_showRequestDetailsButton && !_chatLoading)
+          _buildRequestDetailsButton(colors),
+      ],
+    );
+  }
+
+  Widget _buildRequestDetailsButton(ThemeColors colors) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: GestureDetector(
+        onTap: _showRequestDetailsDialog,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          decoration: BoxDecoration(
+            color: colors.surfaceVariant,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: colors.divider),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.info_outline, size: 16, color: colors.textSecondary),
+              const SizedBox(width: 6),
+              Text(
+                '查看请求详情',
+                style: TextStyle(color: colors.textSecondary, fontSize: 13),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showRequestDetailsDialog() {
+    final colors = context.read<ThemeProvider>().colors;
+    final details = ApiService.getLastChatRequestDetails();
+
+    if (details == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('没有可用的请求详情'),
+          backgroundColor: colors.warning,
+        ),
+      );
+      return;
+    }
+
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: Row(
+              children: [
+                Icon(Icons.info_outline, color: colors.primary),
+                const SizedBox(width: 8),
+                const Text('AI对话请求详情'),
+              ],
+            ),
+            content: SingleChildScrollView(
+              child: Container(
+                constraints: const BoxConstraints(maxWidth: 400),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildDetailRow('时间', details.timestamp.toIso8601String()),
+                    _buildDetailRow(
+                      '耗时',
+                      '${details.duration?.inMilliseconds ?? 'N/A'} ms',
+                    ),
+                    _buildDetailRow('URL', details.url),
+                    _buildDetailRow(
+                      '状态码',
+                      details.statusCode?.toString() ?? 'N/A',
+                    ),
+                    if (details.errorMessage != null)
+                      _buildDetailRow(
+                        '错误',
+                        details.errorMessage!,
+                        isError: true,
+                      ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(
+                  '关闭',
+                  style: TextStyle(color: colors.textSecondary),
+                ),
+              ),
+              ElevatedButton.icon(
+                onPressed: () {
+                  Clipboard.setData(
+                    ClipboardData(text: details.toFormattedString()),
+                  );
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: const Text('请求详情已复制到剪贴板'),
+                      backgroundColor: colors.success,
+                    ),
+                  );
+                  Navigator.pop(context);
+                },
+                icon: const Icon(Icons.copy, size: 18),
+                label: const Text('复制完整详情'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: colors.primary,
+                  foregroundColor: colors.textOnPrimary,
+                ),
+              ),
+            ],
+          ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value, {bool isError = false}) {
+    final colors = context.read<ThemeProvider>().colors;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 60,
+            child: Text(
+              '$label:',
+              style: TextStyle(
+                fontWeight: FontWeight.w500,
+                color: colors.textSecondary,
+                fontSize: 12,
+              ),
+            ),
+          ),
+          Expanded(
+            child: SelectableText(
+              value,
+              style: TextStyle(
+                color: isError ? colors.error : colors.textPrimary,
+                fontSize: 12,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -849,6 +1278,44 @@ class _AnalysisPageState extends State<AnalysisPage> {
                 ],
               ),
             ),
+          if (_showRecordsAdjustedHint && _actualRecordsStartDate != null)
+            Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.orange.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.orange.shade200),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.info_outline,
+                    size: 14,
+                    color: Colors.orange.shade700,
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      '记录已自动调整：实际发送 $_actualRecordsStartDate 至 $_recordsEndDate',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.orange.shade700,
+                      ),
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap:
+                        () => setState(() => _showRecordsAdjustedHint = false),
+                    child: Icon(
+                      Icons.close,
+                      size: 14,
+                      color: Colors.orange.shade700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           Row(
             children: [
               GestureDetector(
@@ -898,7 +1365,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
               ),
               const SizedBox(width: 8),
               GestureDetector(
-                onTap: _toggleThinking,
+                onTap: _cycleThinkingIntensity,
                 child: Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 12,
@@ -906,12 +1373,12 @@ class _AnalysisPageState extends State<AnalysisPage> {
                   ),
                   decoration: BoxDecoration(
                     color:
-                        _thinkingEnabled
+                        _thinkingIntensity != ThinkingIntensity.none
                             ? Colors.orange.shade100
                             : colors.surfaceVariant,
                     borderRadius: BorderRadius.circular(8),
                     border:
-                        _thinkingEnabled
+                        _thinkingIntensity != ThinkingIntensity.none
                             ? Border.all(color: Colors.orange.shade400)
                             : null,
                   ),
@@ -922,21 +1389,21 @@ class _AnalysisPageState extends State<AnalysisPage> {
                         Icons.psychology,
                         size: 16,
                         color:
-                            _thinkingEnabled
+                            _thinkingIntensity != ThinkingIntensity.none
                                 ? Colors.orange.shade800
                                 : colors.textSecondary,
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        '深度思考',
+                        _getThinkingLabel(),
                         style: TextStyle(
                           color:
-                              _thinkingEnabled
+                              _thinkingIntensity != ThinkingIntensity.none
                                   ? Colors.orange.shade800
                                   : colors.textSecondary,
                           fontSize: 12,
                           fontWeight:
-                              _thinkingEnabled
+                              _thinkingIntensity != ThinkingIntensity.none
                                   ? FontWeight.w600
                                   : FontWeight.normal,
                         ),
@@ -1023,29 +1490,18 @@ class _AnalysisPageState extends State<AnalysisPage> {
               ),
               const SizedBox(width: 8),
               GestureDetector(
-                onTap: _chatLoading ? null : _sendMessage,
+                onTap: _chatLoading ? _cancelCurrentRequest : _sendMessage,
                 child: Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color:
-                        _chatLoading ? colors.surfaceVariant : colors.primary,
+                    color: _chatLoading ? colors.error : colors.primary,
                     shape: BoxShape.circle,
                   ),
-                  child:
-                      _chatLoading
-                          ? SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: colors.textPrimary,
-                            ),
-                          )
-                          : Icon(
-                            Icons.send,
-                            color: colors.textOnPrimary,
-                            size: 20,
-                          ),
+                  child: Icon(
+                    _chatLoading ? Icons.stop : Icons.send,
+                    color: colors.textOnPrimary,
+                    size: 20,
+                  ),
                 ),
               ),
             ],
@@ -1060,26 +1516,26 @@ class _AnalysisPageState extends State<AnalysisPage> {
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
-          _buildAnalysisOptions(colors),
+          AnimatedEntrance(child: _buildAnalysisOptions(colors)),
           const SizedBox(height: 16),
           if (_analysisLoading)
             Center(child: CircularProgressIndicator(color: colors.primary))
           else if (_error != null)
-            AnalysisErrorCard(
-              error: _error!,
-              colors: colors,
-              onLogin:
-                  _isAuthError()
-                      ? () => Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(builder: (_) => const LoginPage()),
-                      )
-                      : null,
+            AnimatedEntrance(
+              delay: const Duration(
+                milliseconds: AppAnimations.staggerIntervalMs,
+              ),
+              child: AnalysisErrorCard(error: _error!, colors: colors),
             )
           else if (_result != null)
             AnalysisResultView(result: _result!, colors: colors)
           else
-            AnalysisPlaceholder(colors: colors),
+            AnimatedEntrance(
+              delay: const Duration(
+                milliseconds: AppAnimations.staggerIntervalMs,
+              ),
+              child: AnalysisPlaceholder(colors: colors),
+            ),
         ],
       ),
     );
@@ -1171,7 +1627,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
                 ),
               ),
               child: Text(
-                _analysisLoading ? '分析中...' : '🤖 开始 AI 分析',
+                _analysisLoading ? '分析中...' : '📊 开始本地分析',
                 style: TextStyle(fontSize: 16, color: colors.textOnPrimary),
               ),
             ),
@@ -1180,4 +1636,16 @@ class _AnalysisPageState extends State<AnalysisPage> {
       ),
     );
   }
+}
+
+class _BackgroundChatState {
+  final String conversationId;
+  final String requestId;
+  String content = '';
+  String? thinkingContent;
+  bool isComplete = false;
+  String? messageId;
+  String? error;
+
+  _BackgroundChatState({required this.conversationId, required this.requestId});
 }

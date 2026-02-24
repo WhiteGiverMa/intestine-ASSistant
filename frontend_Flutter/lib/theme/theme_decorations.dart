@@ -1,13 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/theme_provider.dart';
 import 'theme_colors.dart';
 
 class ThemeDecorations {
+  static AppThemeMode _getMode(BuildContext context, AppThemeMode? mode) {
+    return mode ?? context.watch<ThemeProvider>().mode;
+  }
+
   static BoxDecoration backgroundGradient(
     BuildContext context, {
     AppThemeMode? mode,
   }) {
-    final themeMode = mode ?? AppThemeMode.greenClassic;
-    final colors = ThemeColors.forMode(themeMode);
+    final colors = ThemeColors.forMode(_getMode(context, mode));
     return BoxDecoration(
       gradient: LinearGradient(
         begin: Alignment.topLeft,
@@ -18,8 +23,7 @@ class ThemeDecorations {
   }
 
   static BoxDecoration card(BuildContext context, {AppThemeMode? mode}) {
-    final themeMode = mode ?? AppThemeMode.greenClassic;
-    final colors = ThemeColors.forMode(themeMode);
+    final colors = ThemeColors.forMode(_getMode(context, mode));
     return BoxDecoration(
       color: colors.card,
       borderRadius: BorderRadius.circular(16),
@@ -37,8 +41,7 @@ class ThemeDecorations {
     BuildContext context, {
     AppThemeMode? mode,
   }) {
-    final themeMode = mode ?? AppThemeMode.greenClassic;
-    final colors = ThemeColors.forMode(themeMode);
+    final colors = ThemeColors.forMode(_getMode(context, mode));
     return BoxDecoration(
       color: colors.card,
       borderRadius: BorderRadius.circular(16),
@@ -54,10 +57,9 @@ class ThemeDecorations {
   }
 
   static BoxDecoration header(BuildContext context, {AppThemeMode? mode}) {
-    final themeMode = mode ?? AppThemeMode.greenClassic;
-    final colors = ThemeColors.forMode(themeMode);
+    final colors = ThemeColors.forMode(_getMode(context, mode));
     return BoxDecoration(
-      color: colors.card.withValues(alpha: 0.8),
+      color: colors.headerBackground,
       boxShadow: [
         BoxShadow(
           color: colors.shadow,
@@ -69,8 +71,7 @@ class ThemeDecorations {
   }
 
   static BoxDecoration bottomNav(BuildContext context, {AppThemeMode? mode}) {
-    final themeMode = mode ?? AppThemeMode.greenClassic;
-    final colors = ThemeColors.forMode(themeMode);
+    final colors = ThemeColors.forMode(_getMode(context, mode));
     return BoxDecoration(
       color: colors.card,
       border: Border(top: BorderSide(color: colors.divider)),
@@ -81,8 +82,7 @@ class ThemeDecorations {
     BuildContext context, {
     AppThemeMode? mode,
   }) {
-    final themeMode = mode ?? AppThemeMode.greenClassic;
-    final colors = ThemeColors.forMode(themeMode);
+    final colors = ThemeColors.forMode(_getMode(context, mode));
     return BoxDecoration(
       color: colors.primary,
       borderRadius: BorderRadius.circular(12),
@@ -90,8 +90,7 @@ class ThemeDecorations {
   }
 
   static BoxDecoration primaryChip(BuildContext context, {AppThemeMode? mode}) {
-    final themeMode = mode ?? AppThemeMode.greenClassic;
-    final colors = ThemeColors.forMode(themeMode);
+    final colors = ThemeColors.forMode(_getMode(context, mode));
     return BoxDecoration(
       color: colors.primary.withValues(alpha: 0.1),
       borderRadius: BorderRadius.circular(8),
@@ -100,8 +99,7 @@ class ThemeDecorations {
   }
 
   static BoxDecoration inputField(BuildContext context, {AppThemeMode? mode}) {
-    final themeMode = mode ?? AppThemeMode.greenClassic;
-    final colors = ThemeColors.forMode(themeMode);
+    final colors = ThemeColors.forMode(_getMode(context, mode));
     return BoxDecoration(
       color: colors.card,
       borderRadius: BorderRadius.circular(12),
@@ -110,8 +108,7 @@ class ThemeDecorations {
   }
 
   static BoxDecoration errorCard(BuildContext context, {AppThemeMode? mode}) {
-    final themeMode = mode ?? AppThemeMode.greenClassic;
-    final colors = ThemeColors.forMode(themeMode);
+    final colors = ThemeColors.forMode(_getMode(context, mode));
     return BoxDecoration(
       color: colors.error.withValues(alpha: 0.1),
       borderRadius: BorderRadius.circular(12),
@@ -120,8 +117,7 @@ class ThemeDecorations {
   }
 
   static BoxDecoration warningCard(BuildContext context, {AppThemeMode? mode}) {
-    final themeMode = mode ?? AppThemeMode.greenClassic;
-    final colors = ThemeColors.forMode(themeMode);
+    final colors = ThemeColors.forMode(_getMode(context, mode));
     return BoxDecoration(
       color: colors.warning.withValues(alpha: 0.1),
       borderRadius: BorderRadius.circular(12),
@@ -130,8 +126,7 @@ class ThemeDecorations {
   }
 
   static BoxDecoration successCard(BuildContext context, {AppThemeMode? mode}) {
-    final themeMode = mode ?? AppThemeMode.greenClassic;
-    final colors = ThemeColors.forMode(themeMode);
+    final colors = ThemeColors.forMode(_getMode(context, mode));
     return BoxDecoration(
       color: colors.success.withValues(alpha: 0.1),
       borderRadius: BorderRadius.circular(12),
@@ -144,8 +139,7 @@ class ThemeDecorations {
     AppThemeMode? mode,
     Color? backgroundColor,
   }) {
-    final themeMode = mode ?? AppThemeMode.greenClassic;
-    final colors = ThemeColors.forMode(themeMode);
+    final colors = ThemeColors.forMode(_getMode(context, mode));
     return BoxDecoration(
       color: backgroundColor ?? colors.primary.withValues(alpha: 0.1),
       borderRadius: BorderRadius.circular(10),

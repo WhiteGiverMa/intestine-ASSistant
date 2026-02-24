@@ -18,12 +18,12 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
+  <meta name="description" content="肠道健康助手 - Intestine ASSistant">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="frontend_flutter">
+  <meta name="apple-mobile-web-app-title" content="肠道助手">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
   <!-- Favicon -->
@@ -38,9 +38,118 @@
         "Helvetica Neue", Arial, "Noto Sans SC", "PingFang SC",
         "Microsoft YaHei", sans-serif;
     }
+
+    /* Native splash screen styles */
+    .splash-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background-color: #ffffff;
+      z-index: 9999;
+      transition: opacity 0.3s ease-out;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .splash-screen {
+        background-color: #000000;
+      }
+      .splash-title {
+        color: #ffffff !important;
+      }
+      .splash-subtitle {
+        color: #b0b0b0 !important;
+      }
+      .splash-icon {
+        background: linear-gradient(180deg, #00D2BE 0%, #00A996 100%) !important;
+      }
+      .spinner {
+        border-color: #333333 !important;
+        border-top-color: #00C8B4 !important;
+      }
+    }
+
+    .splash-icon {
+      width: 120px;
+      height: 120px;
+      background: linear-gradient(180deg, #00D2BE 0%, #00A996 100%);
+      border-radius: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      box-shadow: 0 8px 20px rgba(0, 200, 180, 0.3);
+      margin-bottom: 24px;
+    }
+
+    .splash-icon .emoji {
+      font-size: 64px;
+      line-height: 1;
+    }
+
+    .splash-title {
+      font-size: 24px;
+      font-weight: bold;
+      color: #212121;
+      letter-spacing: 2px;
+      margin-bottom: 8px;
+    }
+
+    .splash-subtitle {
+      font-size: 14px;
+      color: #757575;
+      letter-spacing: 1px;
+      margin-bottom: 48px;
+    }
+
+    .spinner {
+      width: 32px;
+      height: 32px;
+      border: 3px solid #E0E0E0;
+      border-top-color: #00C8B4;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .splash-hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
   </style>
 </head>
 <body>
+  <!-- Native splash screen -->
+  <div id="splash-screen" class="splash-screen">
+    <div class="splash-icon">
+      <span class="emoji">🚽</span>
+    </div>
+    <div class="splash-title">肠道健康助手</div>
+    <div class="splash-subtitle">Intestine ASSistant</div>
+    <div class="spinner"></div>
+  </div>
+
+  <script>
+    // Hide splash screen when Flutter app is ready
+    window.addEventListener('flutter-first-frame', function() {
+      var splash = document.getElementById('splash-screen');
+      if (splash) {
+        splash.classList.add('splash-hidden');
+        setTimeout(function() {
+          splash.remove();
+        }, 300);
+      }
+    });
+  </script>
+
   <!--
     You can customize the "flutter_bootstrap.js" script.
     This is useful to provide a custom configuration to the Flutter loader

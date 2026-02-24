@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../providers/theme_provider.dart';
 import '../theme/theme_colors.dart';
 import '../theme/theme_decorations.dart';
 import '../widgets/app_header.dart';
 
-const String appVersion = '0.5.0';
+const String appVersion = '1.1.2';
 
 class AboutPage extends StatelessWidget {
   const AboutPage({super.key});
@@ -80,7 +81,7 @@ class AboutPage extends StatelessWidget {
         ),
         const SizedBox(height: 4),
         Text(
-          '智能排便健康助手',
+          '肠道健康智能追踪助手',
           style: TextStyle(fontSize: 14, color: colors.textSecondary),
         ),
       ],
@@ -142,49 +143,103 @@ class AboutPage extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: ThemeDecorations.card(context),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: colors.secondary.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Center(
-              child: Text('👨‍💻', style: TextStyle(fontSize: 20)),
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '开发者',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: colors.textPrimary,
-                  ),
+          Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: colors.secondary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  '项目作者',
-                  style: TextStyle(fontSize: 12, color: colors.textSecondary),
+                child: const Center(
+                  child: Text('👨‍💻', style: TextStyle(fontSize: 20)),
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '开发者',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: colors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '马戈 (WhiteGiverMa)',
+                      style: TextStyle(fontSize: 12, color: colors.textSecondary),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-          Text(
-            '马戈',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-              color: colors.primary,
-            ),
+          const SizedBox(height: 16),
+          _buildLinkItem(
+            context,
+            'GitHub',
+            'https://github.com/WhiteGiverMa/intestine-ASSistant',
+            '🔗',
+            colors,
+          ),
+          const SizedBox(height: 8),
+          _buildLinkItem(
+            context,
+            '哔哩哔哩',
+            'https://space.bilibili.com/357545524',
+            '📺',
+            colors,
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildLinkItem(
+    BuildContext context,
+    String title,
+    String url,
+    String emoji,
+    ThemeColors colors,
+  ) {
+    return GestureDetector(
+      onTap: () async {
+        final uri = Uri.parse(url);
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: colors.surfaceVariant,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          children: [
+            Text(emoji, style: const TextStyle(fontSize: 16)),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                title,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: colors.textPrimary,
+                ),
+              ),
+            ),
+            Icon(Icons.open_in_new, size: 16, color: colors.textSecondary),
+          ],
+        ),
       ),
     );
   }
@@ -223,7 +278,9 @@ class AboutPage extends StatelessWidget {
           const SizedBox(height: 16),
           _buildPoweredByItem('GLM-5', '智谱AI大语言模型', colors),
           const SizedBox(height: 12),
-          _buildPoweredByItem('DeepSeek v3.2', '深度求索AI模型', colors),
+          _buildPoweredByItem('Kimi-K2.5', '月之暗面大语言模型', colors),
+          const SizedBox(height: 12),
+          _buildPoweredByItem('DeepSeek V3.2', '深度求索AI模型', colors),
         ],
       ),
     );

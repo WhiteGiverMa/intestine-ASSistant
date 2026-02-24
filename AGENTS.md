@@ -25,6 +25,14 @@ frontend_Flutter/     # Flutter 应用 (主项目)
 
 ## 开发命令
 
+### 推荐方式 (自动检测可用端口)
+```powershell
+cd frontend_Flutter
+.\start.ps1          # PowerShell 脚本
+# 或双击 start.bat   # 批处理文件
+```
+
+### 手动方式
 ```bash
 cd frontend_Flutter
 flutter pub get
@@ -35,7 +43,7 @@ flutter run -d chrome --web-port=5174
 
 | 服务 | 端口 | 说明 |
 |------|------|------|
-| Flutter Web | http://localhost:5174 | 主应用 |
+| Flutter Web | http://localhost:5174+ | 自动检测可用端口 |
 
 ## 本地数据架构
 
@@ -57,6 +65,7 @@ flutter run -d chrome --web-port=5174
 - 注意修复尾随空格（Trailing whitespace），保持代码整洁
 - 遵循现有代码风格和命名约定
 - 显式优于隐式
+- 修复问题后，**简要**记录到 `.trae/rules/coding_guidelines.md` 的修复记录中
 
 ## 代码检查
 

@@ -14,6 +14,7 @@ class DateInputField extends StatefulWidget {
   final bool showDatePicker;
   final ValueChanged<bool>? onFocusChanged;
   final bool isExternallyFocused;
+  final bool isSelected;
 
   const DateInputField({
     super.key,
@@ -27,6 +28,7 @@ class DateInputField extends StatefulWidget {
     this.showDatePicker = true,
     this.onFocusChanged,
     this.isExternallyFocused = false,
+    this.isSelected = false,
   });
 
   @override
@@ -317,13 +319,26 @@ class DateInputFieldState extends State<DateInputField> {
     final colors = context.watch<ThemeProvider>().colors;
     final accentColor = widget.accentColor ?? colors.primary;
     final isHighlighted = widget.isExternallyFocused || _isFocused;
+    final showSelectedHighlight = widget.isSelected || isHighlighted;
 
-    return Container(
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeInOut,
       decoration: BoxDecoration(
-        color: isHighlighted ? colors.primary.withValues(alpha: 0.05) : null,
-        borderRadius: BorderRadius.circular(8),
+        color: showSelectedHighlight
+            ? accentColor.withValues(alpha: widget.isSelected ? 0.12 : 0.08)
+            : null,
+        borderRadius: BorderRadius.circular(10),
+        border: showSelectedHighlight
+            ? Border.all(
+                color: accentColor.withValues(alpha: widget.isSelected ? 0.4 : 0.2),
+                width: widget.isSelected ? 1.5 : 1,
+              )
+            : null,
       ),
-      padding: isHighlighted ? const EdgeInsets.all(8) : EdgeInsets.zero,
+      padding: showSelectedHighlight
+          ? const EdgeInsets.all(10)
+          : const EdgeInsets.all(2),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

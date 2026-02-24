@@ -1,11 +1,11 @@
 {
-    "name": "frontend_flutter",
-    "short_name": "frontend_flutter",
+    "name": "肠道健康助手",
+    "short_name": "肠道助手",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#00C8B4",
+    "theme_color": "#00C8B4",
+    "description": "肠道健康助手 - 记录和分析排便数据，提供个性化健康建议",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

@@ -13,7 +13,15 @@ class StoolTypeSelector extends StatelessWidget {
     required this.colors,
   });
 
-  static const _emojis = ['🪨', '🥜', '🌭', '🍌', '🫘', '🥣', '💧'];
+  static const _bristolTypes = [
+    {'emoji': '🪨', 'label': '硬块', 'status': '便秘'},
+    {'emoji': '🥜', 'label': '香肠结块', 'status': '轻便秘'},
+    {'emoji': '🌭', 'label': '香肠裂纹', 'status': '正常'},
+    {'emoji': '🍌', 'label': '香肠光滑', 'status': '理想'},
+    {'emoji': '🫘', 'label': '柔软断块', 'status': '缺纤维'},
+    {'emoji': '🥣', 'label': '糊状', 'status': '轻腹泻'},
+    {'emoji': '💧', 'label': '液体', 'status': '腹泻'},
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -28,35 +36,80 @@ class StoolTypeSelector extends StatelessWidget {
             color: colors.textPrimary,
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 10),
         Row(
           children: List.generate(7, (index) {
             final type = index + 1;
+            final isSelected = value == type;
+            final bristol = _bristolTypes[index];
+            final status = bristol['status'] as String;
+
+            Color statusColor;
+            if (status == '理想') {
+              statusColor = colors.success;
+            } else if (status == '正常') {
+              statusColor = colors.success.withValues(alpha: 0.8);
+            } else if (status.contains('便秘') || status.contains('腹泻')) {
+              statusColor = colors.error;
+            } else {
+              statusColor = colors.warning;
+            }
+
             return Expanded(
               child: GestureDetector(
                 onTap: () => onChanged(type),
                 child: Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 2),
-                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  margin: EdgeInsets.only(left: index == 0 ? 0 : 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 14),
                   decoration: BoxDecoration(
-                    color:
-                        value == type ? colors.primary : colors.surfaceVariant,
-                    borderRadius: BorderRadius.circular(8),
+                    color: isSelected ? colors.primary : colors.surfaceVariant,
+                    borderRadius: BorderRadius.circular(10),
+                    border: isSelected ? Border.all(color: statusColor, width: 2) : null,
+                    boxShadow: isSelected
+                        ? [BoxShadow(color: statusColor.withValues(alpha: 0.3), blurRadius: 6, offset: const Offset(0, 2))]
+                        : null,
                   ),
                   child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        _emojis[index],
-                        style: const TextStyle(fontSize: 20),
+                        bristol['emoji'] as String,
+                        style: const TextStyle(fontSize: 28),
                       ),
+                      const SizedBox(height: 8),
                       Text(
                         '$type',
                         style: TextStyle(
-                          fontSize: 12,
-                          color:
-                              value == type
-                                  ? colors.textOnPrimary
-                                  : colors.textSecondary,
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: isSelected ? colors.textOnPrimary : colors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        bristol['label'] as String,
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                        style: TextStyle(
+                          fontSize: 14,
+                          height: 1.2,
+                          color: isSelected ? colors.textOnPrimary.withValues(alpha: 0.9) : colors.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: statusColor.withValues(alpha: isSelected ? 0.3 : 0.15),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          status,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: isSelected ? colors.textOnPrimary : statusColor,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
                     ],

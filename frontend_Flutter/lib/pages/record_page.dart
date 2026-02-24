@@ -2,15 +2,15 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
+import '../services/local_db_service.dart';
 import '../widgets/date_input_field.dart';
 import '../widgets/record_form_selectors.dart';
 import '../widgets/app_header.dart';
 import '../providers/theme_provider.dart';
 import '../theme/theme_colors.dart';
 import '../theme/theme_decorations.dart';
-import 'login_page.dart';
+import '../utils/animations.dart';
 
 class RecordPage extends StatefulWidget {
   const RecordPage({super.key});
@@ -50,9 +50,9 @@ class _RecordPageState extends State<RecordPage> {
   }
 
   Future<void> _loadMaxYear() async {
-    final prefs = await SharedPreferences.getInstance();
+    final savedValue = await LocalDbService.getSetting('max_year');
     setState(() {
-      _maxYear = prefs.getInt('max_year') ?? 2112;
+      _maxYear = int.tryParse(savedValue ?? '') ?? 2112;
     });
   }
 
@@ -123,25 +123,9 @@ class _RecordPageState extends State<RecordPage> {
       _resetForm();
     } catch (e) {
       final errorMsg = e.toString().replaceAll('Exception: ', '');
-      final lowerMsg = errorMsg.toLowerCase();
-      final isAuthError =
-          lowerMsg.contains('认证') ||
-          lowerMsg.contains('token') ||
-          lowerMsg.contains('令牌') ||
-          lowerMsg.contains('authenticated') ||
-          lowerMsg.contains('unauthorized');
-      if (isAuthError) {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.remove('token');
-        await prefs.remove('user');
-        setState(() {
-          _message = '登录已过期，请重新登录';
-        });
-      } else {
-        setState(() {
-          _message = errorMsg;
-        });
-      }
+      setState(() {
+        _message = errorMsg;
+      });
     } finally {
       setState(() {
         _submitting = false;
@@ -319,163 +303,130 @@ class _RecordPageState extends State<RecordPage> {
   }
 
   Widget _buildFormSection(ThemeColors colors) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: ThemeDecorations.card(context),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                flex: 3,
-                child: DateInputField(
-                  label: '日期',
-                  initialDate: _selectedDate,
-                  firstDate: DateTime(_minYear),
-                  lastDate: DateTime(_maxYear, 12, 31),
-                  onChanged: (date) {
-                    setState(() {
-                      _selectedDate = date;
-                    });
-                  },
+    return AnimatedEntrance(
+      duration: AppAnimations.durationSlow,
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: ThemeDecorations.card(context),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  flex: 3,
+                  child: DateInputField(
+                    label: '日期',
+                    initialDate: _selectedDate,
+                    firstDate: DateTime(_minYear),
+                    lastDate: DateTime(_maxYear, 12, 31),
+                    onChanged: (date) {
+                      setState(() {
+                        _selectedDate = date;
+                      });
+                    },
+                  ),
                 ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: _buildTextField(
+                    '时间',
+                    _timeController,
+                    readOnly: true,
+                    colors: colors,
+                  ),
+                ),
+              ],
+            ),
+            if (!_isTimerMode) ...[
+              const SizedBox(height: 16),
+              _buildTextField(
+                '时长（分钟）',
+                _durationController,
+                keyboardType: TextInputType.number,
+                colors: colors,
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _buildTextField(
-                  '时间',
-                  _timeController,
-                  readOnly: true,
-                  colors: colors,
+            ],
+            const SizedBox(height: 16),
+            StoolTypeSelector(
+              value: _stoolType,
+              onChanged: (v) => setState(() => _stoolType = v),
+              colors: colors,
+            ),
+            const SizedBox(height: 16),
+            ColorSelector(
+              value: _color,
+              onChanged: (v) => setState(() => _color = v),
+              colors: colors,
+            ),
+            const SizedBox(height: 16),
+            SmellSelector(
+              value: _smellLevel,
+              onChanged: (v) => setState(() => _smellLevel = v),
+              colors: colors,
+            ),
+            const SizedBox(height: 16),
+            FeelingSelector(
+              value: _feeling,
+              onChanged: (v) => setState(() => _feeling = v),
+              colors: colors,
+            ),
+            const SizedBox(height: 16),
+            SymptomsSelector(
+              value: _symptoms,
+              onChanged: (v) => setState(() => _symptoms = v),
+              colors: colors,
+            ),
+            const SizedBox(height: 16),
+            _buildTextField('备注', _notesController, maxLines: 2, colors: colors),
+            if (_message != null) ...[
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color:
+                      _message!.contains('成功')
+                          ? colors.success.withValues(alpha: 0.1)
+                          : colors.errorBackground,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  _message!,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color:
+                        _message!.contains('成功')
+                            ? colors.success
+                            : colors.error,
+                    fontSize: 15,
+                  ),
                 ),
               ),
             ],
-          ),
-          if (!_isTimerMode) ...[
             const SizedBox(height: 16),
-            _buildTextField(
-              '时长（分钟）',
-              _durationController,
-              keyboardType: TextInputType.number,
-              colors: colors,
-            ),
-          ],
-          const SizedBox(height: 16),
-          StoolTypeSelector(
-            value: _stoolType,
-            onChanged: (v) => setState(() => _stoolType = v),
-            colors: colors,
-          ),
-          const SizedBox(height: 16),
-          ColorSelector(
-            value: _color,
-            onChanged: (v) => setState(() => _color = v),
-            colors: colors,
-          ),
-          const SizedBox(height: 16),
-          SmellSelector(
-            value: _smellLevel,
-            onChanged: (v) => setState(() => _smellLevel = v),
-            colors: colors,
-          ),
-          const SizedBox(height: 16),
-          FeelingSelector(
-            value: _feeling,
-            onChanged: (v) => setState(() => _feeling = v),
-            colors: colors,
-          ),
-          const SizedBox(height: 16),
-          SymptomsSelector(
-            value: _symptoms,
-            onChanged: (v) => setState(() => _symptoms = v),
-            colors: colors,
-          ),
-          const SizedBox(height: 16),
-          _buildTextField('备注', _notesController, maxLines: 2, colors: colors),
-          if (_message != null) ...[
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color:
-                    _message!.contains('成功')
-                        ? colors.success.withValues(alpha: 0.1)
-                        : (_message!.contains('登录') || _message!.contains('过期'))
-                        ? colors.warning.withValues(alpha: 0.1)
-                        : colors.errorBackground,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Column(
-                children: [
-                  Text(
-                    _message!,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color:
-                          _message!.contains('成功')
-                              ? colors.success
-                              : (_message!.contains('登录') ||
-                                  _message!.contains('过期'))
-                              ? colors.warning
-                              : colors.error,
-                      fontSize: 15,
+            ScaleOnTap(
+              onTap: _submitting ? null : _submit,
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _submitting ? null : _submit,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: colors.primary,
+                    foregroundColor: colors.textOnPrimary,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  if (_message!.contains('登录') || _message!.contains('过期')) ...[
-                    const SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: () {
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(builder: (_) => const LoginPage()),
-                        );
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: colors.primary,
-                        foregroundColor: colors.textOnPrimary,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 12,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text('🔑', style: TextStyle(fontSize: 16)),
-                          SizedBox(width: 8),
-                          Text('去登录', style: TextStyle(fontSize: 14)),
-                        ],
-                      ),
-                    ),
-                  ],
-                ],
+                  child: Text(
+                    _submitting ? '保存中...' : '保存记录',
+                    style: const TextStyle(fontSize: 16),
+                  ),
+                ),
               ),
             ),
           ],
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _submitting ? null : _submit,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: colors.primary,
-                foregroundColor: colors.textOnPrimary,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: Text(
-                _submitting ? '保存中...' : '保存记录',
-                style: const TextStyle(fontSize: 16),
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

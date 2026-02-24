@@ -19,8 +19,32 @@ class DeepSeekService {
   static const String _defaultBaseUrl = 'https://api.deepseek.com';
   static const String _defaultModel = 'deepseek-chat';
 
+  static const String kDefaultSystemPrompt =
+      '''You are a professional gut health consultant. You can have friendly conversations with users, answer questions about gut health, and provide professional advice.
+
+If the user shares bowel record data, please analyze and provide suggestions based on this data.
+
+Please reply in Chinese, maintaining a professional yet friendly tone.''';
+
+  static ChatRequestDetails? _lastRequestDetails;
+  static http.Client? _httpClient;
+  static StreamSubscription? _streamSubscription;
+
+  static void cancelRequest() {
+    _httpClient?.close();
+    _httpClient = null;
+    _streamSubscription?.cancel();
+    _streamSubscription = null;
+  }
+
+  static ChatRequestDetails? getLastRequestDetails() => _lastRequestDetails;
+
+  static void clearLastRequestDetails() {
+    _lastRequestDetails = null;
+  }
+
   static Future<String?> getApiKey() async {
-    return await LocalDbService.getSetting('deepseek_api_key');
+    return LocalDbService.getSetting('deepseek_api_key');
   }
 
   static Future<void> setApiKey(String? apiKey) async {
@@ -37,7 +61,8 @@ class DeepSeekService {
   }
 
   static Future<String?> getModel() async {
-    return await LocalDbService.getSetting('deepseek_model') ?? _defaultModel;
+    final model = await LocalDbService.getSetting('deepseek_model');
+    return model ?? _defaultModel;
   }
 
   static Future<void> setModel(String? model) async {
@@ -45,11 +70,19 @@ class DeepSeekService {
   }
 
   static Future<String?> getSystemPrompt() async {
-    return await LocalDbService.getSetting('default_system_prompt');
+    final saved = await LocalDbService.getSetting('default_system_prompt');
+    if (saved == null || saved.isEmpty) {
+      return kDefaultSystemPrompt;
+    }
+    return saved;
   }
 
   static Future<void> setSystemPrompt(String? prompt) async {
-    await LocalDbService.setSetting('default_system_prompt', prompt);
+    if (prompt == null || prompt.isEmpty || prompt == kDefaultSystemPrompt) {
+      await LocalDbService.setSetting('default_system_prompt', null);
+    } else {
+      await LocalDbService.setSetting('default_system_prompt', prompt);
+    }
   }
 
   static Future<AiStatus> checkApiStatus() async {
@@ -65,11 +98,49 @@ class DeepSeekService {
     );
   }
 
+  static Future<bool> testConnection() async {
+    final apiKey = await getApiKey();
+    if (apiKey == null || apiKey.isEmpty) {
+      throw Exception('请先配置 API Key');
+    }
+
+    final apiUrl = await getApiUrl() ?? _defaultBaseUrl;
+    final model = await getModel() ?? _defaultModel;
+
+    final response = await http
+        .post(
+          Uri.parse('$apiUrl/v1/chat/completions'),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $apiKey',
+          },
+          body: jsonEncode({
+            'model': model,
+            'messages': [
+              {'role': 'user', 'content': 'Hi'},
+            ],
+            'max_tokens': 5,
+          }),
+        )
+        .timeout(const Duration(seconds: 30));
+
+    if (response.statusCode == 200) {
+      return true;
+    }
+
+    final error = jsonDecode(response.body);
+    final errorMsg =
+        error['error']?['message'] ?? '连接失败 (${response.statusCode})';
+    throw Exception(errorMsg);
+  }
+
   static Future<String> chat({
     required String message,
     String? systemPrompt,
     String? conversationId,
     List<ChatMessage>? history,
+    String? thinkingIntensity,
+    String? extraUserMessage,
   }) async {
     final apiKey = await getApiKey();
     if (apiKey == null || apiKey.isEmpty) {
@@ -94,28 +165,79 @@ class DeepSeekService {
 
     messages.add({'role': 'user', 'content': message});
 
-    final response = await http
-        .post(
-          Uri.parse('$apiUrl/v1/chat/completions'),
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer $apiKey',
-          },
-          body: jsonEncode({
-            'model': model,
-            'messages': messages,
-            'stream': false,
-          }),
-        )
-        .timeout(const Duration(seconds: 60));
-
-    if (response.statusCode != 200) {
-      final error = jsonDecode(response.body);
-      throw Exception(error['error']?['message'] ?? 'API调用失败');
+    if (extraUserMessage != null && extraUserMessage.isNotEmpty) {
+      messages.add({'role': 'user', 'content': extraUserMessage});
     }
 
-    final data = jsonDecode(response.body);
-    return data['choices'][0]['message']['content'] as String;
+    final requestBody = <String, dynamic>{
+      'model': model,
+      'messages': messages,
+      'stream': false,
+    };
+
+    if (thinkingIntensity != null && thinkingIntensity != 'none') {
+      requestBody['thinking_intensity'] = thinkingIntensity;
+    }
+
+    final url = '$apiUrl/v1/chat/completions';
+    final headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $apiKey',
+    };
+
+    final startTime = DateTime.now();
+
+    try {
+      _httpClient = http.Client();
+      final response = await _httpClient!
+          .post(Uri.parse(url), headers: headers, body: jsonEncode(requestBody))
+          .timeout(const Duration(seconds: 60));
+
+      final duration = DateTime.now().difference(startTime);
+
+      if (response.statusCode != 200) {
+        final error = jsonDecode(response.body);
+        final errorMsg = error['error']?['message'] ?? 'API调用失败';
+        _lastRequestDetails = ChatRequestDetails(
+          url: url,
+          headers: headers,
+          body: requestBody,
+          statusCode: response.statusCode,
+          responseBody: response.body,
+          errorMessage: errorMsg,
+          duration: duration,
+        );
+        throw Exception(errorMsg);
+      }
+
+      final data = jsonDecode(response.body);
+      final content = data['choices'][0]['message']['content'] as String;
+
+      _lastRequestDetails = ChatRequestDetails(
+        url: url,
+        headers: headers,
+        body: requestBody,
+        statusCode: response.statusCode,
+        responseBody: response.body,
+        duration: duration,
+      );
+
+      return content;
+    } catch (e) {
+      if (e is! Exception ||
+          e.toString() != 'Exception: 请先配置 DeepSeek API Key') {
+        final duration = DateTime.now().difference(startTime);
+        _lastRequestDetails = ChatRequestDetails(
+          url: url,
+          headers: headers,
+          body: requestBody,
+          statusCode: null,
+          errorMessage: e.toString(),
+          duration: duration,
+        );
+      }
+      rethrow;
+    }
   }
 
   static Stream<StreamChatChunk> chatStream({
@@ -123,6 +245,7 @@ class DeepSeekService {
     String? systemPrompt,
     List<ChatMessage>? history,
     String? thinkingIntensity,
+    String? extraUserMessage,
   }) async* {
     final apiKey = await getApiKey();
     if (apiKey == null || apiKey.isEmpty) {
@@ -147,70 +270,126 @@ class DeepSeekService {
 
     messages.add({'role': 'user', 'content': message});
 
+    if (extraUserMessage != null && extraUserMessage.isNotEmpty) {
+      messages.add({'role': 'user', 'content': extraUserMessage});
+    }
+
     final requestBody = <String, dynamic>{
       'model': model,
       'messages': messages,
       'stream': true,
     };
 
-    final intensity = thinkingIntensity ?? 'medium';
-    if (model.contains('reasoner') || intensity != 'low') {
-      // DeepSeek reasoner models support thinking
+    if (thinkingIntensity != null && thinkingIntensity != 'none') {
+      requestBody['thinking_intensity'] = thinkingIntensity;
     }
 
-    final request = http.Request(
-      'POST',
-      Uri.parse('$apiUrl/v1/chat/completions'),
-    );
-    request.headers.addAll({
+    final url = '$apiUrl/v1/chat/completions';
+    final headers = {
       'Content-Type': 'application/json',
       'Authorization': 'Bearer $apiKey',
-    });
+    };
+
+    final request = http.Request('POST', Uri.parse(url));
+    request.headers.addAll(headers);
     request.body = jsonEncode(requestBody);
 
-    final streamedResponse = await request.send().timeout(
-      const Duration(seconds: 120),
-    );
+    final startTime = DateTime.now();
+    int? statusCode;
 
-    if (streamedResponse.statusCode != 200) {
-      final response = await http.Response.fromStream(streamedResponse);
-      String errorMsg = 'API调用失败';
-      try {
-        final error = jsonDecode(response.body);
-        errorMsg = error['error']?['message'] ?? errorMsg;
-      } catch (_) {}
-      throw Exception(errorMsg);
-    }
+    try {
+      _httpClient = http.Client();
+      final streamedResponse = await _httpClient!
+          .send(request)
+          .timeout(const Duration(seconds: 120));
 
-    await for (final line in streamedResponse.stream
-        .transform(utf8.decoder)
-        .transform(const LineSplitter())) {
-      if (line.startsWith('data: ')) {
-        final jsonStr = line.substring(6);
-        if (jsonStr.trim() == '[DONE]') {
-          yield StreamChatChunk(done: true);
-          break;
-        }
-        if (jsonStr.trim().isEmpty) continue;
+      statusCode = streamedResponse.statusCode;
 
+      if (streamedResponse.statusCode != 200) {
+        final response = await http.Response.fromStream(streamedResponse);
+        String errorMsg = 'API调用失败';
         try {
-          final json = jsonDecode(jsonStr);
-          final delta = json['choices']?[0]?['delta'];
-          if (delta != null) {
-            final content = delta['content'] as String?;
-            final reasoningContent = delta['reasoning_content'] as String?;
+          final error = jsonDecode(response.body);
+          errorMsg = error['error']?['message'] ?? errorMsg;
+        } catch (_) {}
+        final duration = DateTime.now().difference(startTime);
+        _lastRequestDetails = ChatRequestDetails(
+          url: url,
+          headers: headers,
+          body: requestBody,
+          statusCode: streamedResponse.statusCode,
+          responseBody: response.body,
+          errorMessage: errorMsg,
+          duration: duration,
+        );
+        throw Exception(errorMsg);
+      }
 
-            yield StreamChatChunk(
-              content: content,
-              reasoningContent: reasoningContent,
-              done: false,
-            );
+      final buffer = StringBuffer();
+      await for (final line in streamedResponse.stream
+          .transform(utf8.decoder)
+          .transform(const LineSplitter())) {
+        if (line.startsWith('data: ')) {
+          final jsonStr = line.substring(6);
+          if (jsonStr.trim() == '[DONE]') {
+            yield StreamChatChunk(done: true);
+            break;
           }
-        } catch (e) {
-          // Skip malformed JSON
+          if (jsonStr.trim().isEmpty) continue;
+
+          try {
+            final json = jsonDecode(jsonStr);
+            final delta = json['choices']?[0]?['delta'];
+            if (delta != null) {
+              final content = delta['content'] as String?;
+              final reasoningContent = delta['reasoning_content'] as String?;
+              if (content != null) {
+                buffer.write(content);
+              }
+              yield StreamChatChunk(
+                content: content,
+                reasoningContent: reasoningContent,
+                done: false,
+              );
+            }
+
+            final finishReason = json['choices']?[0]?['finish_reason'];
+            if (finishReason != null) {
+              yield StreamChatChunk(done: true);
+              break;
+            }
+          } catch (e) {
+            // Skip malformed JSON
+          }
         }
       }
+
+      final duration = DateTime.now().difference(startTime);
+      _lastRequestDetails = ChatRequestDetails(
+        url: url,
+        headers: headers,
+        body: requestBody,
+        statusCode: statusCode,
+        responseBody:
+            '{"choices":[{"message":{"content":"${buffer.length > 500 ? buffer.toString().substring(0, 500) + '... (${buffer.length} chars)' : buffer.toString()}"}}]}',
+        duration: duration,
+      );
+    } catch (e) {
+      if (e is! Exception ||
+          e.toString() != 'Exception: 请先配置 DeepSeek API Key') {
+        final duration = DateTime.now().difference(startTime);
+        _lastRequestDetails = ChatRequestDetails(
+          url: url,
+          headers: headers,
+          body: requestBody,
+          statusCode: statusCode,
+          errorMessage: e.toString(),
+          duration: duration,
+        );
+      }
+      rethrow;
     }
+    yield StreamChatChunk(done: true);
   }
 
   static Future<AnalysisResult> analyzeRecords({

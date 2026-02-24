@@ -30,7 +30,7 @@ class _MainContainerState extends State<MainContainer> {
     final pages = [
       HomePage(onNavigate: _onNavigate),
       const DataPage(),
-      const AnalysisPage(),
+      AnalysisPage(onNavigate: _onNavigate),
       const SettingsPage(),
     ];
 

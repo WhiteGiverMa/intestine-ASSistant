@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'theme_colors.dart';
+import '../utils/animations.dart';
 
 class AppTheme {
   static ThemeData getTheme(AppThemeMode mode) {
@@ -23,6 +24,15 @@ class AppTheme {
       scaffoldBackgroundColor: colors.background,
       cardColor: colors.card,
       dividerColor: colors.divider,
+      pageTransitionsTheme: const PageTransitionsTheme(
+        builders: {
+          TargetPlatform.android: _FadePageTransitionsBuilder(),
+          TargetPlatform.iOS: _FadePageTransitionsBuilder(),
+          TargetPlatform.windows: _FadePageTransitionsBuilder(),
+          TargetPlatform.macOS: _FadePageTransitionsBuilder(),
+          TargetPlatform.linux: _FadePageTransitionsBuilder(),
+        },
+      ),
       appBarTheme: AppBarTheme(
         backgroundColor: colors.card.withValues(alpha: 0.8),
         foregroundColor: colors.textPrimary,
@@ -110,4 +120,42 @@ class AppTheme {
   static ThemeData get greenClassic => getTheme(AppThemeMode.greenClassic);
   static ThemeData get whiteMinimal => getTheme(AppThemeMode.whiteMinimal);
   static ThemeData get darkOled => getTheme(AppThemeMode.darkOled);
+}
+
+class _FadePageTransitionsBuilder extends PageTransitionsBuilder {
+  const _FadePageTransitionsBuilder();
+
+  @override
+  Widget buildTransitions<T>(
+    PageRoute<T> route,
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    final fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: animation,
+        curve: AppAnimations.curveEnter,
+      ),
+    );
+
+    final slideAnimation = Tween<Offset>(
+      begin: const Offset(0.05, 0),
+      end: Offset.zero,
+    ).animate(
+      CurvedAnimation(
+        parent: animation,
+        curve: AppAnimations.curveEnter,
+      ),
+    );
+
+    return FadeTransition(
+      opacity: fadeAnimation,
+      child: SlideTransition(
+        position: slideAnimation,
+        child: child,
+      ),
+    );
+  }
 }

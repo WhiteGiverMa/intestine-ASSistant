@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/api_service.dart';
+import '../services/deepseek_service.dart';
 import '../widgets/app_header.dart';
 import '../providers/theme_provider.dart';
 import '../theme/theme_colors.dart';
@@ -17,6 +18,7 @@ class AiChatOptionsPage extends StatefulWidget {
 class _AiChatOptionsPageState extends State<AiChatOptionsPage> {
   bool _loading = true;
   bool _saving = false;
+  bool _testing = false;
   String? _message;
   bool _obscureApiKey = true;
 
@@ -24,15 +26,19 @@ class _AiChatOptionsPageState extends State<AiChatOptionsPage> {
   final _aiApiUrlController = TextEditingController();
   final _aiModelController = TextEditingController();
   final _systemPromptController = TextEditingController();
+  final _systemPromptFocusNode = FocusNode();
 
   @override
   void initState() {
     super.initState();
+    _systemPromptFocusNode.addListener(_onSystemPromptFocusLost);
     _loadSettings();
   }
 
   @override
   void dispose() {
+    _systemPromptFocusNode.removeListener(_onSystemPromptFocusLost);
+    _systemPromptFocusNode.dispose();
     _aiApiKeyController.dispose();
     _aiApiUrlController.dispose();
     _aiModelController.dispose();
@@ -40,19 +46,47 @@ class _AiChatOptionsPageState extends State<AiChatOptionsPage> {
     super.dispose();
   }
 
+  void _onSystemPromptFocusLost() {
+    if (!_systemPromptFocusNode.hasFocus) {
+      _saveSystemPrompt();
+    }
+  }
+
+  Future<void> _saveSystemPrompt() async {
+    final promptText = _systemPromptController.text.trim();
+    final promptToSave =
+        (promptText.isEmpty ||
+                promptText == DeepSeekService.kDefaultSystemPrompt)
+            ? ''
+            : promptText;
+
+    try {
+      await ApiService.updateUserSettings(defaultSystemPrompt: promptToSave);
+    } catch (e) {
+      debugPrint('保存系统提示词失败: $e');
+    }
+  }
+
   Future<void> _loadSettings() async {
     try {
       final settings = await ApiService.getUserSettings();
+      final savedPrompt = settings['default_system_prompt'] ?? '';
       setState(() {
         _aiApiKeyController.text = settings['ai_api_key'] ?? '';
         _aiApiUrlController.text =
             settings['ai_api_url'] ?? 'https://api.deepseek.com';
         _aiModelController.text = settings['ai_model'] ?? 'deepseek-chat';
-        _systemPromptController.text = settings['default_system_prompt'] ?? '';
+        _systemPromptController.text =
+            savedPrompt.isNotEmpty
+                ? savedPrompt
+                : DeepSeekService.kDefaultSystemPrompt;
         _loading = false;
       });
     } catch (e) {
-      setState(() => _loading = false);
+      setState(() {
+        _systemPromptController.text = DeepSeekService.kDefaultSystemPrompt;
+        _loading = false;
+      });
     }
   }
 
@@ -63,11 +97,18 @@ class _AiChatOptionsPageState extends State<AiChatOptionsPage> {
     });
 
     try {
+      final promptText = _systemPromptController.text.trim();
+      final promptToSave =
+          (promptText.isEmpty ||
+                  promptText == DeepSeekService.kDefaultSystemPrompt)
+              ? ''
+              : promptText;
+
       await ApiService.updateUserSettings(
         aiApiKey: _aiApiKeyController.text.trim(),
         aiApiUrl: _aiApiUrlController.text.trim(),
         aiModel: _aiModelController.text.trim(),
-        defaultSystemPrompt: _systemPromptController.text.trim(),
+        defaultSystemPrompt: promptToSave,
       );
       setState(() {
         _message = 'AI配置保存成功';
@@ -78,6 +119,26 @@ class _AiChatOptionsPageState extends State<AiChatOptionsPage> {
       });
     } finally {
       setState(() => _saving = false);
+    }
+  }
+
+  Future<void> _testConnection() async {
+    setState(() {
+      _testing = true;
+      _message = null;
+    });
+
+    try {
+      await DeepSeekService.testConnection();
+      setState(() {
+        _message = '✅ 连接测试成功！API 配置有效';
+      });
+    } catch (e) {
+      setState(() {
+        _message = '❌ ${e.toString().replaceAll('Exception: ', '')}';
+      });
+    } finally {
+      setState(() => _testing = false);
     }
   }
 
@@ -185,22 +246,24 @@ class _AiChatOptionsPageState extends State<AiChatOptionsPage> {
               Text('🔑', style: TextStyle(fontSize: 20)),
               SizedBox(width: 8),
               Text(
-                'DeepSeek API 配置',
+                'AI API 配置',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
             ],
           ),
           const Divider(height: 24),
           Text(
-            '配置您的 DeepSeek API Key 后，即可使用 AI 智能分析功能。',
+            '支持 OpenAI API 格式的服务，如 DeepSeek、硅基流动、OpenAI 等。',
             style: TextStyle(fontSize: 12, color: colors.textSecondary),
           ),
+          const SizedBox(height: 12),
+          _buildQuickConfigButtons(colors),
           const SizedBox(height: 16),
           TextField(
             controller: _aiApiKeyController,
             decoration: InputDecoration(
               labelText: 'API 密钥',
-              hintText: '输入您的 DeepSeek API Key',
+              hintText: '输入您的 API Key',
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
               ),
@@ -223,7 +286,7 @@ class _AiChatOptionsPageState extends State<AiChatOptionsPage> {
             controller: _aiApiUrlController,
             decoration: InputDecoration(
               labelText: 'API URL',
-              hintText: '默认: https://api.deepseek.com',
+              hintText: '如: https://api.deepseek.com',
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
               ),
@@ -238,7 +301,7 @@ class _AiChatOptionsPageState extends State<AiChatOptionsPage> {
             controller: _aiModelController,
             decoration: InputDecoration(
               labelText: '模型名称',
-              hintText: '默认: deepseek-chat',
+              hintText: '如: deepseek-chat, gpt-4o-mini',
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
               ),
@@ -268,7 +331,7 @@ class _AiChatOptionsPageState extends State<AiChatOptionsPage> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  '1. 访问 DeepSeek 官网注册账号\n'
+                  '1. 选择服务商并注册账号\n'
                   '2. 进入 API 管理页面创建 Key\n'
                   '3. 复制 Key 粘贴到上方输入框',
                   style: TextStyle(
@@ -298,9 +361,102 @@ class _AiChatOptionsPageState extends State<AiChatOptionsPage> {
               ),
             ),
           ),
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton(
+              onPressed: _testing ? null : _testConnection,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: colors.primary,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                side: BorderSide(color: colors.primary.withValues(alpha: 0.5)),
+              ),
+              child:
+                  _testing
+                      ? SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: colors.primary,
+                        ),
+                      )
+                      : const Text('🔌 测试连接', style: TextStyle(fontSize: 14)),
+            ),
+          ),
           const SizedBox(height: 16),
           _buildApiLinks(colors),
         ],
+      ),
+    );
+  }
+
+  Widget _buildQuickConfigButtons(ThemeColors colors) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '快捷配置：',
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: colors.textSecondary,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            _buildQuickConfigChip(
+              'DeepSeek',
+              'https://api.deepseek.com',
+              'deepseek-chat',
+              colors,
+            ),
+            _buildQuickConfigChip(
+              '硅基流动',
+              'https://api.siliconflow.cn/v1',
+              'deepseek-ai/DeepSeek-V3.2',
+              colors,
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildQuickConfigChip(
+    String label,
+    String apiUrl,
+    String model,
+    ThemeColors colors,
+  ) {
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _aiApiUrlController.text = apiUrl;
+          _aiModelController.text = model;
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: colors.primary.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: colors.primary.withValues(alpha: 0.3)),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: colors.primary,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
       ),
     );
   }
@@ -312,43 +468,206 @@ class _AiChatOptionsPageState extends State<AiChatOptionsPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
-              Text('📝', style: TextStyle(fontSize: 20)),
-              SizedBox(width: 8),
-              Text(
+              const Text('📝', style: TextStyle(fontSize: 20)),
+              const SizedBox(width: 8),
+              const Text(
                 '系统提示词',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              const Spacer(),
+              TextButton(
+                onPressed: () {
+                  _systemPromptController.text =
+                      DeepSeekService.kDefaultSystemPrompt;
+                  setState(() {});
+                },
+                style: TextButton.styleFrom(
+                  foregroundColor: colors.textSecondary,
+                ),
+                child: const Text('恢复默认'),
               ),
             ],
           ),
           const Divider(height: 24),
           Text(
-            '自定义 AI 对话的系统提示词，留空使用默认设置。',
+            '自定义 AI 对话的系统提示词，留空或使用默认值将使用系统默认设置。',
             style: TextStyle(fontSize: 12, color: colors.textSecondary),
           ),
           const SizedBox(height: 12),
-          TextField(
-            controller: _systemPromptController,
-            maxLines: 4,
-            decoration: InputDecoration(
-              hintText: '输入自定义系统提示词...',
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
+          Stack(
+            children: [
+              TextField(
+                controller: _systemPromptController,
+                focusNode: _systemPromptFocusNode,
+                maxLines: 4,
+                decoration: InputDecoration(
+                  hintText: '输入自定义系统提示词...',
+                  hintStyle: TextStyle(color: colors.textHint),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  contentPadding: const EdgeInsets.only(
+                    left: 12,
+                    right: 40,
+                    top: 12,
+                    bottom: 12,
+                  ),
+                  filled: true,
+                  fillColor: colors.surface,
+                ),
               ),
-              contentPadding: const EdgeInsets.all(12),
-            ),
+              Positioned(
+                right: 4,
+                top: 4,
+                child: IconButton(
+                  icon: Icon(
+                    Icons.open_in_full,
+                    size: 18,
+                    color: colors.textSecondary,
+                  ),
+                  tooltip: '展开编辑',
+                  onPressed: () => _showExpandedPromptEditor(context, colors),
+                  padding: const EdgeInsets.all(8),
+                  constraints: const BoxConstraints(
+                    minWidth: 32,
+                    minHeight: 32,
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
 
+  void _showExpandedPromptEditor(BuildContext context, ThemeColors colors) {
+    final expandedController = TextEditingController(
+      text: _systemPromptController.text,
+    );
+    showDialog(
+      context: context,
+      builder:
+          (dialogContext) => Dialog(
+            insetPadding: const EdgeInsets.symmetric(
+              horizontal: 24,
+              vertical: 40,
+            ),
+            child: Container(
+              height: MediaQuery.of(context).size.height * 0.8,
+              decoration: BoxDecoration(
+                color: colors.background,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 16,
+                    ),
+                    decoration: BoxDecoration(
+                      border: Border(bottom: BorderSide(color: colors.divider)),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.edit_note, size: 24, color: colors.primary),
+                        const SizedBox(width: 12),
+                        Text(
+                          '系统提示词',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            color: colors.textPrimary,
+                          ),
+                        ),
+                        const Spacer(),
+                        TextButton(
+                          onPressed: () {
+                            expandedController.text =
+                                DeepSeekService.kDefaultSystemPrompt;
+                          },
+                          style: TextButton.styleFrom(
+                            foregroundColor: colors.textSecondary,
+                          ),
+                          child: const Text('恢复默认'),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: TextField(
+                        controller: expandedController,
+                        maxLines: null,
+                        expands: true,
+                        textAlignVertical: TextAlignVertical.top,
+                        decoration: InputDecoration(
+                          hintText: '输入系统提示词...',
+                          hintStyle: TextStyle(color: colors.textHint),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          contentPadding: const EdgeInsets.all(16),
+                          filled: true,
+                          fillColor: colors.surface,
+                        ),
+                        style: TextStyle(
+                          fontSize: 15,
+                          color: colors.textPrimary,
+                        ),
+                      ),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      border: Border(top: BorderSide(color: colors.divider)),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(dialogContext),
+                          style: TextButton.styleFrom(
+                            foregroundColor: colors.textSecondary,
+                          ),
+                          child: const Text('取消'),
+                        ),
+                        const SizedBox(width: 12),
+                        ElevatedButton(
+                          onPressed: () {
+                            _systemPromptController.text =
+                                expandedController.text;
+                            Navigator.pop(dialogContext);
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: colors.primary,
+                            foregroundColor: colors.textOnPrimary,
+                          ),
+                          child: const Text('确定'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+    );
+  }
+
   Widget _buildApiLinks(ThemeColors colors) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
+    return Wrap(
+      spacing: 12,
+      runSpacing: 8,
+      alignment: WrapAlignment.center,
       children: [
         _buildLinkButton('DeepSeek 官网', 'https://deepseek.com', colors.primary),
+        _buildLinkButton('硅基流动官网', 'https://siliconflow.cn', colors.primary),
       ],
     );
   }

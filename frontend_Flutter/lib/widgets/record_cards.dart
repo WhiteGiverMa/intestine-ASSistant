@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import '../models/models.dart';
 import '../theme/theme_colors.dart';
 import '../theme/theme_decorations.dart';
+import '../utils/animations.dart';
 
 const Map<int, String> kStoolTypeEmojis = {
   1: '🪨',
@@ -48,7 +49,7 @@ class RecordCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return ScaleOnTap(
       onTap: onTap,
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
@@ -221,7 +222,7 @@ class NoBowelCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return ScaleOnTap(
       onTap: onTap,
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
@@ -537,6 +538,11 @@ class RecordDetailSheet extends StatelessWidget {
     required ThemeColors colors,
     required VoidCallback onDelete,
   }) {
+    final controller = AnimationController(
+      vsync: Navigator.of(context),
+      duration: AppAnimations.durationNormal,
+    );
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -545,6 +551,7 @@ class RecordDetailSheet extends StatelessWidget {
         borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         side: BorderSide(color: colors.divider),
       ),
+      transitionAnimationController: controller..forward(),
       builder:
           (context) => RecordDetailSheet(
             record: record,

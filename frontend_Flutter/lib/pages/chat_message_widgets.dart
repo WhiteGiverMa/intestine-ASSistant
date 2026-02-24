@@ -64,6 +64,10 @@ class MessageBubble extends StatelessWidget {
 
   Widget _buildAssistantBubble(BuildContext context) {
     final colors = context.watch<ThemeProvider>().colors;
+    final isLoading = message.content.isEmpty &&
+        (message.thinkingContent == null ||
+            message.thinkingContent!.isEmpty);
+
     return Align(
       alignment: Alignment.centerLeft,
       child: Container(
@@ -86,10 +90,38 @@ class MessageBubble extends StatelessWidget {
             if (message.thinkingContent != null &&
                 message.thinkingContent!.isNotEmpty)
               ThinkingBlock(content: message.thinkingContent!),
-            _buildMarkdownContent(message.content, colors),
+            if (isLoading)
+              _buildLoadingIndicator(colors)
+            else
+              _buildMarkdownContent(message.content, colors),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildLoadingIndicator(ThemeColors colors) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          width: 16,
+          height: 16,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            color: colors.primary,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Text(
+          'Thinking...',
+          style: TextStyle(
+            color: colors.textSecondary,
+            fontSize: 14,
+            fontStyle: FontStyle.italic,
+          ),
+        ),
+      ],
     );
   }
 

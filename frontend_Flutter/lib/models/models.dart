@@ -2,7 +2,7 @@
 // @type: model
 // @layer: frontend
 // @depends: []
-// @exports: [User, BowelRecord, StatsSummary, AnalysisResult, ChatMessage, ChatSession, AiStatus, ConversationSummary, StreamChatChunk, ThinkingIntensity]
+// @exports: [User, BowelRecord, StatsSummary, AnalysisResult, ChatMessage, ChatSession, AiStatus, ConversationSummary, StreamChatChunk, ThinkingIntensity, ChatRequestDetails]
 // @models:
 //   - User: 用户信息
 //   - BowelRecord: 排便记录
@@ -13,26 +13,22 @@
 //   - AiStatus: AI配置状态
 //   - ConversationSummary: 对话摘要
 //   - StreamChatChunk: 流式响应块
+//   - ChatRequestDetails: 请求详情
 // @brief: 数据模型定义，包含所有DTO和实体类
+import 'dart:convert';
 class User {
   final String userId;
-  final String email;
   final String? nickname;
-  final String token;
 
   User({
     required this.userId,
-    required this.email,
     this.nickname,
-    required this.token,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
     return User(
       userId: json['user_id'],
-      email: json['email'],
       nickname: json['nickname'],
-      token: json['token'],
     );
   }
 }
@@ -383,12 +379,15 @@ class ConversationSummary {
 }
 
 enum ThinkingIntensity {
+  none,
   low,
   medium,
   high;
 
   String toApiValue() {
     switch (this) {
+      case ThinkingIntensity.none:
+        return 'none';
       case ThinkingIntensity.low:
         return 'low';
       case ThinkingIntensity.medium:
@@ -398,12 +397,17 @@ enum ThinkingIntensity {
     }
   }
 
+  bool get shouldSendToApi => this != ThinkingIntensity.none;
+
   static ThinkingIntensity fromApiValue(String value) {
     switch (value) {
+      case 'none':
+        return ThinkingIntensity.none;
       case 'low':
         return ThinkingIntensity.low;
       case 'high':
         return ThinkingIntensity.high;
+      case 'medium':
       default:
         return ThinkingIntensity.medium;
     }
@@ -416,6 +420,7 @@ class StreamChatChunk {
   final bool done;
   final String? messageId;
   final String? conversationId;
+  final String? actualStartDate;
 
   StreamChatChunk({
     this.content,
@@ -423,6 +428,7 @@ class StreamChatChunk {
     required this.done,
     this.messageId,
     this.conversationId,
+    this.actualStartDate,
   });
 
   factory StreamChatChunk.fromJson(Map<String, dynamic> json) {
@@ -432,6 +438,119 @@ class StreamChatChunk {
       done: json['done'] ?? false,
       messageId: json['message_id'],
       conversationId: json['conversation_id'],
+      actualStartDate: json['actual_start_date'],
     );
+  }
+}
+
+class ChatRequestDetails {
+  final String url;
+  final String method;
+  final Map<String, String> headers;
+  final Map<String, dynamic> body;
+  final int? statusCode;
+  final String? responseBody;
+  final String? errorMessage;
+  final Duration? duration;
+  final DateTime timestamp;
+
+  ChatRequestDetails({
+    required this.url,
+    this.method = 'POST',
+    required this.headers,
+    required this.body,
+    this.statusCode,
+    this.responseBody,
+    this.errorMessage,
+    this.duration,
+    DateTime? timestamp,
+  }) : timestamp = timestamp ?? DateTime.now();
+
+  String toFormattedString() {
+    final buffer = StringBuffer();
+    buffer.writeln('=== AI Chat Request Details ===');
+    buffer.writeln('Timestamp: ${timestamp.toIso8601String()}');
+    buffer.writeln('Duration: ${duration?.inMilliseconds ?? 'N/A'} ms');
+    buffer.writeln();
+    buffer.writeln('--- Request ---');
+    buffer.writeln('Method: $method');
+    buffer.writeln('URL: $url');
+    buffer.writeln('Headers:');
+    final maskedHeaders = Map<String, String>.from(headers);
+    if (maskedHeaders.containsKey('Authorization')) {
+      final auth = maskedHeaders['Authorization']!;
+      if (auth.startsWith('Bearer ')) {
+        maskedHeaders['Authorization'] = 'Bearer ${auth.substring(7, 7 + 8)}...';
+      }
+    }
+    maskedHeaders.forEach((key, value) {
+      buffer.writeln('  $key: $value');
+    });
+    buffer.writeln('Body:');
+    try {
+      final encoder = const JsonEncoder.withIndent('  ');
+      final maskedBody = Map<String, dynamic>.from(body);
+      if (maskedBody.containsKey('messages') && maskedBody['messages'] is List) {
+        final messages = maskedBody['messages'] as List;
+        maskedBody['messages'] = messages.map((m) {
+          if (m is Map && m.containsKey('content')) {
+            final content = m['content'].toString();
+            if (content.length > 200) {
+              return {...m, 'content': '${content.substring(0, 200)}... (${content.length} chars)'};
+            }
+          }
+          return m;
+        }).toList();
+      }
+      buffer.writeln(encoder.convert(maskedBody));
+    } catch (e) {
+      buffer.writeln(body.toString());
+    }
+    buffer.writeln();
+    buffer.writeln('--- Response ---');
+    buffer.writeln('Status Code: ${statusCode ?? 'N/A'}');
+    if (errorMessage != null) {
+      buffer.writeln('Error: $errorMessage');
+    }
+    if (responseBody != null) {
+      buffer.writeln('Body:');
+      try {
+        final encoder = const JsonEncoder.withIndent('  ');
+        final decoded = jsonDecode(responseBody!);
+        if (decoded is Map && decoded.containsKey('choices')) {
+          final choices = decoded['choices'] as List;
+          final maskedResponse = Map<String, dynamic>.from(decoded);
+          maskedResponse['choices'] = choices.map((c) {
+            if (c is Map && c.containsKey('message')) {
+              final msg = c['message'] as Map;
+              if (msg.containsKey('content')) {
+                final content = msg['content'].toString();
+                if (content.length > 500) {
+                  return {
+                    ...c,
+                    'message': {
+                      ...msg,
+                      'content': '${content.substring(0, 500)}... (${content.length} chars)',
+                    },
+                  };
+                }
+              }
+            }
+            return c;
+          }).toList();
+          buffer.writeln(encoder.convert(maskedResponse));
+        } else {
+          buffer.writeln(encoder.convert(decoded));
+        }
+      } catch (e) {
+        if (responseBody!.length > 1000) {
+          buffer.writeln('${responseBody!.substring(0, 1000)}...');
+        } else {
+          buffer.writeln(responseBody);
+        }
+      }
+    }
+    buffer.writeln('=== End ===');
+    return buffer.toString();
   }
 }

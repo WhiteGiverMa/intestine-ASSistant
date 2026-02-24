@@ -1,17 +1,15 @@
 // @module: api_service
 // @type: service
 // @layer: frontend
-// @depends: [local_db_service, deepseek_service, http, shared_preferences, models]
+// @depends: [local_db_service, deepseek_service, http, models]
 // @exports: [ApiService, ErrorHandler, AppError, ErrorType]
 // @features:
-//   - 认证: register, login, logout (保留签名，返回本地用户)
 //   - 记录: createRecord, getRecords, deleteRecord (重定向到本地)
 //   - 统计: getStatsSummary, getStatsTrends (重定向到本地)
 //   - AI: analyzeData, sendMessage, sendMessageStream (重定向到 DeepSeek)
 //   - 设置: getUserSettings, updateUserSettings (重定向到本地)
-// @brief: API服务层，已重构为本地优先，保留接口签名兼容性
+// @brief: API服务层，已重构为本地优先
 import 'dart:async';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../models/models.dart';
 import 'local_db_service.dart';
 import 'deepseek_service.dart';
@@ -67,46 +65,70 @@ class ErrorHandler {
 }
 
 class ApiService {
-  static Future<void> setBaseUrl(String url) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('api_base_url', url);
-  }
+  static const int _maxRecordsChars = 10000;
+  static const int _maxRecordsCount = 150;
 
-  // ==================== 认证 (本地模式) ====================
-
-  static Future<User> register(
-    String email,
-    String password, {
-    String? nickname,
-  }) async {
-    final user = await LocalDbService.createLocalUser(
-      nickname: nickname ?? 'Local User',
-    );
-    return User(
-      userId: user.userId,
-      email: email,
-      nickname: nickname,
-      token: 'local_token_${user.userId}',
-    );
-  }
-
-  static Future<User> login(String email, String password) async {
-    var user = await LocalDbService.getLocalUser();
-    if (user == null) {
-      user = await LocalDbService.createLocalUser();
+  static String _buildRecordsText(List<BowelRecord> records) {
+    final buffer = StringBuffer();
+    for (final record in records) {
+      buffer.writeln(
+        '- ${record.recordDate} ${record.recordTime ?? ""}: '
+        '类型${record.stoolType ?? "?"}, '
+        '时长${record.durationMinutes ?? "?"}分钟, '
+        '感受${record.feeling ?? "?"}',
+      );
     }
-    return User(
-      userId: user.userId,
-      email: email,
-      nickname: user.nickname,
-      token: 'local_token_${user.userId}',
-    );
+    return buffer.toString();
   }
 
-  static Future<void> logout() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('token');
-    await prefs.remove('user');
+  static Future<({String? message, String? actualStartDate})>
+  _buildRecordsMessage({
+    String? recordsStartDate,
+    String? recordsEndDate,
+  }) async {
+    if (recordsStartDate == null || recordsEndDate == null) {
+      return (message: null, actualStartDate: null);
+    }
+
+    final records = await LocalDbService.getRecords(
+      startDate: recordsStartDate,
+      endDate: recordsEndDate,
+    );
+
+    if (records.isEmpty) {
+      return (message: null, actualStartDate: null);
+    }
+
+    records.sort((a, b) => b.recordDate.compareTo(a.recordDate));
+
+    final String recordsText = _buildRecordsText(records);
+
+    if (recordsText.length <= _maxRecordsChars &&
+        records.length <= _maxRecordsCount) {
+      return (
+        message: '以下是用户的排便记录：\n$recordsText',
+        actualStartDate: recordsStartDate,
+      );
+    }
+
+    final List<BowelRecord> trimmedRecords = List.from(records);
+    while (trimmedRecords.isNotEmpty &&
+        (trimmedRecords.length > _maxRecordsCount ||
+            _buildRecordsText(trimmedRecords).length > _maxRecordsChars)) {
+      trimmedRecords.removeLast();
+    }
+
+    if (trimmedRecords.isEmpty) {
+      return (message: null, actualStartDate: null);
+    }
+
+    final actualStartDate = trimmedRecords.last.recordDate;
+    final trimmedText = _buildRecordsText(trimmedRecords);
+
+    return (
+      message: '以下是用户的排便记录：\n$trimmedText',
+      actualStartDate: actualStartDate,
+    );
   }
 
   // ==================== 排便记录 (本地) ====================
@@ -123,7 +145,7 @@ class ApiService {
     String? notes,
     bool isNoBowel = false,
   }) async {
-    return await LocalDbService.createRecord(
+    return LocalDbService.createRecord(
       recordDate: recordDate,
       recordTime: recordTime,
       durationMinutes: durationMinutes,
@@ -143,7 +165,7 @@ class ApiService {
     int? limit,
     int? offset,
   }) async {
-    return await LocalDbService.getRecords(
+    return LocalDbService.getRecords(
       startDate: startDate,
       endDate: endDate,
       limit: limit,
@@ -152,7 +174,7 @@ class ApiService {
   }
 
   static Future<BowelRecord?> getRecordById(String recordId) async {
-    return await LocalDbService.getRecordById(recordId);
+    return LocalDbService.getRecordById(recordId);
   }
 
   static Future<void> updateRecord({
@@ -201,7 +223,7 @@ class ApiService {
     String? startDate,
     String? endDate,
   }) async {
-    return await LocalDbService.getStatsSummary(
+    return LocalDbService.getStatsSummary(
       startDate: startDate,
       endDate: endDate,
     );
@@ -213,7 +235,7 @@ class ApiService {
     String? startDate,
     String? endDate,
   }) async {
-    return await LocalDbService.getTrends(
+    return LocalDbService.getTrends(
       metric: metric,
       period: period,
       startDate: startDate,
@@ -225,7 +247,7 @@ class ApiService {
     String? startDate,
     String? endDate,
   }) async {
-    return await LocalDbService.getDailyCounts(
+    return LocalDbService.getDailyCounts(
       startDate: startDate,
       endDate: endDate,
     );
@@ -238,14 +260,14 @@ class ApiService {
     String? startDate,
     String? endDate,
   }) async {
-    return await DeepSeekService.analyzeRecords(
+    return DeepSeekService.analyzeRecords(
       analysisType: analysisType,
       startDate: startDate,
       endDate: endDate,
     );
   }
 
-  static Future<ChatMessage> sendMessage({
+  static Future<({ChatMessage message, String? actualStartDate})> sendMessage({
     required String message,
     String? conversationId,
     String? recordsStartDate,
@@ -258,11 +280,18 @@ class ApiService {
       session = await LocalDbService.getChatSession(conversationId);
     }
 
+    final recordsResult = await _buildRecordsMessage(
+      recordsStartDate: recordsStartDate,
+      recordsEndDate: recordsEndDate,
+    );
+
     final response = await DeepSeekService.chat(
       message: message,
       systemPrompt: systemPrompt,
       conversationId: conversationId,
       history: session?.messages,
+      thinkingIntensity: thinkingIntensity,
+      extraUserMessage: recordsResult.message,
     );
 
     if (conversationId == null) {
@@ -271,7 +300,7 @@ class ApiService {
         thinkingIntensity:
             thinkingIntensity != null
                 ? ThinkingIntensity.fromApiValue(thinkingIntensity)
-                : ThinkingIntensity.medium,
+                : ThinkingIntensity.none,
       );
       conversationId = newSession.conversationId;
     }
@@ -282,13 +311,24 @@ class ApiService {
       content: message,
     );
 
+    if (recordsResult.message != null) {
+      await LocalDbService.saveMessage(
+        conversationId: conversationId,
+        role: 'user',
+        content: recordsResult.message!,
+      );
+    }
+
     final assistantMessage = await LocalDbService.saveMessage(
       conversationId: conversationId,
       role: 'assistant',
       content: response,
     );
 
-    return assistantMessage;
+    return (
+      message: assistantMessage,
+      actualStartDate: recordsResult.actualStartDate,
+    );
   }
 
   static Stream<StreamChatChunk> sendMessageStream({
@@ -300,33 +340,53 @@ class ApiService {
     String? thinkingIntensity,
   }) async* {
     ChatSession? session;
+    String actualConversationId;
+
     if (conversationId != null) {
       session = await LocalDbService.getChatSession(conversationId);
-    }
-
-    final userMessage = await LocalDbService.saveMessage(
-      conversationId: conversationId ?? '',
-      role: 'user',
-      content: message,
-    );
-
-    String actualConversationId = conversationId ?? userMessage.conversationId;
-
-    if (conversationId == null) {
-      await LocalDbService.createChatSession(
+      actualConversationId = conversationId;
+    } else {
+      final newSession = await LocalDbService.createChatSession(
         systemPrompt: systemPrompt,
         thinkingIntensity:
             thinkingIntensity != null
                 ? ThinkingIntensity.fromApiValue(thinkingIntensity)
-                : ThinkingIntensity.medium,
+                : ThinkingIntensity.none,
+      );
+      actualConversationId = newSession.conversationId;
+    }
+
+    final recordsResult = await _buildRecordsMessage(
+      recordsStartDate: recordsStartDate,
+      recordsEndDate: recordsEndDate,
+    );
+
+    await LocalDbService.saveMessage(
+      conversationId: actualConversationId,
+      role: 'user',
+      content: message,
+    );
+
+    if (recordsResult.message != null) {
+      await LocalDbService.saveMessage(
+        conversationId: actualConversationId,
+        role: 'user',
+        content: recordsResult.message!,
       );
     }
+
+    yield StreamChatChunk(
+      conversationId: actualConversationId,
+      done: false,
+      actualStartDate: recordsResult.actualStartDate,
+    );
 
     final responseStream = DeepSeekService.chatStream(
       message: message,
       systemPrompt: systemPrompt,
       history: session?.messages,
       thinkingIntensity: thinkingIntensity,
+      extraUserMessage: recordsResult.message,
     );
 
     String fullContent = '';
@@ -378,11 +438,23 @@ class ApiService {
   }
 
   static Future<AiStatus> checkAiStatus() async {
-    return await DeepSeekService.checkApiStatus();
+    return DeepSeekService.checkApiStatus();
+  }
+
+  static ChatRequestDetails? getLastChatRequestDetails() {
+    return DeepSeekService.getLastRequestDetails();
+  }
+
+  static void clearLastChatRequestDetails() {
+    DeepSeekService.clearLastRequestDetails();
+  }
+
+  static void cancelCurrentRequest() {
+    DeepSeekService.cancelRequest();
   }
 
   static Future<List<ConversationSummary>> getConversations() async {
-    return await LocalDbService.getChatSessions();
+    return LocalDbService.getChatSessions();
   }
 
   static Future<void> renameConversation({

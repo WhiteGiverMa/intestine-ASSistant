@@ -425,7 +425,7 @@ class LocalDbService {
   }) async {
     final db = await DatabaseService.database;
 
-    DateTime now = DateTime.now();
+    final DateTime now = DateTime.now();
     DateTime start;
     DateTime end = now;
 
@@ -489,7 +489,7 @@ class LocalDbService {
   static Future<ChatSession> createChatSession({
     String? title,
     String? systemPrompt,
-    ThinkingIntensity thinkingIntensity = ThinkingIntensity.medium,
+    ThinkingIntensity thinkingIntensity = ThinkingIntensity.none,
   }) async {
     final db = await DatabaseService.database;
     final now = _getNowIso();
@@ -695,16 +695,281 @@ class LocalDbService {
     await db.delete('settings', where: 'key = ?', whereArgs: [key]);
   }
 
+  // ==================== 本地分析 ====================
+
+  static Future<AnalysisResult> analyzeLocally({
+    String analysisType = 'weekly',
+    String? startDate,
+    String? endDate,
+  }) async {
+    final records = await getRecords(startDate: startDate, endDate: endDate);
+    final stats = await getStatsSummary(startDate: startDate, endDate: endDate);
+
+    if (records.isEmpty) {
+      return AnalysisResult(
+        healthScore: 0,
+        insights: [],
+        suggestions: [],
+        warnings: [Warning(type: 'no_data', message: '没有记录数据可供分析')],
+      );
+    }
+
+    final nonNoBowelRecords = records.where((r) => !r.isNoBowel).toList();
+    final insights = <Insight>[];
+    final suggestions = <Suggestion>[];
+    final warnings = <Warning>[];
+
+    int healthScore = 70;
+
+    final avgFreq = stats.avgFrequencyPerDay;
+    if (avgFreq >= 1 && avgFreq <= 2) {
+      healthScore += 10;
+      insights.add(
+        Insight(
+          type: 'frequency',
+          title: '排便频率正常',
+          description: '平均每日${avgFreq.toStringAsFixed(1)}次，在健康范围内(1-2次/天)',
+        ),
+      );
+    } else if (avgFreq > 2 && avgFreq <= 3) {
+      healthScore += 5;
+      insights.add(
+        Insight(
+          type: 'frequency',
+          title: '排便频率偏高',
+          description: '平均每日${avgFreq.toStringAsFixed(1)}次，略高于正常范围',
+        ),
+      );
+      suggestions.add(
+        Suggestion(category: '饮食', suggestion: '注意饮食规律，避免过多刺激性食物'),
+      );
+    } else if (avgFreq > 3) {
+      healthScore -= 10;
+      warnings.add(
+        Warning(
+          type: 'high_frequency',
+          message: '排便频率过高(>${avgFreq.toStringAsFixed(1)}次/天)，建议关注肠道健康',
+        ),
+      );
+      suggestions.add(Suggestion(category: '就医', suggestion: '建议咨询医生，排除肠道疾病'));
+    } else if (avgFreq < 1) {
+      healthScore -= 5;
+      insights.add(
+        Insight(
+          type: 'frequency',
+          title: '排便频率偏低',
+          description: '平均每日${avgFreq.toStringAsFixed(1)}次，可能有便秘倾向',
+        ),
+      );
+      suggestions.add(
+        Suggestion(category: '饮食', suggestion: '增加膳食纤维摄入，多喝水，适当运动'),
+      );
+    }
+
+    if (stats.stoolTypeDistribution.isNotEmpty) {
+      final totalStool = stats.stoolTypeDistribution.values.reduce(
+        (a, b) => a + b,
+      );
+      double avgType = 0;
+      stats.stoolTypeDistribution.forEach((type, count) {
+        avgType += int.parse(type) * count;
+      });
+      avgType /= totalStool;
+
+      if (avgType >= 3 && avgType <= 5) {
+        healthScore += 10;
+        insights.add(
+          Insight(
+            type: 'stool_type',
+            title: '大便类型健康',
+            description: '平均类型${avgType.toStringAsFixed(1)}，属于正常范围(布里斯托3-5型)',
+          ),
+        );
+      } else if (avgType < 3) {
+        healthScore -= 5;
+        warnings.add(
+          Warning(
+            type: 'constipation',
+            message: '大便偏硬(平均${avgType.toStringAsFixed(1)}型)，可能有便秘',
+          ),
+        );
+        suggestions.add(Suggestion(category: '饮食', suggestion: '增加膳食纤维和水分摄入'));
+      } else if (avgType > 5) {
+        healthScore -= 5;
+        warnings.add(
+          Warning(
+            type: 'diarrhea',
+            message: '大便偏软(平均${avgType.toStringAsFixed(1)}型)，可能有腹泻倾向',
+          ),
+        );
+        suggestions.add(
+          Suggestion(category: '饮食', suggestion: '注意饮食卫生，避免生冷食物'),
+        );
+      }
+    }
+
+    if (stats.avgDurationMinutes > 0) {
+      if (stats.avgDurationMinutes <= 10) {
+        healthScore += 5;
+        insights.add(
+          Insight(
+            type: 'duration',
+            title: '排便时长正常',
+            description:
+                '平均${stats.avgDurationMinutes.toStringAsFixed(0)}分钟，在健康范围内',
+          ),
+        );
+      } else if (stats.avgDurationMinutes > 15) {
+        healthScore -= 5;
+        warnings.add(
+          Warning(
+            type: 'long_duration',
+            message:
+                '排便时间较长(平均${stats.avgDurationMinutes.toStringAsFixed(0)}分钟)',
+          ),
+        );
+        suggestions.add(
+          Suggestion(category: '习惯', suggestion: '避免如厕时玩手机，控制排便时间'),
+        );
+      }
+    }
+
+    final timeDist = stats.timeDistribution;
+    final totalWithTime =
+        timeDist.morning + timeDist.afternoon + timeDist.evening;
+    if (totalWithTime > 0) {
+      final morningRatio = timeDist.morning / totalWithTime;
+      if (morningRatio > 0.5) {
+        insights.add(
+          Insight(
+            type: 'timing',
+            title: '排便时间规律',
+            description:
+                '${(morningRatio * 100).toStringAsFixed(0)}%的排便发生在上午，符合生理节律',
+          ),
+        );
+        healthScore += 5;
+      } else if (timeDist.evening / totalWithTime > 0.5) {
+        suggestions.add(
+          Suggestion(category: '作息', suggestion: '尝试在早晨排便，更符合肠道生理节律'),
+        );
+      }
+    }
+
+    final feelings = <String, int>{};
+    for (final record in nonNoBowelRecords) {
+      if (record.feeling != null) {
+        feelings[record.feeling!] = (feelings[record.feeling!] ?? 0) + 1;
+      }
+    }
+    if (feelings.isNotEmpty) {
+      final badFeelings = ['差', '不适', '疼痛', '困难'];
+      int badCount = 0;
+      feelings.forEach((feeling, count) {
+        for (final bad in badFeelings) {
+          if (feeling.contains(bad)) {
+            badCount += count;
+            break;
+          }
+        }
+      });
+      if (badCount > 0) {
+        final badRatio = badCount / nonNoBowelRecords.length;
+        if (badRatio > 0.3) {
+          healthScore -= 5;
+          warnings.add(
+            Warning(
+              type: 'feeling',
+              message: '${(badRatio * 100).toStringAsFixed(0)}%的排便感受不佳',
+            ),
+          );
+          suggestions.add(
+            Suggestion(category: '就医', suggestion: '如持续不适，建议就医检查'),
+          );
+        }
+      }
+    }
+
+    if (stats.recordedDays < 7) {
+      suggestions.add(
+        Suggestion(category: '记录', suggestion: '持续记录更多天数可获得更准确的分析'),
+      );
+    }
+
+    healthScore = healthScore.clamp(0, 100);
+
+    if (insights.isEmpty) {
+      insights.add(
+        Insight(
+          type: 'general',
+          title: '数据已分析',
+          description:
+              '共分析${nonNoBowelRecords.length}条记录，跨越${stats.recordedDays}天',
+        ),
+      );
+    }
+
+    if (suggestions.isEmpty) {
+      suggestions.add(Suggestion(category: '维持', suggestion: '继续保持良好的排便习惯'));
+    }
+
+    return AnalysisResult(
+      healthScore: healthScore,
+      insights: insights,
+      suggestions: suggestions,
+      warnings: warnings,
+    );
+  }
+
   // ==================== 数据导出导入 ====================
 
-  static Future<Map<String, dynamic>> exportAllData() async {
+  static const _apiConfigKeys = [
+    'ai_api_key',
+    'ai_api_url',
+    'ai_model',
+    'default_system_prompt',
+  ];
+
+  static Future<Map<String, dynamic>> exportAllData({
+    bool includeSettings = true,
+    bool includeApiConfig = true,
+    bool includeRecords = true,
+    bool includeChatHistory = true,
+  }) async {
     final db = await DatabaseService.database;
 
     final users = await db.query('local_users');
-    final records = await db.query('bowel_records');
-    final sessions = await db.query('chat_sessions');
-    final messages = await db.query('chat_messages');
-    final settings = await db.query('settings');
+
+    List<Map<String, dynamic>> records = [];
+    if (includeRecords) {
+      records = await db.query('bowel_records');
+    }
+
+    List<Map<String, dynamic>> sessions = [];
+    List<Map<String, dynamic>> messages = [];
+    if (includeChatHistory) {
+      sessions = await db.query('chat_sessions');
+      messages = await db.query('chat_messages');
+    }
+
+    final List<Map<String, dynamic>> settings = [];
+    if (includeSettings || includeApiConfig) {
+      final allSettings = await db.query('settings');
+      for (final setting in allSettings) {
+        final key = setting['key'] as String;
+        final isApiConfig = _apiConfigKeys.contains(key);
+
+        if (isApiConfig) {
+          if (includeApiConfig) {
+            settings.add(setting);
+          }
+        } else {
+          if (includeSettings) {
+            settings.add(setting);
+          }
+        }
+      }
+    }
 
     return {
       'version': 1,
@@ -727,12 +992,15 @@ class LocalDbService {
       await DatabaseService.resetDatabase();
     }
 
+    final conflictAlgorithm =
+        overwrite ? ConflictAlgorithm.replace : ConflictAlgorithm.ignore;
+
     if (data['users'] != null) {
       for (final user in data['users'] as List) {
         await db.insert(
           'local_users',
           Map<String, dynamic>.from(user),
-          conflictAlgorithm: ConflictAlgorithm.replace,
+          conflictAlgorithm: conflictAlgorithm,
         );
       }
     }
@@ -742,7 +1010,7 @@ class LocalDbService {
         await db.insert(
           'bowel_records',
           Map<String, dynamic>.from(record),
-          conflictAlgorithm: ConflictAlgorithm.replace,
+          conflictAlgorithm: conflictAlgorithm,
         );
       }
     }
@@ -752,7 +1020,7 @@ class LocalDbService {
         await db.insert(
           'chat_sessions',
           Map<String, dynamic>.from(session),
-          conflictAlgorithm: ConflictAlgorithm.replace,
+          conflictAlgorithm: conflictAlgorithm,
         );
       }
     }
@@ -762,7 +1030,7 @@ class LocalDbService {
         await db.insert(
           'chat_messages',
           Map<String, dynamic>.from(message),
-          conflictAlgorithm: ConflictAlgorithm.replace,
+          conflictAlgorithm: conflictAlgorithm,
         );
       }
     }
@@ -772,9 +1040,21 @@ class LocalDbService {
         await db.insert(
           'settings',
           Map<String, dynamic>.from(setting),
-          conflictAlgorithm: ConflictAlgorithm.replace,
+          conflictAlgorithm: conflictAlgorithm,
         );
       }
     }
+  }
+
+  static Map<String, dynamic> getImportPreview(Map<String, dynamic> data) {
+    final preview = <String, dynamic>{};
+
+    preview['users'] = (data['users'] as List?)?.length ?? 0;
+    preview['bowel_records'] = (data['bowel_records'] as List?)?.length ?? 0;
+    preview['chat_sessions'] = (data['chat_sessions'] as List?)?.length ?? 0;
+    preview['chat_messages'] = (data['chat_messages'] as List?)?.length ?? 0;
+    preview['settings'] = (data['settings'] as List?)?.length ?? 0;
+
+    return preview;
   }
 }

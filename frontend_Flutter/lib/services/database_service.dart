@@ -43,7 +43,7 @@ class DatabaseService {
 
     final path = await _getDatabasePath();
 
-    return await openDatabase(
+    return openDatabase(
       path,
       version: _databaseVersion,
       onCreate: _onCreate,

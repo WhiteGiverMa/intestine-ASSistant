@@ -7,7 +7,6 @@
 // @exports: [DataOverviewPage]
 // @brief: 整合数据统计与记录管理，支持日期范围筛选、日历视图、统计图表和记录列表。
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
 import '../services/api_service.dart';
 import '../models/models.dart';
@@ -21,6 +20,7 @@ import '../widgets/app_header.dart';
 import '../providers/theme_provider.dart';
 import '../theme/theme_colors.dart';
 import '../theme/theme_decorations.dart';
+import '../utils/animations.dart';
 
 class DataOverviewPage extends StatefulWidget {
   const DataOverviewPage({super.key});
@@ -56,9 +56,13 @@ class _DataOverviewPageState extends State<DataOverviewPage> {
 
   // Date input fields
   String? _focusedDateField;
-  final GlobalKey<DateInputFieldState> _startDateKey =
+  final GlobalKey<DateInputFieldState> _startDateKeyStats =
       GlobalKey<DateInputFieldState>();
-  final GlobalKey<DateInputFieldState> _endDateKey =
+  final GlobalKey<DateInputFieldState> _endDateKeyStats =
+      GlobalKey<DateInputFieldState>();
+  final GlobalKey<DateInputFieldState> _startDateKeyManage =
+      GlobalKey<DateInputFieldState>();
+  final GlobalKey<DateInputFieldState> _endDateKeyManage =
       GlobalKey<DateInputFieldState>();
   DateTime? _pendingRangeStart;
 
@@ -126,11 +130,6 @@ class _DataOverviewPageState extends State<DataOverviewPage> {
       });
     } catch (e) {
       final appError = ErrorHandler.handleError(e);
-      if (appError.type == ErrorType.auth) {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.remove('token');
-        await prefs.remove('user');
-      }
       setState(() {
         _statsError = appError;
         _statsLoading = false;
@@ -175,11 +174,6 @@ class _DataOverviewPageState extends State<DataOverviewPage> {
       });
     } catch (e) {
       final appError = ErrorHandler.handleError(e);
-      if (appError.type == ErrorType.auth) {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.remove('token');
-        await prefs.remove('user');
-      }
       setState(() {
         _recordsError = appError;
         _recordsLoading = false;
@@ -223,10 +217,12 @@ class _DataOverviewPageState extends State<DataOverviewPage> {
 
   void _updateDateInputFields() {
     if (_rangeStart != null) {
-      _startDateKey.currentState?.setDate(_rangeStart!);
+      _startDateKeyStats.currentState?.setDate(_rangeStart!);
+      _startDateKeyManage.currentState?.setDate(_rangeStart!);
     }
     if (_rangeEnd != null) {
-      _endDateKey.currentState?.setDate(_rangeEnd!);
+      _endDateKeyStats.currentState?.setDate(_rangeEnd!);
+      _endDateKeyManage.currentState?.setDate(_rangeEnd!);
     }
   }
 
@@ -254,7 +250,8 @@ class _DataOverviewPageState extends State<DataOverviewPage> {
   void _onCalendarDateClick(DateTime date) {
     if (_focusedDateField != null) {
       if (_focusedDateField == 'start') {
-        _startDateKey.currentState?.setDate(date);
+        _startDateKeyStats.currentState?.setDate(date);
+        _startDateKeyManage.currentState?.setDate(date);
         setState(() {
           _rangeStart = date;
           _viewMode = 'range';
@@ -262,7 +259,8 @@ class _DataOverviewPageState extends State<DataOverviewPage> {
           _focusedDateField = 'end';
         });
       } else if (_focusedDateField == 'end') {
-        _endDateKey.currentState?.setDate(date);
+        _endDateKeyStats.currentState?.setDate(date);
+        _endDateKeyManage.currentState?.setDate(date);
         setState(() {
           _rangeEnd = date;
           _viewMode = 'range';
@@ -273,7 +271,8 @@ class _DataOverviewPageState extends State<DataOverviewPage> {
       }
     } else {
       if (_pendingRangeStart == null) {
-        _startDateKey.currentState?.setDate(date);
+        _startDateKeyStats.currentState?.setDate(date);
+        _startDateKeyManage.currentState?.setDate(date);
         setState(() {
           _rangeStart = date;
           _rangeEnd = null;
@@ -286,8 +285,10 @@ class _DataOverviewPageState extends State<DataOverviewPage> {
             date.isBefore(_pendingRangeStart!) ? date : _pendingRangeStart!;
         final end =
             date.isBefore(_pendingRangeStart!) ? _pendingRangeStart! : date;
-        _startDateKey.currentState?.setDate(start);
-        _endDateKey.currentState?.setDate(end);
+        _startDateKeyStats.currentState?.setDate(start);
+        _startDateKeyManage.currentState?.setDate(start);
+        _endDateKeyStats.currentState?.setDate(end);
+        _endDateKeyManage.currentState?.setDate(end);
         setState(() {
           _rangeStart = start;
           _rangeEnd = end;
@@ -322,7 +323,7 @@ class _DataOverviewPageState extends State<DataOverviewPage> {
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: colors.primary,
+                        color: colors.headerText,
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -338,7 +339,7 @@ class _DataOverviewPageState extends State<DataOverviewPage> {
                             content: SizedBox.shrink(),
                           ),
                           CompactTabItem(
-                            label: '记录',
+                            label: '管理',
                             icon: Icons.list_alt,
                             content: SizedBox.shrink(),
                           ),
@@ -372,7 +373,7 @@ class _DataOverviewPageState extends State<DataOverviewPage> {
                       content: _buildStatsTab(colors),
                     ),
                     CompactTabItem(
-                      label: '记录',
+                      label: '管理',
                       icon: Icons.list_alt,
                       content: _buildRecordsTab(colors),
                     ),
@@ -394,24 +395,28 @@ class _DataOverviewPageState extends State<DataOverviewPage> {
         padding: const EdgeInsets.symmetric(horizontal: 16),
         child: Column(
           children: [
+            const SizedBox(height: 12),
             _buildDateInputRow(colors),
             const SizedBox(height: 12),
             _buildQuickSelectButtons(colors),
             const SizedBox(height: 12),
-            CalendarWidget(
-              startDate: _rangeStart,
-              endDate: _rangeEnd,
-              dailyCounts: _dailyCounts,
-              noBowelDates: _noBowelDates,
-              onDateSelected: (_) {},
-              onDateRangeSelected: _onDateRangeSelected,
-              onDateClick: _onCalendarDateClick,
-              isExpanded: _calendarExpanded,
-              onExpandToggle: () {
-                setState(() {
-                  _calendarExpanded = !_calendarExpanded;
-                });
-              },
+            AnimatedEntrance(
+              delay: const Duration(milliseconds: 100),
+              child: CalendarWidget(
+                startDate: _rangeStart,
+                endDate: _rangeEnd,
+                dailyCounts: _dailyCounts,
+                noBowelDates: _noBowelDates,
+                onDateSelected: (_) {},
+                onDateRangeSelected: _onDateRangeSelected,
+                onDateClick: _onCalendarDateClick,
+                isExpanded: _calendarExpanded,
+                onExpandToggle: () {
+                  setState(() {
+                    _calendarExpanded = !_calendarExpanded;
+                  });
+                },
+              ),
             ),
             const SizedBox(height: 16),
             if (_statsLoading)
@@ -420,26 +425,41 @@ class _DataOverviewPageState extends State<DataOverviewPage> {
               _buildStatsErrorWidget()
             else ...[
               if (_summary != null && _summary!.coverageRate < 0.8)
-                _buildCoverageWarning(colors),
+                AnimatedEntrance(
+                  delay: const Duration(milliseconds: 150),
+                  child: _buildCoverageWarning(colors),
+                ),
               const SizedBox(height: 8),
-              StatsGrid(summary: _summary, colors: colors),
+              AnimatedEntrance(
+                delay: const Duration(milliseconds: 200),
+                child: StatsGrid(summary: _summary, colors: colors),
+              ),
               const SizedBox(height: 16),
-              TrendChart(trends: _trends, colors: colors),
+              AnimatedEntrance(
+                delay: const Duration(milliseconds: 250),
+                child: TrendChart(trends: _trends, colors: colors),
+              ),
               const SizedBox(height: 16),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: StoolTypePieChart(summary: _summary, colors: colors),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: TimeDistributionRing(
-                      summary: _summary,
-                      colors: colors,
+              AnimatedEntrance(
+                delay: const Duration(milliseconds: 300),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: StoolTypePieChart(
+                        summary: _summary,
+                        colors: colors,
+                      ),
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: TimeDistributionRing(
+                        summary: _summary,
+                        colors: colors,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
             const SizedBox(height: 16),
@@ -454,23 +474,37 @@ class _DataOverviewPageState extends State<DataOverviewPage> {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
         children: [
-          CalendarWidget(
-            selectedDate: _selectedDate,
-            startDate: _rangeStart,
-            endDate: _rangeEnd,
-            dailyCounts: _dailyCounts,
-            noBowelDates: _noBowelDates,
-            onDateSelected: _onDateSelected,
-            onDateRangeSelected: _onDateRangeSelected,
-            isExpanded: _calendarExpanded,
-            onExpandToggle: () {
-              setState(() {
-                _calendarExpanded = !_calendarExpanded;
-              });
-            },
+          const SizedBox(height: 12),
+          _buildDateInputRow(
+            colors,
+            startKey: _startDateKeyManage,
+            endKey: _endDateKeyManage,
+          ),
+          const SizedBox(height: 12),
+          _buildQuickSelectButtons(colors),
+          const SizedBox(height: 12),
+          AnimatedEntrance(
+            child: CalendarWidget(
+              selectedDate: _selectedDate,
+              startDate: _rangeStart,
+              endDate: _rangeEnd,
+              dailyCounts: _dailyCounts,
+              noBowelDates: _noBowelDates,
+              onDateSelected: _onDateSelected,
+              onDateRangeSelected: _onDateRangeSelected,
+              isExpanded: _calendarExpanded,
+              onExpandToggle: () {
+                setState(() {
+                  _calendarExpanded = !_calendarExpanded;
+                });
+              },
+            ),
           ),
           const SizedBox(height: 16),
-          _buildSelectionInfo(colors),
+          AnimatedEntrance(
+            delay: const Duration(milliseconds: 100),
+            child: _buildSelectionInfo(colors),
+          ),
           const SizedBox(height: 8),
           if (_recordsLoading && _records.isEmpty)
             Center(child: CircularProgressIndicator(color: colors.primary))
@@ -486,7 +520,19 @@ class _DataOverviewPageState extends State<DataOverviewPage> {
     );
   }
 
-  Widget _buildDateInputRow(ThemeColors colors) {
+  Widget _buildDateInputRow(
+    ThemeColors colors, {
+    GlobalKey<DateInputFieldState>? startKey,
+    GlobalKey<DateInputFieldState>? endKey,
+  }) {
+    startKey ??= _startDateKeyStats;
+    endKey ??= _endDateKeyStats;
+
+    final bool isSelectingStart = _focusedDateField == 'start';
+    final bool isSelectingEnd = _focusedDateField == 'end';
+    final bool isPendingStart = _pendingRangeStart != null && _rangeEnd == null;
+    final bool hasCompleteRange = _rangeStart != null && _rangeEnd != null && _focusedDateField == null && _pendingRangeStart == null;
+
     return GestureDetector(
       onTap: () {
         setState(() {
@@ -500,13 +546,14 @@ class _DataOverviewPageState extends State<DataOverviewPage> {
           children: [
             Expanded(
               child: DateInputField(
-                key: _startDateKey,
+                key: startKey,
                 label: '开始日期',
                 initialDate: _rangeStart ?? DateTime.now(),
                 firstDate: DateTime(2020),
                 lastDate: _rangeEnd ?? DateTime.now(),
                 showDatePicker: false,
-                isExternallyFocused: _focusedDateField == 'start',
+                isExternallyFocused: isSelectingStart,
+                isSelected: isSelectingStart || isPendingStart || hasCompleteRange,
                 onFocusChanged: (focused) {
                   setState(() {
                     _focusedDateField = focused ? 'start' : null;
@@ -526,13 +573,14 @@ class _DataOverviewPageState extends State<DataOverviewPage> {
             const SizedBox(width: 12),
             Expanded(
               child: DateInputField(
-                key: _endDateKey,
+                key: endKey,
                 label: '结束日期',
                 initialDate: _rangeEnd ?? DateTime.now(),
                 firstDate: _rangeStart ?? DateTime(2020),
                 lastDate: DateTime.now(),
                 showDatePicker: false,
-                isExternallyFocused: _focusedDateField == 'end',
+                isExternallyFocused: isSelectingEnd,
+                isSelected: isSelectingEnd || hasCompleteRange,
                 onFocusChanged: (focused) {
                   setState(() {
                     _focusedDateField = focused ? 'end' : null;
@@ -714,29 +762,29 @@ class _DataOverviewPageState extends State<DataOverviewPage> {
   }
 
   Widget _buildRecordList(ThemeColors colors) {
-    return Column(
-      children: [
-        ...(_records
-            .where((r) => !r.isNoBowel)
-            .map(
-              (record) => RecordCard(
-                record: record,
-                colors: colors,
-                onTap: () => _showRecordDetail(record, colors),
-                onDelete: () => _deleteRecord(record.recordId),
-              ),
-            )),
-        ...(_records
-            .where((r) => r.isNoBowel)
-            .map(
-              (record) => NoBowelCard(
-                record: record,
-                colors: colors,
-                onTap: () => _showRecordDetail(record, colors),
-                onDelete: () => _deleteRecord(record.recordId),
-              ),
-            )),
-      ],
+    final normalRecords = _records.where((r) => !r.isNoBowel).toList();
+    final noBowelRecords = _records.where((r) => r.isNoBowel).toList();
+    final allRecords = [...normalRecords, ...noBowelRecords];
+
+    return AnimatedStaggeredList(
+      itemCount: allRecords.length,
+      itemBuilder: (context, index) {
+        final record = allRecords[index];
+        if (record.isNoBowel) {
+          return NoBowelCard(
+            record: record,
+            colors: colors,
+            onTap: () => _showRecordDetail(record, colors),
+            onDelete: () => _deleteRecord(record.recordId),
+          );
+        }
+        return RecordCard(
+          record: record,
+          colors: colors,
+          onTap: () => _showRecordDetail(record, colors),
+          onDelete: () => _deleteRecord(record.recordId),
+        );
+      },
     );
   }
 

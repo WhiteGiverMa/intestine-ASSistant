@@ -11,6 +11,7 @@ import 'package:provider/provider.dart';
 import '../providers/theme_provider.dart';
 import '../theme/theme_colors.dart';
 import '../theme/theme_decorations.dart';
+import '../utils/animations.dart';
 import '../widgets/app_header.dart';
 import 'record_page.dart';
 import 'data_overview_page.dart';
@@ -67,21 +68,24 @@ class _DataPageState extends State<DataPage> {
   }
 
   Widget _buildWelcome(ThemeColors colors) {
-    return Column(
-      children: [
-        const Text('📊', style: TextStyle(fontSize: 64)),
-        const SizedBox(height: 16),
-        Text(
-          '数据管理中心',
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: colors.textPrimary,
+    return AnimatedEntrance(
+      duration: AppAnimations.durationSlow,
+      child: Column(
+        children: [
+          const Text('📊', style: TextStyle(fontSize: 64)),
+          const SizedBox(height: 16),
+          Text(
+            '数据管理中心',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: colors.textPrimary,
+            ),
           ),
-        ),
-        const SizedBox(height: 8),
-        Text('记录、查看和管理您的肠道健康数据', style: TextStyle(color: colors.textSecondary)),
-      ],
+          const SizedBox(height: 8),
+          Text('记录、查看和管理您的肠道健康数据', style: TextStyle(color: colors.textSecondary)),
+        ],
+      ),
     );
   }
 
@@ -91,22 +95,28 @@ class _DataPageState extends State<DataPage> {
         Row(
           children: [
             Expanded(
-              child: _buildMenuItem(
-                '📝',
-                '记录排便',
-                '手动输入或计时记录',
-                const RecordPage(),
-                colors,
+              child: AnimatedCard(
+                delay: const Duration(milliseconds: 100),
+                onTap: () => navigateWithFade(context, const RecordPage()),
+                child: _buildMenuCardContent(
+                  '📝',
+                  '记录排便',
+                  '手动输入或计时记录',
+                  colors,
+                ),
               ),
             ),
             const SizedBox(width: 16),
             Expanded(
-              child: _buildMenuItem(
-                '📈',
-                '数据概览',
-                '统计趋势与记录管理',
-                const DataOverviewPage(),
-                colors,
+              child: AnimatedCard(
+                delay: const Duration(milliseconds: 200),
+                onTap: () => navigateWithFade(context, const DataOverviewPage()),
+                child: _buildMenuCardContent(
+                  '📈',
+                  '数据概览',
+                  '统计趋势与记录管理',
+                  colors,
+                ),
               ),
             ),
           ],
@@ -115,72 +125,36 @@ class _DataPageState extends State<DataPage> {
     );
   }
 
-  Widget _buildMenuItem(
+  Widget _buildMenuCardContent(
     String emoji,
     String title,
     String subtitle,
-    Widget page,
-    ThemeColors colors, {
-    bool fullWidth = false,
-  }) {
-    return GestureDetector(
-      onTap:
-          () =>
-              Navigator.push(context, MaterialPageRoute(builder: (_) => page)),
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: ThemeDecorations.card(context, mode: context.themeMode),
-        child:
-            fullWidth
-                ? Row(
-                  children: [
-                    Text(emoji, style: const TextStyle(fontSize: 40)),
-                    const SizedBox(width: 16),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          title,
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: colors.textPrimary,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          subtitle,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: colors.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                )
-                : Column(
-                  children: [
-                    Text(emoji, style: const TextStyle(fontSize: 40)),
-                    const SizedBox(height: 12),
-                    Text(
-                      title,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: colors.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: colors.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
+    ThemeColors colors,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: ThemeDecorations.card(context, mode: context.themeMode),
+      child: Column(
+        children: [
+          Text(emoji, style: const TextStyle(fontSize: 40)),
+          const SizedBox(height: 12),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: colors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            subtitle,
+            style: TextStyle(
+              fontSize: 12,
+              color: colors.textSecondary,
+            ),
+          ),
+        ],
       ),
     );
   }

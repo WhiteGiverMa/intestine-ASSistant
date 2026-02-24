@@ -11,6 +11,8 @@ class ConversationSidebar extends StatefulWidget {
   final String? selectedConversationId;
   final Function(String) onConversationSelected;
   final VoidCallback onNewConversation;
+  final bool isLoading;
+  final String? loadingConversationId;
 
   const ConversationSidebar({
     super.key,
@@ -19,6 +21,8 @@ class ConversationSidebar extends StatefulWidget {
     this.selectedConversationId,
     required this.onConversationSelected,
     required this.onNewConversation,
+    this.isLoading = false,
+    this.loadingConversationId,
   });
 
   @override
@@ -28,11 +32,24 @@ class ConversationSidebar extends StatefulWidget {
 class _ConversationSidebarState extends State<ConversationSidebar> {
   List<ConversationSummary> _conversations = [];
   bool _loading = false;
+  String? _lastConversationId;
 
   @override
   void initState() {
     super.initState();
     _loadConversations();
+  }
+
+  @override
+  void didUpdateWidget(covariant ConversationSidebar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.selectedConversationId != oldWidget.selectedConversationId) {
+      if (widget.selectedConversationId != null &&
+          widget.selectedConversationId != _lastConversationId) {
+        _lastConversationId = widget.selectedConversationId;
+        _loadConversations();
+      }
+    }
   }
 
   Future<void> _loadConversations() async {
@@ -172,10 +189,25 @@ class _ConversationSidebarState extends State<ConversationSidebar> {
   }
 
   Widget _buildNewItem(ThemeColors colors) {
+    final isCreatingNew = widget.isLoading &&
+        (widget.loadingConversationId == null ||
+            widget.loadingConversationId!.isEmpty);
     return ListTile(
-      leading: Icon(Icons.add, color: colors.primary),
-      title: Text('新建对话', style: TextStyle(color: colors.primary)),
-      onTap: widget.onNewConversation,
+      leading: isCreatingNew
+          ? SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: colors.primary,
+              ),
+            )
+          : Icon(Icons.add, color: colors.primary),
+      title: Text(
+        isCreatingNew ? '创建中...' : '新建对话',
+        style: TextStyle(color: colors.primary),
+      ),
+      onTap: isCreatingNew ? null : widget.onNewConversation,
     );
   }
 
@@ -185,38 +217,71 @@ class _ConversationSidebarState extends State<ConversationSidebar> {
   ) {
     final isSelected =
         conversation.conversationId == widget.selectedConversationId;
-    return ListTile(
-      selected: isSelected,
-      selectedTileColor: colors.primary.withValues(alpha: 0.1),
-      title: Text(
-        conversation.title ?? '新对话',
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: TextStyle(color: colors.textPrimary),
-      ),
-      subtitle: Text(
-        _formatTime(conversation.updatedAt),
-        style: TextStyle(fontSize: 12, color: colors.textSecondary),
-      ),
-      onTap: () => widget.onConversationSelected(conversation.conversationId),
-      trailing: SizedBox(
-        width: 40,
-        child: PopupMenuButton<String>(
-          padding: EdgeInsets.zero,
-          onSelected: (value) {
-            if (value == 'rename') {
-              _renameConversation(conversation);
-            }
-            if (value == 'delete') {
-              _deleteConversation(conversation.conversationId);
-            }
-          },
-          itemBuilder:
-              (context) => [
-                const PopupMenuItem(value: 'rename', child: Text('重命名')),
-                const PopupMenuItem(value: 'delete', child: Text('删除')),
-              ],
+    final isThisLoading = widget.isLoading &&
+        widget.loadingConversationId == conversation.conversationId;
+    return Container(
+      decoration: BoxDecoration(
+        color: isSelected ? colors.primary.withValues(alpha: 0.15) : null,
+        border: Border(
+          left: BorderSide(
+            color: isSelected ? colors.primary : Colors.transparent,
+            width: 4,
+          ),
         ),
+      ),
+      child: ListTile(
+        title: Row(
+          children: [
+            Expanded(
+              child: Text(
+                conversation.title ?? '新对话',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: isSelected ? colors.primary : colors.textPrimary,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                ),
+              ),
+            ),
+            if (isThisLoading) ...[
+              const SizedBox(width: 8),
+              SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: colors.primary,
+                ),
+              ),
+            ],
+          ],
+        ),
+        subtitle: Text(
+          _formatTime(conversation.updatedAt),
+          style: TextStyle(fontSize: 12, color: colors.textSecondary),
+        ),
+        onTap: () => widget.onConversationSelected(conversation.conversationId),
+        trailing: isThisLoading
+            ? null
+            : SizedBox(
+                width: 40,
+                child: PopupMenuButton<String>(
+                  padding: EdgeInsets.zero,
+                  onSelected: (value) {
+                    if (value == 'rename') {
+                      _renameConversation(conversation);
+                    }
+                    if (value == 'delete') {
+                      _deleteConversation(conversation.conversationId);
+                    }
+                  },
+                  itemBuilder:
+                      (context) => [
+                        const PopupMenuItem(value: 'rename', child: Text('重命名')),
+                        const PopupMenuItem(value: 'delete', child: Text('删除')),
+                      ],
+                ),
+              ),
       ),
     );
   }
