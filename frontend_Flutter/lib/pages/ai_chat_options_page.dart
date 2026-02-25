@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../services/api_service.dart';
 import '../services/deepseek_service.dart';
+import '../services/url_launcher_service.dart';
 import '../widgets/app_header.dart';
 import '../providers/theme_provider.dart';
 import '../theme/theme_colors.dart';
 import '../theme/theme_decorations.dart';
+import '../widgets/expanded_text_editor_dialog.dart';
 
 class AiChatOptionsPage extends StatefulWidget {
   const AiChatOptionsPage({super.key});
@@ -528,7 +529,19 @@ class _AiChatOptionsPageState extends State<AiChatOptionsPage> {
                     color: colors.textSecondary,
                   ),
                   tooltip: '展开编辑',
-                  onPressed: () => _showExpandedPromptEditor(context, colors),
+                  onPressed: () async {
+                    final result = await ExpandedTextEditorDialog.show(
+                      context,
+                      title: '系统提示词',
+                      hintText: '输入系统提示词...',
+                      initialText: _systemPromptController.text,
+                      showClearButton: true,
+                      defaultText: DeepSeekService.kDefaultSystemPrompt,
+                    );
+                    if (result != null) {
+                      _systemPromptController.text = result;
+                    }
+                  },
                   padding: const EdgeInsets.all(8),
                   constraints: const BoxConstraints(
                     minWidth: 32,
@@ -540,123 +553,6 @@ class _AiChatOptionsPageState extends State<AiChatOptionsPage> {
           ),
         ],
       ),
-    );
-  }
-
-  void _showExpandedPromptEditor(BuildContext context, ThemeColors colors) {
-    final expandedController = TextEditingController(
-      text: _systemPromptController.text,
-    );
-    showDialog(
-      context: context,
-      builder:
-          (dialogContext) => Dialog(
-            insetPadding: const EdgeInsets.symmetric(
-              horizontal: 24,
-              vertical: 40,
-            ),
-            child: Container(
-              height: MediaQuery.of(context).size.height * 0.8,
-              decoration: BoxDecoration(
-                color: colors.background,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Column(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 16,
-                    ),
-                    decoration: BoxDecoration(
-                      border: Border(bottom: BorderSide(color: colors.divider)),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.edit_note, size: 24, color: colors.primary),
-                        const SizedBox(width: 12),
-                        Text(
-                          '系统提示词',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                            color: colors.textPrimary,
-                          ),
-                        ),
-                        const Spacer(),
-                        TextButton(
-                          onPressed: () {
-                            expandedController.text =
-                                DeepSeekService.kDefaultSystemPrompt;
-                          },
-                          style: TextButton.styleFrom(
-                            foregroundColor: colors.textSecondary,
-                          ),
-                          child: const Text('恢复默认'),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: TextField(
-                        controller: expandedController,
-                        maxLines: null,
-                        expands: true,
-                        textAlignVertical: TextAlignVertical.top,
-                        decoration: InputDecoration(
-                          hintText: '输入系统提示词...',
-                          hintStyle: TextStyle(color: colors.textHint),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          contentPadding: const EdgeInsets.all(16),
-                          filled: true,
-                          fillColor: colors.surface,
-                        ),
-                        style: TextStyle(
-                          fontSize: 15,
-                          color: colors.textPrimary,
-                        ),
-                      ),
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      border: Border(top: BorderSide(color: colors.divider)),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(dialogContext),
-                          style: TextButton.styleFrom(
-                            foregroundColor: colors.textSecondary,
-                          ),
-                          child: const Text('取消'),
-                        ),
-                        const SizedBox(width: 12),
-                        ElevatedButton(
-                          onPressed: () {
-                            _systemPromptController.text =
-                                expandedController.text;
-                            Navigator.pop(dialogContext);
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: colors.primary,
-                            foregroundColor: colors.textOnPrimary,
-                          ),
-                          child: const Text('确定'),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
     );
   }
 
@@ -674,12 +570,7 @@ class _AiChatOptionsPageState extends State<AiChatOptionsPage> {
 
   Widget _buildLinkButton(String label, String url, Color color) {
     return GestureDetector(
-      onTap: () async {
-        final uri = Uri.parse(url);
-        if (await canLaunchUrl(uri)) {
-          await launchUrl(uri, mode: LaunchMode.externalApplication);
-        }
-      },
+      onTap: () => UrlLauncherService.launchWebUrl(context, url),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(

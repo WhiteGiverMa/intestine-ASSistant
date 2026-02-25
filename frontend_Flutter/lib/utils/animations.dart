@@ -34,13 +34,9 @@ class FadeSlideTransition extends StatelessWidget {
     return FadeTransition(
       opacity: animation,
       child: SlideTransition(
-        position: Tween<Offset>(
-          begin: offset,
-          end: Offset.zero,
-        ).animate(CurvedAnimation(
-          parent: animation,
-          curve: AppAnimations.curveEnter,
-        )),
+        position: Tween<Offset>(begin: offset, end: Offset.zero).animate(
+          CurvedAnimation(parent: animation, curve: AppAnimations.curveEnter),
+        ),
         child: child,
       ),
     );
@@ -56,6 +52,7 @@ class AnimatedEntrance extends StatefulWidget {
   final bool fadeIn;
   final bool slideIn;
   final bool scaleIn;
+  final bool animate;
 
   const AnimatedEntrance({
     super.key,
@@ -67,6 +64,7 @@ class AnimatedEntrance extends StatefulWidget {
     this.fadeIn = true,
     this.slideIn = true,
     this.scaleIn = false,
+    this.animate = false,
   });
 
   @override
@@ -81,14 +79,13 @@ class _AnimatedEntranceState extends State<AnimatedEntrance>
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: widget.duration,
-    );
-    _animation = CurvedAnimation(
-      parent: _controller,
-      curve: widget.curve,
-    );
+    _controller = AnimationController(vsync: this, duration: widget.duration);
+    _animation = CurvedAnimation(parent: _controller, curve: widget.curve);
+
+    if (!widget.animate) {
+      _controller.value = 1.0;
+      return;
+    }
 
     if (widget.delay > Duration.zero) {
       Future.delayed(widget.delay, () {
@@ -127,10 +124,7 @@ class _AnimatedEntranceState extends State<AnimatedEntrance>
     }
 
     if (widget.fadeIn) {
-      result = FadeTransition(
-        opacity: _animation,
-        child: result,
-      );
+      result = FadeTransition(opacity: _animation, child: result);
     }
 
     return result;
@@ -173,6 +167,7 @@ class AnimatedCard extends StatefulWidget {
   final Duration delay;
   final VoidCallback? onTap;
   final bool enableScaleOnTap;
+  final bool animate;
 
   const AnimatedCard({
     super.key,
@@ -181,6 +176,7 @@ class AnimatedCard extends StatefulWidget {
     this.delay = Duration.zero,
     this.onTap,
     this.enableScaleOnTap = true,
+    this.animate = false,
   });
 
   @override
@@ -196,14 +192,16 @@ class _AnimatedCardState extends State<AnimatedCard>
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: widget.duration,
-    );
+    _controller = AnimationController(vsync: this, duration: widget.duration);
     _animation = CurvedAnimation(
       parent: _controller,
       curve: AppAnimations.curveEnter,
     );
+
+    if (!widget.animate) {
+      _controller.value = 1.0;
+      return;
+    }
 
     if (widget.delay > Duration.zero) {
       Future.delayed(widget.delay, () {
@@ -325,36 +323,33 @@ class FadePageRoute<T> extends PageRouteBuilder<T> {
     this.slideFromRight = true,
     super.settings,
   }) : super(
-          pageBuilder: (context, animation, secondaryAnimation) => page,
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            final fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-              CurvedAnimation(
-                parent: animation,
-                curve: AppAnimations.curveEnter,
-              ),
-            );
+         pageBuilder: (context, animation, secondaryAnimation) => page,
+         transitionsBuilder: (context, animation, secondaryAnimation, child) {
+           final fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+             CurvedAnimation(
+               parent: animation,
+               curve: AppAnimations.curveEnter,
+             ),
+           );
 
-            final slideAnimation = Tween<Offset>(
-              begin: slideFromRight ? const Offset(0.1, 0) : Offset.zero,
-              end: Offset.zero,
-            ).animate(
-              CurvedAnimation(
-                parent: animation,
-                curve: AppAnimations.curveEnter,
-              ),
-            );
+           final slideAnimation = Tween<Offset>(
+             begin: slideFromRight ? const Offset(0.1, 0) : Offset.zero,
+             end: Offset.zero,
+           ).animate(
+             CurvedAnimation(
+               parent: animation,
+               curve: AppAnimations.curveEnter,
+             ),
+           );
 
-            return FadeTransition(
-              opacity: fadeAnimation,
-              child: SlideTransition(
-                position: slideAnimation,
-                child: child,
-              ),
-            );
-          },
-          transitionDuration: AppAnimations.durationPageTransition,
-          reverseTransitionDuration: AppAnimations.durationNormal,
-        );
+           return FadeTransition(
+             opacity: fadeAnimation,
+             child: SlideTransition(position: slideAnimation, child: child),
+           );
+         },
+         transitionDuration: AppAnimations.durationPageTransition,
+         reverseTransitionDuration: AppAnimations.durationNormal,
+       );
 }
 
 Future<T?> navigateWithFade<T>(
@@ -388,7 +383,7 @@ class AnimatedBottomSheet {
   }
 }
 
-class AnimatedMessageBubble extends StatefulWidget {
+class AnimatedMessageBubble extends StatelessWidget {
   final Widget child;
   final Duration delay;
 
@@ -399,52 +394,7 @@ class AnimatedMessageBubble extends StatefulWidget {
   });
 
   @override
-  State<AnimatedMessageBubble> createState() => _AnimatedMessageBubbleState();
-}
-
-class _AnimatedMessageBubbleState extends State<AnimatedMessageBubble>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _animation;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: AppAnimations.durationNormal,
-    );
-    _animation = CurvedAnimation(
-      parent: _controller,
-      curve: AppAnimations.curveEnter,
-    );
-
-    if (widget.delay > Duration.zero) {
-      Future.delayed(widget.delay, () {
-        if (mounted) _controller.forward();
-      });
-    } else {
-      _controller.forward();
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return FadeTransition(
-      opacity: _animation,
-      child: SlideTransition(
-        position: Tween<Offset>(
-          begin: const Offset(0, 0.05),
-          end: Offset.zero,
-        ).animate(_animation),
-        child: widget.child,
-      ),
-    );
+    return child;
   }
 }

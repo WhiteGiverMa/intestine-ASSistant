@@ -1,7 +1,7 @@
 name: frontend_flutter
-description: "肠道健康助手 - Intestine ASSistant"
+description: "肠胃健康助手 - Intestine ASSistant"
 publish_to: 'none'
-version: 1.1.2+5
+version: 1.2.0+6
 
 environment:
   sdk: ^3.7.0

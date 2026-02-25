@@ -11,6 +11,7 @@ import '../providers/theme_provider.dart';
 import '../theme/theme_colors.dart';
 import '../theme/theme_decorations.dart';
 import '../utils/animations.dart';
+import '../utils/responsive_utils.dart';
 
 class RecordPage extends StatefulWidget {
   const RecordPage({super.key});
@@ -164,16 +165,24 @@ class _RecordPageState extends State<RecordPage> {
             children: [
               const AppHeader(title: '记录排便', showBackButton: true),
               Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    children: [
-                      _buildModeToggle(colors),
-                      const SizedBox(height: 16),
-                      if (_isTimerMode) _buildTimerSection(colors),
-                      _buildFormSection(colors),
-                    ],
-                  ),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    return SingleChildScrollView(
+                      padding: ResponsiveUtils.responsivePadding(context),
+                      child: ResponsiveUtils.constrainedContent(
+                        context: context,
+                        maxWidth: 600,
+                        child: Column(
+                          children: [
+                            _buildModeToggle(colors),
+                            const SizedBox(height: 16),
+                            if (_isTimerMode) _buildTimerSection(colors),
+                            _buildFormSection(colors, constraints),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ),
             ],
@@ -302,7 +311,9 @@ class _RecordPageState extends State<RecordPage> {
     );
   }
 
-  Widget _buildFormSection(ThemeColors colors) {
+  Widget _buildFormSection(ThemeColors colors, BoxConstraints constraints) {
+    final isNarrow = constraints.maxWidth < 400;
+
     return AnimatedEntrance(
       duration: AppAnimations.durationSlow,
       child: Container(
@@ -311,11 +322,10 @@ class _RecordPageState extends State<RecordPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Expanded(
-                  flex: 3,
-                  child: DateInputField(
+            if (isNarrow)
+              Column(
+                children: [
+                  DateInputField(
                     label: '日期',
                     initialDate: _selectedDate,
                     firstDate: DateTime(_minYear),
@@ -326,18 +336,43 @@ class _RecordPageState extends State<RecordPage> {
                       });
                     },
                   ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _buildTextField(
+                  const SizedBox(height: 16),
+                  _buildTextField(
                     '时间',
                     _timeController,
                     readOnly: true,
                     colors: colors,
                   ),
-                ),
-              ],
-            ),
+                ],
+              )
+            else
+              Row(
+                children: [
+                  Expanded(
+                    flex: 3,
+                    child: DateInputField(
+                      label: '日期',
+                      initialDate: _selectedDate,
+                      firstDate: DateTime(_minYear),
+                      lastDate: DateTime(_maxYear, 12, 31),
+                      onChanged: (date) {
+                        setState(() {
+                          _selectedDate = date;
+                        });
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: _buildTextField(
+                      '时间',
+                      _timeController,
+                      readOnly: true,
+                      colors: colors,
+                    ),
+                  ),
+                ],
+              ),
             if (!_isTimerMode) ...[
               const SizedBox(height: 16),
               _buildTextField(

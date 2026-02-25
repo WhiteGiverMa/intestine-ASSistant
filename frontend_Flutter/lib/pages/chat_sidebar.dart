@@ -33,6 +33,7 @@ class _ConversationSidebarState extends State<ConversationSidebar> {
   List<ConversationSummary> _conversations = [];
   bool _loading = false;
   String? _lastConversationId;
+  final Map<String, String> _formattedTimeCache = {};
 
   @override
   void initState() {
@@ -43,6 +44,7 @@ class _ConversationSidebarState extends State<ConversationSidebar> {
   @override
   void didUpdateWidget(covariant ConversationSidebar oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (!mounted) return;
     if (widget.selectedConversationId != oldWidget.selectedConversationId) {
       if (widget.selectedConversationId != null &&
           widget.selectedConversationId != _lastConversationId) {
@@ -53,19 +55,27 @@ class _ConversationSidebarState extends State<ConversationSidebar> {
   }
 
   Future<void> _loadConversations() async {
+    if (!mounted) return;
     setState(() => _loading = true);
     try {
       final conversations = await ApiService.getConversations();
+      if (!mounted) return;
+      _formattedTimeCache.clear();
+      for (final conv in conversations) {
+        _formattedTimeCache[conv.conversationId] = _formatTime(conv.updatedAt);
+      }
       setState(() {
         _conversations = conversations;
         _loading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() => _loading = false);
     }
   }
 
   Future<void> _deleteConversation(String conversationId) async {
+    if (!mounted) return;
     final colors = context.read<ThemeProvider>().colors;
     final confirmed = await showDialog<bool>(
       context: context,
@@ -86,13 +96,16 @@ class _ConversationSidebarState extends State<ConversationSidebar> {
             ],
           ),
     );
+    if (!mounted) return;
     if (confirmed == true) {
       await ApiService.deleteConversation(conversationId: conversationId);
+      if (!mounted) return;
       _loadConversations();
     }
   }
 
   Future<void> _renameConversation(ConversationSummary conversation) async {
+    if (!mounted) return;
     final controller = TextEditingController(text: conversation.title ?? '新对话');
     final confirmed = await showDialog<bool>(
       context: context,
@@ -112,11 +125,13 @@ class _ConversationSidebarState extends State<ConversationSidebar> {
             ],
           ),
     );
+    if (!mounted) return;
     if (confirmed == true && controller.text.isNotEmpty) {
       await ApiService.renameConversation(
         conversationId: conversation.conversationId,
         title: controller.text,
       );
+      if (!mounted) return;
       _loadConversations();
     }
   }
@@ -257,31 +272,31 @@ class _ConversationSidebarState extends State<ConversationSidebar> {
           ],
         ),
         subtitle: Text(
-          _formatTime(conversation.updatedAt),
+          _formattedTimeCache[conversation.conversationId] ?? '',
           style: TextStyle(fontSize: 12, color: colors.textSecondary),
         ),
         onTap: () => widget.onConversationSelected(conversation.conversationId),
         trailing: isThisLoading
             ? null
             : SizedBox(
-                width: 40,
-                child: PopupMenuButton<String>(
-                  padding: EdgeInsets.zero,
-                  onSelected: (value) {
-                    if (value == 'rename') {
-                      _renameConversation(conversation);
-                    }
-                    if (value == 'delete') {
-                      _deleteConversation(conversation.conversationId);
-                    }
-                  },
-                  itemBuilder:
-                      (context) => [
-                        const PopupMenuItem(value: 'rename', child: Text('重命名')),
-                        const PopupMenuItem(value: 'delete', child: Text('删除')),
-                      ],
-                ),
+              width: 40,
+              child: PopupMenuButton<String>(
+                padding: EdgeInsets.zero,
+                onSelected: (value) {
+                  if (value == 'rename') {
+                    _renameConversation(conversation);
+                  }
+                  if (value == 'delete') {
+                    _deleteConversation(conversation.conversationId);
+                  }
+                },
+                itemBuilder:
+                    (context) => [
+                      const PopupMenuItem(value: 'rename', child: Text('重命名')),
+                      const PopupMenuItem(value: 'delete', child: Text('删除')),
+                    ],
               ),
+            ),
       ),
     );
   }

@@ -116,5 +116,9 @@ scripts/
 # Docs
 docs/
 
+# Project documents
+产品需求文档.md
+技术需求文档.md
+
 # Trae documents
 .trae/

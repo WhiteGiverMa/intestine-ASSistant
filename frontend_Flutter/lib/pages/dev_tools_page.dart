@@ -5,6 +5,7 @@ import '../theme/theme_colors.dart';
 import '../theme/theme_decorations.dart';
 import '../widgets/app_header.dart';
 import '../services/local_db_service.dart';
+import '../utils/responsive_utils.dart';
 import 'test_data_generator_page.dart';
 
 class DevToolsPage extends StatefulWidget {
@@ -47,17 +48,21 @@ class _DevToolsPageState extends State<DevToolsPage> {
               const AppHeader(title: '开发者工具', showBackButton: true),
               Expanded(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    children: [
-                      _buildWarningCard(colors),
-                      const SizedBox(height: 16),
-                      _buildTestDataGeneratorEntry(colors),
-                      const SizedBox(height: 16),
-                      _buildShowRequestDetailsToggle(colors),
-                      const SizedBox(height: 16),
-                      _buildClearDataButton(colors),
-                    ],
+                  padding: ResponsiveUtils.responsivePadding(context),
+                  child: ResponsiveUtils.constrainedContent(
+                    context: context,
+                    maxWidth: 600,
+                    child: Column(
+                      children: [
+                        _buildWarningCard(colors),
+                        const SizedBox(height: 16),
+                        _buildTestDataGeneratorEntry(colors),
+                        const SizedBox(height: 16),
+                        _buildShowRequestDetailsToggle(colors),
+                        const SizedBox(height: 16),
+                        _buildClearDataButton(colors),
+                      ],
+                    ),
                   ),
                 ),
               ),

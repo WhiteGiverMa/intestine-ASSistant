@@ -18,7 +18,7 @@ import 'package:path_provider/path_provider.dart';
 
 class DatabaseService {
   static Database? _database;
-  static const int _databaseVersion = 1;
+  static const int _databaseVersion = 2;
   static const String _databaseName = 'intestine_assistant.db';
 
   static Future<Database> get database async {
@@ -106,6 +106,8 @@ class DatabaseService {
         role TEXT NOT NULL,
         content TEXT NOT NULL,
         thinking_content TEXT,
+        attached_records TEXT,
+        records_date_range TEXT,
         created_at TEXT NOT NULL,
         FOREIGN KEY (conversation_id) REFERENCES chat_sessions(id) ON DELETE CASCADE
       )
@@ -129,7 +131,12 @@ class DatabaseService {
     int newVersion,
   ) async {
     if (oldVersion < 2) {
-      // Future migrations
+      await db.execute(
+        'ALTER TABLE chat_messages ADD COLUMN attached_records TEXT',
+      );
+      await db.execute(
+        'ALTER TABLE chat_messages ADD COLUMN records_date_range TEXT',
+      );
     }
   }
 

@@ -609,6 +609,8 @@ class LocalDbService {
     required String role,
     required String content,
     String? thinkingContent,
+    List<BowelRecord>? attachedRecords,
+    String? recordsDateRange,
   }) async {
     final db = await DatabaseService.database;
     final now = _getNowIso();
@@ -620,6 +622,11 @@ class LocalDbService {
       'role': role,
       'content': content,
       'thinking_content': thinkingContent,
+      'attached_records':
+          attachedRecords != null
+              ? jsonEncode(attachedRecords.map((e) => e.toJson()).toList())
+              : null,
+      'records_date_range': recordsDateRange,
       'created_at': now,
     });
 
@@ -637,6 +644,8 @@ class LocalDbService {
       content: content,
       thinkingContent: thinkingContent,
       createdAt: now,
+      attachedRecords: attachedRecords,
+      recordsDateRange: recordsDateRange,
     );
   }
 
@@ -659,6 +668,13 @@ class LocalDbService {
             content: row['content'] as String,
             thinkingContent: row['thinking_content'] as String?,
             createdAt: row['created_at'] as String,
+            attachedRecords:
+                row['attached_records'] != null
+                    ? (jsonDecode(row['attached_records'] as String) as List)
+                        .map((e) => BowelRecord.fromJson(e))
+                        .toList()
+                    : null,
+            recordsDateRange: row['records_date_range'] as String?,
           ),
         )
         .toList();
@@ -748,10 +764,10 @@ class LocalDbService {
       warnings.add(
         Warning(
           type: 'high_frequency',
-          message: '排便频率过高(>${avgFreq.toStringAsFixed(1)}次/天)，建议关注肠道健康',
+          message: '排便频率过高(>${avgFreq.toStringAsFixed(1)}次/天)，建议关注肠胃健康',
         ),
       );
-      suggestions.add(Suggestion(category: '就医', suggestion: '建议咨询医生，排除肠道疾病'));
+      suggestions.add(Suggestion(category: '就医', suggestion: '建议咨询医生，排除肠胃疾病'));
     } else if (avgFreq < 1) {
       healthScore -= 5;
       insights.add(
@@ -851,7 +867,7 @@ class LocalDbService {
         healthScore += 5;
       } else if (timeDist.evening / totalWithTime > 0.5) {
         suggestions.add(
-          Suggestion(category: '作息', suggestion: '尝试在早晨排便，更符合肠道生理节律'),
+          Suggestion(category: '作息', suggestion: '尝试在早晨排便，更符合肠胃生理节律'),
         );
       }
     }

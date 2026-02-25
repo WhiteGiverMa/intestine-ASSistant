@@ -12,7 +12,7 @@ void main() {
     testWidgets('SplashPage displays during initialization', (WidgetTester tester) async {
       await tester.pumpWidget(const AppInitializer());
 
-      expect(find.text('肠道健康助手'), findsOneWidget);
+      expect(find.text('肠胃健康助手'), findsOneWidget);
       expect(find.text('Intestine ASSistant'), findsOneWidget);
     });
   });

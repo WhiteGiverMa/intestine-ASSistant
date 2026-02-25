@@ -132,7 +132,7 @@ class _SplashBodyState extends State<_SplashBody>
     return Column(
       children: [
         Text(
-          '肠道健康助手',
+          '肠胃健康助手',
           style: TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.bold,

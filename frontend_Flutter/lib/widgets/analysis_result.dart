@@ -80,7 +80,7 @@ class HealthScoreCard extends StatelessWidget {
       child: Column(
         children: [
           Text(
-            '肠道健康评分',
+            '肠胃健康评分',
             style: TextStyle(fontSize: 14, color: colors.textSecondary),
           ),
           const SizedBox(height: 8),

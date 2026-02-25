@@ -5,6 +5,7 @@ import '../theme/theme_colors.dart';
 import '../theme/theme_decorations.dart';
 import '../widgets/app_header.dart';
 import '../utils/animations.dart';
+import '../utils/responsive_utils.dart';
 
 class ThemeSelectorPage extends StatelessWidget {
   const ThemeSelectorPage({super.key});
@@ -28,18 +29,22 @@ class ThemeSelectorPage extends StatelessWidget {
                 const AppHeader(title: '选择主题', showBackButton: true),
                 Expanded(
                   child: ListView.builder(
-                    padding: const EdgeInsets.all(16),
+                    padding: ResponsiveUtils.responsivePadding(context),
                     itemCount: AppThemeMode.values.length,
                     itemBuilder: (context, index) {
                       final mode = AppThemeMode.values[index];
                       final delay = Duration(
                         milliseconds: AppAnimations.staggerIntervalMs * index,
                       );
-                      return _buildAnimatedThemeCard(
-                        context,
-                        mode,
-                        themeProvider,
-                        delay,
+                      return ResponsiveUtils.constrainedContent(
+                        context: context,
+                        maxWidth: 600,
+                        child: _buildAnimatedThemeCard(
+                          context,
+                          mode,
+                          themeProvider,
+                          delay,
+                        ),
                       );
                     },
                   ),

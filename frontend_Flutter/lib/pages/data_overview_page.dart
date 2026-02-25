@@ -492,6 +492,7 @@ class _DataOverviewPageState extends State<DataOverviewPage> {
               noBowelDates: _noBowelDates,
               onDateSelected: _onDateSelected,
               onDateRangeSelected: _onDateRangeSelected,
+              onDateClick: _onCalendarDateClick,
               isExpanded: _calendarExpanded,
               onExpandToggle: () {
                 setState(() {
@@ -531,7 +532,16 @@ class _DataOverviewPageState extends State<DataOverviewPage> {
     final bool isSelectingStart = _focusedDateField == 'start';
     final bool isSelectingEnd = _focusedDateField == 'end';
     final bool isPendingStart = _pendingRangeStart != null && _rangeEnd == null;
-    final bool hasCompleteRange = _rangeStart != null && _rangeEnd != null && _focusedDateField == null && _pendingRangeStart == null;
+    final bool hasCompleteRange =
+        _rangeStart != null &&
+        _rangeEnd != null &&
+        _focusedDateField == null &&
+        _pendingRangeStart == null;
+
+    const double minInputWidth = 240.0;
+    const double spacing = 12.0;
+    const double padding = 24.0;
+    const double wrapThreshold = (minInputWidth * 2) + spacing + padding;
 
     return GestureDetector(
       onTap: () {
@@ -542,62 +552,98 @@ class _DataOverviewPageState extends State<DataOverviewPage> {
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: ThemeDecorations.card(context),
-        child: Row(
-          children: [
-            Expanded(
-              child: DateInputField(
-                key: startKey,
-                label: '开始日期',
-                initialDate: _rangeStart ?? DateTime.now(),
-                firstDate: DateTime(2020),
-                lastDate: _rangeEnd ?? DateTime.now(),
-                showDatePicker: false,
-                isExternallyFocused: isSelectingStart,
-                isSelected: isSelectingStart || isPendingStart || hasCompleteRange,
-                onFocusChanged: (focused) {
-                  setState(() {
-                    _focusedDateField = focused ? 'start' : null;
-                  });
-                },
-                onChanged: (date) {
-                  setState(() {
-                    _rangeStart = date;
-                    _viewMode = 'range';
-                    _selectedDate = null;
-                  });
-                  _loadStats();
-                  _loadRecords(refresh: true);
-                },
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: DateInputField(
-                key: endKey,
-                label: '结束日期',
-                initialDate: _rangeEnd ?? DateTime.now(),
-                firstDate: _rangeStart ?? DateTime(2020),
-                lastDate: DateTime.now(),
-                showDatePicker: false,
-                isExternallyFocused: isSelectingEnd,
-                isSelected: isSelectingEnd || hasCompleteRange,
-                onFocusChanged: (focused) {
-                  setState(() {
-                    _focusedDateField = focused ? 'end' : null;
-                  });
-                },
-                onChanged: (date) {
-                  setState(() {
-                    _rangeEnd = date;
-                    _viewMode = 'range';
-                    _selectedDate = null;
-                  });
-                  _loadStats();
-                  _loadRecords(refresh: true);
-                },
-              ),
-            ),
-          ],
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final bool shouldWrap = constraints.maxWidth < wrapThreshold;
+
+            final startDateField = DateInputField(
+              key: startKey,
+              label: '开始日期',
+              initialDate: _rangeStart ?? DateTime.now(),
+              firstDate: DateTime(2020),
+              lastDate: _rangeEnd ?? DateTime.now(),
+              showDatePicker: false,
+              isExternallyFocused: isSelectingStart,
+              isSelected:
+                  isSelectingStart || isPendingStart || hasCompleteRange,
+              onFocusChanged: (focused) {
+                setState(() {
+                  _focusedDateField = focused ? 'start' : null;
+                });
+              },
+              onChanged: (date) {
+                setState(() {
+                  _rangeStart = date;
+                  _viewMode = 'range';
+                  _selectedDate = null;
+                  if (_rangeEnd != null && _rangeStart!.isAfter(_rangeEnd!)) {
+                    final temp = _rangeStart;
+                    _rangeStart = _rangeEnd;
+                    _rangeEnd = temp;
+                    _startDateKeyStats.currentState?.setDate(_rangeStart!);
+                    _startDateKeyManage.currentState?.setDate(_rangeStart!);
+                    _endDateKeyStats.currentState?.setDate(_rangeEnd!);
+                    _endDateKeyManage.currentState?.setDate(_rangeEnd!);
+                  }
+                });
+                _loadStats();
+                _loadRecords(refresh: true);
+              },
+            );
+
+            final endDateField = DateInputField(
+              key: endKey,
+              label: '结束日期',
+              initialDate: _rangeEnd ?? DateTime.now(),
+              firstDate: _rangeStart ?? DateTime(2020),
+              lastDate: DateTime.now(),
+              showDatePicker: false,
+              isExternallyFocused: isSelectingEnd,
+              isSelected: isSelectingEnd || hasCompleteRange,
+              onFocusChanged: (focused) {
+                setState(() {
+                  _focusedDateField = focused ? 'end' : null;
+                });
+              },
+              onChanged: (date) {
+                setState(() {
+                  _rangeEnd = date;
+                  _viewMode = 'range';
+                  _selectedDate = null;
+                  if (_rangeStart != null &&
+                      _rangeEnd!.isBefore(_rangeStart!)) {
+                    final temp = _rangeStart;
+                    _rangeStart = _rangeEnd;
+                    _rangeEnd = temp;
+                    _startDateKeyStats.currentState?.setDate(_rangeStart!);
+                    _startDateKeyManage.currentState?.setDate(_rangeStart!);
+                    _endDateKeyStats.currentState?.setDate(_rangeEnd!);
+                    _endDateKeyManage.currentState?.setDate(_rangeEnd!);
+                  }
+                });
+                _loadStats();
+                _loadRecords(refresh: true);
+              },
+            );
+
+            if (shouldWrap) {
+              return Column(
+                children: [
+                  startDateField,
+                  const SizedBox(height: 12),
+                  endDateField,
+                ],
+              );
+            }
+
+            return Row(
+              children: [
+                Expanded(child: startDateField),
+                const SizedBox(width: 12),
+                Expanded(child: endDateField),
+              ],
+            );
+          },
         ),
       ),
     );

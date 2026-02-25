@@ -12,6 +12,7 @@ import '../providers/theme_provider.dart';
 import '../theme/theme_colors.dart';
 import '../theme/theme_decorations.dart';
 import '../utils/animations.dart';
+import '../utils/responsive_utils.dart';
 import '../widgets/app_header.dart';
 import 'record_page.dart';
 import 'data_overview_page.dart';
@@ -49,15 +50,23 @@ class _DataPageState extends State<DataPage> {
             children: [
               const AppHeader(title: '数据管理'),
               Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    children: [
-                      _buildWelcome(colors),
-                      const SizedBox(height: 24),
-                      _buildMenuGrid(colors),
-                    ],
-                  ),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    return SingleChildScrollView(
+                      padding: ResponsiveUtils.responsivePadding(context),
+                      child: ResponsiveUtils.constrainedContent(
+                        context: context,
+                        maxWidth: 800,
+                        child: Column(
+                          children: [
+                            _buildWelcome(colors),
+                            const SizedBox(height: 24),
+                            _buildMenuGrid(colors, constraints),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ),
             ],
@@ -83,43 +92,39 @@ class _DataPageState extends State<DataPage> {
             ),
           ),
           const SizedBox(height: 8),
-          Text('记录、查看和管理您的肠道健康数据', style: TextStyle(color: colors.textSecondary)),
+          Text(
+            '记录、查看和管理您的肠胃健康数据',
+            style: TextStyle(color: colors.textSecondary),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildMenuGrid(ThemeColors colors) {
-    return Column(
+  Widget _buildMenuGrid(ThemeColors colors, BoxConstraints constraints) {
+    final crossAxisCount = ResponsiveUtils.getGridCrossAxisCount(
+      context,
+      minItems: 1,
+      maxItems: 3,
+    );
+
+    return GridView.count(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisCount: crossAxisCount,
+      mainAxisSpacing: 16,
+      crossAxisSpacing: 16,
+      childAspectRatio: 1.3,
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: AnimatedCard(
-                delay: const Duration(milliseconds: 100),
-                onTap: () => navigateWithFade(context, const RecordPage()),
-                child: _buildMenuCardContent(
-                  '📝',
-                  '记录排便',
-                  '手动输入或计时记录',
-                  colors,
-                ),
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: AnimatedCard(
-                delay: const Duration(milliseconds: 200),
-                onTap: () => navigateWithFade(context, const DataOverviewPage()),
-                child: _buildMenuCardContent(
-                  '📈',
-                  '数据概览',
-                  '统计趋势与记录管理',
-                  colors,
-                ),
-              ),
-            ),
-          ],
+        AnimatedCard(
+          delay: const Duration(milliseconds: 100),
+          onTap: () => navigateWithFade(context, const RecordPage()),
+          child: _buildMenuCardContent('📝', '记录排便', '手动输入或计时记录', colors),
+        ),
+        AnimatedCard(
+          delay: const Duration(milliseconds: 200),
+          onTap: () => navigateWithFade(context, const DataOverviewPage()),
+          child: _buildMenuCardContent('📈', '数据概览', '统计趋势与记录管理', colors),
         ),
       ],
     );
@@ -149,10 +154,7 @@ class _DataPageState extends State<DataPage> {
           const SizedBox(height: 4),
           Text(
             subtitle,
-            style: TextStyle(
-              fontSize: 12,
-              color: colors.textSecondary,
-            ),
+            style: TextStyle(fontSize: 12, color: colors.textSecondary),
           ),
         ],
       ),

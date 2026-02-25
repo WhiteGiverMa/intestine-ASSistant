@@ -6,6 +6,7 @@ import '../services/local_db_service.dart';
 import '../theme/theme_colors.dart';
 import '../theme/theme_decorations.dart';
 import '../services/deepseek_service.dart';
+import '../widgets/expanded_text_editor_dialog.dart';
 
 class ChatSettings extends StatefulWidget {
   final Function(ThinkingIntensity intensity)? onThinkingChanged;
@@ -291,7 +292,20 @@ class _ChatSettingsState extends State<ChatSettings> {
                   color: colors.textSecondary,
                 ),
                 tooltip: '展开编辑',
-                onPressed: () => _showExpandedEditor(context, colors),
+                onPressed: () async {
+                  final result = await ExpandedTextEditorDialog.show(
+                    context,
+                    title: '系统提示词',
+                    hintText: '输入系统提示词...',
+                    initialText: _promptController.text,
+                    showClearButton: true,
+                    defaultText: DeepSeekService.kDefaultSystemPrompt,
+                  );
+                  if (result != null) {
+                    _promptController.text = result;
+                    _saveSystemPrompt(result);
+                  }
+                },
                 padding: const EdgeInsets.all(8),
                 constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
               ),
@@ -311,123 +325,6 @@ class _ChatSettingsState extends State<ChatSettings> {
           ),
         ),
       ],
-    );
-  }
-
-  void _showExpandedEditor(BuildContext context, ThemeColors colors) {
-    final expandedController = TextEditingController(
-      text: _promptController.text,
-    );
-    showDialog(
-      context: context,
-      builder:
-          (dialogContext) => Dialog(
-            insetPadding: const EdgeInsets.symmetric(
-              horizontal: 24,
-              vertical: 40,
-            ),
-            child: Container(
-              height: MediaQuery.of(context).size.height * 0.8,
-              decoration: BoxDecoration(
-                color: colors.background,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Column(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 16,
-                    ),
-                    decoration: BoxDecoration(
-                      border: Border(bottom: BorderSide(color: colors.divider)),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.edit_note, size: 24, color: colors.primary),
-                        const SizedBox(width: 12),
-                        Text(
-                          '系统提示词',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                            color: colors.textPrimary,
-                          ),
-                        ),
-                        const Spacer(),
-                        TextButton(
-                          onPressed: () {
-                            expandedController.text =
-                                DeepSeekService.kDefaultSystemPrompt;
-                          },
-                          style: TextButton.styleFrom(
-                            foregroundColor: colors.textSecondary,
-                          ),
-                          child: const Text('恢复默认'),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: TextField(
-                        controller: expandedController,
-                        maxLines: null,
-                        expands: true,
-                        textAlignVertical: TextAlignVertical.top,
-                        decoration: InputDecoration(
-                          hintText: '输入系统提示词...',
-                          hintStyle: TextStyle(color: colors.textHint),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          contentPadding: const EdgeInsets.all(16),
-                          filled: true,
-                          fillColor: colors.surface,
-                        ),
-                        style: TextStyle(
-                          fontSize: 15,
-                          color: colors.textPrimary,
-                        ),
-                      ),
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      border: Border(top: BorderSide(color: colors.divider)),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(dialogContext),
-                          style: TextButton.styleFrom(
-                            foregroundColor: colors.textSecondary,
-                          ),
-                          child: const Text('取消'),
-                        ),
-                        const SizedBox(width: 12),
-                        ElevatedButton(
-                          onPressed: () {
-                            _promptController.text = expandedController.text;
-                            _saveSystemPrompt(expandedController.text);
-                            Navigator.pop(dialogContext);
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: colors.primary,
-                            foregroundColor: colors.textOnPrimary,
-                          ),
-                          child: const Text('保存'),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
     );
   }
 }

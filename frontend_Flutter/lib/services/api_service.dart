@@ -10,6 +10,7 @@
 //   - 设置: getUserSettings, updateUserSettings (重定向到本地)
 // @brief: API服务层，已重构为本地优先
 import 'dart:async';
+import 'dart:convert';
 import '../models/models.dart';
 import 'local_db_service.dart';
 import 'deepseek_service.dart';
@@ -79,6 +80,23 @@ class ApiService {
       );
     }
     return buffer.toString();
+  }
+
+  static String _formatRecordsAsXml(
+    List<BowelRecord> records,
+    String? dateRange,
+  ) {
+    if (records.isEmpty) {
+      return '';
+    }
+
+    final recordsJson = jsonEncode(records.map((r) => r.toJson()).toList());
+
+    if (dateRange != null && dateRange.isNotEmpty) {
+      return '<bowel_records date_range="$dateRange">\n$recordsJson\n</bowel_records>';
+    }
+
+    return '<bowel_records>\n$recordsJson\n</bowel_records>';
   }
 
   static Future<({String? message, String? actualStartDate})>
@@ -274,6 +292,8 @@ class ApiService {
     String? recordsEndDate,
     String? systemPrompt,
     String? thinkingIntensity,
+    List<BowelRecord>? attachedRecords,
+    String? recordsDateRange,
   }) async {
     ChatSession? session;
     if (conversationId != null) {
@@ -305,19 +325,19 @@ class ApiService {
       conversationId = newSession.conversationId;
     }
 
+    String fullContent = message;
+    if (attachedRecords != null && attachedRecords.isNotEmpty) {
+      final xmlTag = _formatRecordsAsXml(attachedRecords, recordsDateRange);
+      if (xmlTag.isNotEmpty) {
+        fullContent = '$message\n\n$xmlTag';
+      }
+    }
+
     await LocalDbService.saveMessage(
       conversationId: conversationId,
       role: 'user',
-      content: message,
+      content: fullContent,
     );
-
-    if (recordsResult.message != null) {
-      await LocalDbService.saveMessage(
-        conversationId: conversationId,
-        role: 'user',
-        content: recordsResult.message!,
-      );
-    }
 
     final assistantMessage = await LocalDbService.saveMessage(
       conversationId: conversationId,
@@ -338,6 +358,8 @@ class ApiService {
     String? recordsEndDate,
     String? systemPrompt,
     String? thinkingIntensity,
+    List<BowelRecord>? attachedRecords,
+    String? recordsDateRange,
   }) async* {
     ChatSession? session;
     String actualConversationId;
@@ -361,19 +383,19 @@ class ApiService {
       recordsEndDate: recordsEndDate,
     );
 
+    String fullContent = message;
+    if (attachedRecords != null && attachedRecords.isNotEmpty) {
+      final xmlTag = _formatRecordsAsXml(attachedRecords, recordsDateRange);
+      if (xmlTag.isNotEmpty) {
+        fullContent = '$message\n\n$xmlTag';
+      }
+    }
+
     await LocalDbService.saveMessage(
       conversationId: actualConversationId,
       role: 'user',
-      content: message,
+      content: fullContent,
     );
-
-    if (recordsResult.message != null) {
-      await LocalDbService.saveMessage(
-        conversationId: actualConversationId,
-        role: 'user',
-        content: recordsResult.message!,
-      );
-    }
 
     yield StreamChatChunk(
       conversationId: actualConversationId,
@@ -389,12 +411,12 @@ class ApiService {
       extraUserMessage: recordsResult.message,
     );
 
-    String fullContent = '';
+    String responseContent = '';
     String? fullReasoningContent;
 
     await for (final chunk in responseStream) {
       if (chunk.content != null) {
-        fullContent += chunk.content!;
+        responseContent += chunk.content!;
       }
       if (chunk.reasoningContent != null) {
         fullReasoningContent =
@@ -406,7 +428,7 @@ class ApiService {
     await LocalDbService.saveMessage(
       conversationId: actualConversationId,
       role: 'assistant',
-      content: fullContent,
+      content: responseContent,
       thinkingContent: fullReasoningContent,
     );
   }

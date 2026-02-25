@@ -2,7 +2,7 @@
 
 ## 项目概述
 
-Intestine ASSistant - 肠道健康助手，帮助用户记录和分析排便数据，通过AI分析提供个性化健康建议。
+Intestine ASSistant - 肠胃健康助手，帮助用户记录和分析排便数据，通过AI分析提供个性化健康建议。
 
 **架构**: 本地优先 (Local-First)，无需后端服务器
 

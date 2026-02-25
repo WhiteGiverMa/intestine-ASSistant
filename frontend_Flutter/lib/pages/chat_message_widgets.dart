@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
@@ -16,54 +18,20 @@ class MessageBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.watch<ThemeProvider>().colors;
     switch (message.role) {
       case 'user':
-        return _buildUserBubble(context);
+        return _UserMessageBubble(message: message, colors: colors);
       case 'assistant':
-        return _buildAssistantBubble(context);
+        return _buildAssistantBubble(colors);
       case 'system':
-        return _buildSystemBubble(context);
+        return _buildSystemBubble(colors);
       default:
-        return _buildAssistantBubble(context);
+        return _buildAssistantBubble(colors);
     }
   }
 
-  Widget _buildUserBubble(BuildContext context) {
-    final colors = context.watch<ThemeProvider>().colors;
-    return Align(
-      alignment: Alignment.centerRight,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12, left: 60),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: colors.primary,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: MarkdownBody(
-          data: message.content,
-          styleSheet: MarkdownStyleSheet(
-            p: TextStyle(color: colors.textOnPrimary, fontSize: 14),
-            code: TextStyle(
-              color: colors.textOnPrimary,
-              backgroundColor: colors.textOnPrimary.withValues(alpha: 0.2),
-              fontFamily: 'monospace',
-              fontSize: 13,
-            ),
-            codeblockDecoration: BoxDecoration(
-              color: colors.textOnPrimary.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            codeblockPadding: const EdgeInsets.all(12),
-          ),
-          selectable: true,
-          onTapLink: (text, href, title) {},
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAssistantBubble(BuildContext context) {
-    final colors = context.watch<ThemeProvider>().colors;
+  Widget _buildAssistantBubble(ThemeColors colors) {
     final isLoading = message.content.isEmpty &&
         (message.thinkingContent == null ||
             message.thinkingContent!.isEmpty);
@@ -89,7 +57,7 @@ class MessageBubble extends StatelessWidget {
           children: [
             if (message.thinkingContent != null &&
                 message.thinkingContent!.isNotEmpty)
-              ThinkingBlock(content: message.thinkingContent!),
+              ThinkingBlock(content: message.thinkingContent!, colors: colors),
             if (isLoading)
               _buildLoadingIndicator(colors)
             else
@@ -125,77 +93,81 @@ class MessageBubble extends StatelessWidget {
     );
   }
 
+  MarkdownStyleSheet _getAssistantMarkdownStyle(ThemeColors colors) {
+    return MarkdownStyleSheet(
+      p: TextStyle(fontSize: 14, height: 1.6, color: colors.textPrimary),
+      h1: TextStyle(
+        fontSize: 24,
+        fontWeight: FontWeight.bold,
+        color: colors.textPrimary,
+      ),
+      h2: TextStyle(
+        fontSize: 20,
+        fontWeight: FontWeight.bold,
+        color: colors.textPrimary,
+      ),
+      h3: TextStyle(
+        fontSize: 18,
+        fontWeight: FontWeight.bold,
+        color: colors.textPrimary,
+      ),
+      h4: TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.bold,
+        color: colors.textPrimary,
+      ),
+      h5: TextStyle(
+        fontSize: 14,
+        fontWeight: FontWeight.bold,
+        color: colors.textPrimary,
+      ),
+      h6: TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.bold,
+        color: colors.textPrimary,
+      ),
+      code: TextStyle(
+        backgroundColor: colors.surfaceVariant,
+        fontFamily: 'monospace',
+        fontSize: 13,
+      ),
+      codeblockDecoration: BoxDecoration(
+        color: const Color(0xFF1E1E1E),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      codeblockPadding: EdgeInsets.zero,
+      blockquote: TextStyle(
+        color: colors.textSecondary,
+        fontStyle: FontStyle.italic,
+      ),
+      blockquoteDecoration: BoxDecoration(
+        color: colors.surfaceVariant,
+        borderRadius: BorderRadius.circular(4),
+      ),
+      blockquotePadding: const EdgeInsets.symmetric(
+        horizontal: 12,
+        vertical: 8,
+      ),
+      listBullet: TextStyle(fontSize: 14, color: colors.textPrimary),
+      tableHead: TextStyle(
+        fontWeight: FontWeight.bold,
+        fontSize: 14,
+        color: colors.textPrimary,
+      ),
+      tableBody: TextStyle(fontSize: 14, color: colors.textPrimary),
+      tableBorder: TableBorder.all(color: colors.divider),
+      tableCellsPadding: const EdgeInsets.all(8),
+      horizontalRuleDecoration: BoxDecoration(
+        border: Border(top: BorderSide(color: colors.divider)),
+      ),
+    );
+  }
+
   Widget _buildMarkdownContent(String content, ThemeColors colors) {
     return MarkdownBody(
       data: content,
       selectable: true,
-      styleSheet: MarkdownStyleSheet(
-        p: TextStyle(fontSize: 14, height: 1.6, color: colors.textPrimary),
-        h1: TextStyle(
-          fontSize: 24,
-          fontWeight: FontWeight.bold,
-          color: colors.textPrimary,
-        ),
-        h2: TextStyle(
-          fontSize: 20,
-          fontWeight: FontWeight.bold,
-          color: colors.textPrimary,
-        ),
-        h3: TextStyle(
-          fontSize: 18,
-          fontWeight: FontWeight.bold,
-          color: colors.textPrimary,
-        ),
-        h4: TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.bold,
-          color: colors.textPrimary,
-        ),
-        h5: TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.bold,
-          color: colors.textPrimary,
-        ),
-        h6: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.bold,
-          color: colors.textPrimary,
-        ),
-        code: TextStyle(
-          backgroundColor: colors.surfaceVariant,
-          fontFamily: 'monospace',
-          fontSize: 13,
-        ),
-        codeblockDecoration: BoxDecoration(
-          color: const Color(0xFF1E1E1E),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        codeblockPadding: EdgeInsets.zero,
-        blockquote: TextStyle(
-          color: colors.textSecondary,
-          fontStyle: FontStyle.italic,
-        ),
-        blockquoteDecoration: BoxDecoration(
-          color: colors.surfaceVariant,
-          borderRadius: BorderRadius.circular(4),
-        ),
-        blockquotePadding: const EdgeInsets.symmetric(
-          horizontal: 12,
-          vertical: 8,
-        ),
-        listBullet: TextStyle(fontSize: 14, color: colors.textPrimary),
-        tableHead: TextStyle(
-          fontWeight: FontWeight.bold,
-          fontSize: 14,
-          color: colors.textPrimary,
-        ),
-        tableBody: TextStyle(fontSize: 14, color: colors.textPrimary),
-        tableBorder: TableBorder.all(color: colors.divider),
-        tableCellsPadding: const EdgeInsets.all(8),
-        horizontalRuleDecoration: BoxDecoration(
-          border: Border(top: BorderSide(color: colors.divider)),
-        ),
-      ),
+      styleSheet: _getAssistantMarkdownStyle(colors),
       builders: {'pre': CodeBlockBuilder()},
       extensionSet: md.ExtensionSet.gitHubWeb,
       onTapLink: (text, href, title) {
@@ -206,8 +178,7 @@ class MessageBubble extends StatelessWidget {
     );
   }
 
-  Widget _buildSystemBubble(BuildContext context) {
-    final colors = context.watch<ThemeProvider>().colors;
+  Widget _buildSystemBubble(ThemeColors colors) {
     return Center(
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 8),
@@ -231,6 +202,240 @@ class MessageBubble extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _UserMessageBubble extends StatefulWidget {
+  final ChatMessage message;
+  final ThemeColors colors;
+
+  const _UserMessageBubble({required this.message, required this.colors});
+
+  @override
+  State<_UserMessageBubble> createState() => _UserMessageBubbleState();
+}
+
+class _UserMessageBubbleState extends State<_UserMessageBubble> {
+  bool _recordsExpanded = false;
+
+  static final _bowelRecordsRegex = RegExp(
+    r'<bowel_records(?:\s+date_range="([^"]*)")?\s*>([\s\S]*?)</bowel_records>',
+  );
+
+  ({String text, List<BowelRecord>? records, String? dateRange}) _parseMessageContent() {
+    if (widget.message.attachedRecords != null && widget.message.attachedRecords!.isNotEmpty) {
+      return (
+        text: widget.message.content,
+        records: widget.message.attachedRecords,
+        dateRange: widget.message.recordsDateRange,
+      );
+    }
+
+    final match = _bowelRecordsRegex.firstMatch(widget.message.content);
+    if (match == null) {
+      return (text: widget.message.content, records: null, dateRange: null);
+    }
+
+    final dateRange = match.group(1);
+    final jsonContent = match.group(2)?.trim();
+    final text = widget.message.content.replaceFirst(match.group(0)!, '').trim();
+
+    if (jsonContent == null || jsonContent.isEmpty) {
+      return (text: text, records: null, dateRange: dateRange);
+    }
+
+    try {
+      final List<dynamic> decoded = jsonDecode(jsonContent);
+      final records = decoded.map((json) => BowelRecord.fromJson(json)).toList();
+      return (text: text, records: records, dateRange: dateRange);
+    } catch (e) {
+      return (text: text, records: null, dateRange: dateRange);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final parsed = _parseMessageContent();
+    final hasRecords = parsed.records != null && parsed.records!.isNotEmpty;
+
+    return Align(
+      alignment: Alignment.centerRight,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12, left: 60),
+        decoration: BoxDecoration(
+          color: widget.colors.primary,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (parsed.text.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: MarkdownBody(
+                  data: parsed.text,
+                  styleSheet: _getUserMarkdownStyle(widget.colors),
+                  selectable: true,
+                  onTapLink: (text, href, title) {},
+                ),
+              ),
+            if (hasRecords) _buildRecordsBlock(parsed.records!, parsed.dateRange),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRecordsBlock(List<BowelRecord> records, String? dateRange) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+      decoration: BoxDecoration(
+        color: widget.colors.textOnPrimary.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          GestureDetector(
+            onTap: () => setState(() => _recordsExpanded = !_recordsExpanded),
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.attach_file,
+                    size: 14,
+                    color: widget.colors.textOnPrimary,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    '排便记录 (${records.length}条)',
+                    style: TextStyle(
+                      color: widget.colors.textOnPrimary,
+                      fontWeight: FontWeight.w500,
+                      fontSize: 13,
+                    ),
+                  ),
+                  if (dateRange != null && dateRange.isNotEmpty) ...[
+                    const SizedBox(width: 6),
+                    Text(
+                      dateRange,
+                      style: TextStyle(
+                        color: widget.colors.textOnPrimary.withValues(alpha: 0.7),
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                  const SizedBox(width: 4),
+                  Icon(
+                    _recordsExpanded ? Icons.expand_less : Icons.expand_more,
+                    size: 18,
+                    color: widget.colors.textOnPrimary,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (_recordsExpanded)
+            Container(
+              constraints: const BoxConstraints(maxHeight: 150),
+              margin: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: records.map((r) => _buildRecordItem(r)).toList(),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRecordItem(BowelRecord record) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.all(6),
+      decoration: BoxDecoration(
+        color: widget.colors.textOnPrimary.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.calendar_today, size: 10, color: widget.colors.textOnPrimary.withValues(alpha: 0.8)),
+              const SizedBox(width: 4),
+              Text(
+                record.recordDate,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                  color: widget.colors.textOnPrimary,
+                ),
+              ),
+              if (record.recordTime != null) ...[
+                const SizedBox(width: 6),
+                Icon(Icons.access_time, size: 10, color: widget.colors.textOnPrimary.withValues(alpha: 0.8)),
+                const SizedBox(width: 2),
+                Text(
+                  record.recordTime!,
+                  style: TextStyle(fontSize: 11, color: widget.colors.textOnPrimary.withValues(alpha: 0.8)),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 2),
+          Wrap(
+            spacing: 8,
+            runSpacing: 2,
+            children: [
+              if (record.stoolType != null)
+                _buildBadge('类型${record.stoolType}'),
+              if (record.durationMinutes != null)
+                _buildBadge('${record.durationMinutes}分钟'),
+              if (record.feeling != null)
+                _buildBadge(record.feeling!),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBadge(String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+      decoration: BoxDecoration(
+        color: widget.colors.textOnPrimary.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(3),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(fontSize: 10, color: widget.colors.textOnPrimary),
+      ),
+    );
+  }
+
+  MarkdownStyleSheet _getUserMarkdownStyle(ThemeColors colors) {
+    return MarkdownStyleSheet(
+      p: TextStyle(color: colors.textOnPrimary, fontSize: 14),
+      code: TextStyle(
+        color: colors.textOnPrimary,
+        backgroundColor: colors.textOnPrimary.withValues(alpha: 0.2),
+        fontFamily: 'monospace',
+        fontSize: 13,
+      ),
+      codeblockDecoration: BoxDecoration(
+        color: colors.textOnPrimary.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      codeblockPadding: const EdgeInsets.all(12),
     );
   }
 }
@@ -280,6 +485,36 @@ class CodeBlockWidget extends StatefulWidget {
 
 class _CodeBlockWidgetState extends State<CodeBlockWidget> {
   bool _copied = false;
+  List<InlineSpan>? _cachedSpans;
+
+  List<InlineSpan> get _spans {
+    if (_cachedSpans != null) return _cachedSpans!;
+    _cachedSpans = _buildSpans();
+    return _cachedSpans!;
+  }
+
+  List<InlineSpan> _buildSpans() {
+    final language = widget.language.isNotEmpty ? widget.language : 'plaintext';
+    final mode = allLanguages[language];
+
+    if (mode != null) {
+      try {
+        final result = highlight.parse(widget.code, language: language);
+        return _nodesToSpans(result.nodes!);
+      } catch (e) {
+        return [TextSpan(text: widget.code, style: const TextStyle(color: Colors.white))];
+      }
+    }
+    return [TextSpan(text: widget.code, style: const TextStyle(color: Colors.white))];
+  }
+
+  @override
+  void didUpdateWidget(CodeBlockWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.code != widget.code || oldWidget.language != widget.language) {
+      _cachedSpans = null;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -339,7 +574,12 @@ class _CodeBlockWidgetState extends State<CodeBlockWidget> {
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.all(12),
-            child: _buildHighlightedCode(),
+            child: SelectableText.rich(
+              TextSpan(
+                children: _spans,
+                style: const TextStyle(fontFamily: 'monospace', fontSize: 13),
+              ),
+            ),
           ),
         ],
       ),
@@ -356,43 +596,12 @@ class _CodeBlockWidgetState extends State<CodeBlockWidget> {
     });
   }
 
-  Widget _buildHighlightedCode() {
-    final language = widget.language.isNotEmpty ? widget.language : 'plaintext';
-    final mode = allLanguages[language];
-
-    if (mode != null) {
-      try {
-        final result = highlight.parse(widget.code, language: language);
-        return _buildCodeNodes(result.nodes!);
-      } catch (e) {
-        return _buildPlainCode();
-      }
-    }
-    return _buildPlainCode();
-  }
-
-  Widget _buildPlainCode() {
-    return SelectableText(
-      widget.code,
-      style: const TextStyle(
-        fontFamily: 'monospace',
-        fontSize: 13,
-        color: Colors.white,
-      ),
-    );
-  }
-
-  Widget _buildCodeNodes(List<dynamic> nodes) {
+  List<InlineSpan> _nodesToSpans(List<dynamic> nodes) {
     final spans = <InlineSpan>[];
     for (final node in nodes) {
       spans.addAll(_nodeToSpans(node));
     }
-    return SelectableText.rich(
-      TextSpan(
-        children: spans,
-        style: const TextStyle(fontFamily: 'monospace', fontSize: 13),
-      ),
-    );
+    return spans;
   }
 
   List<InlineSpan> _nodeToSpans(dynamic node) {
@@ -485,8 +694,9 @@ class _CodeBlockWidgetState extends State<CodeBlockWidget> {
 
 class ThinkingBlock extends StatefulWidget {
   final String content;
+  final ThemeColors colors;
 
-  const ThinkingBlock({super.key, required this.content});
+  const ThinkingBlock({super.key, required this.content, required this.colors});
 
   @override
   State<ThinkingBlock> createState() => _ThinkingBlockState();
@@ -497,13 +707,12 @@ class _ThinkingBlockState extends State<ThinkingBlock> {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.watch<ThemeProvider>().colors;
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: colors.warning.withValues(alpha: 0.1),
+        color: widget.colors.warning.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: colors.warning.withValues(alpha: 0.3)),
+        border: Border.all(color: widget.colors.warning.withValues(alpha: 0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -514,19 +723,19 @@ class _ThinkingBlockState extends State<ThinkingBlock> {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               child: Row(
                 children: [
-                  Icon(Icons.psychology, size: 16, color: colors.warning),
+                  Icon(Icons.psychology, size: 16, color: widget.colors.warning),
                   const SizedBox(width: 8),
                   Text(
                     '深度思考',
                     style: TextStyle(
-                      color: colors.warning,
+                      color: widget.colors.warning,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
                   const Spacer(),
                   Icon(
                     _expanded ? Icons.expand_less : Icons.expand_more,
-                    color: colors.warning,
+                    color: widget.colors.warning,
                   ),
                 ],
               ),
@@ -539,9 +748,9 @@ class _ThinkingBlockState extends State<ThinkingBlock> {
                 data: widget.content,
                 selectable: true,
                 styleSheet: MarkdownStyleSheet(
-                  p: TextStyle(fontSize: 13, color: colors.warning),
+                  p: TextStyle(fontSize: 13, color: widget.colors.warning),
                   code: TextStyle(
-                    backgroundColor: colors.warning.withValues(alpha: 0.1),
+                    backgroundColor: widget.colors.warning.withValues(alpha: 0.1),
                     fontFamily: 'monospace',
                     fontSize: 12,
                   ),

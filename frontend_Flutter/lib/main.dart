@@ -61,7 +61,7 @@ class _AppInitializerState extends State<AppInitializer> {
   Widget build(BuildContext context) {
     final themeProvider = context.watch<ThemeProvider>();
     return MaterialApp(
-      title: '肠道健康助手',
+      title: '肠胃健康助手',
       debugShowCheckedModeBanner: false,
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,

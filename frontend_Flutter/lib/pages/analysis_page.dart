@@ -14,6 +14,7 @@ import '../theme/theme_colors.dart';
 import '../theme/theme_decorations.dart';
 import '../utils/animations.dart';
 import '../widgets/app_bottom_nav.dart';
+import '../widgets/expanded_text_editor_dialog.dart';
 import 'chat_sidebar.dart';
 import 'chat_message_widgets.dart';
 import 'chat_settings.dart';
@@ -82,6 +83,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
 
   Future<void> _loadShowRequestDetails() async {
     final savedValue = await LocalDbService.getSetting('show_request_details');
+    if (!mounted) return;
     setState(() {
       _showRequestDetails = savedValue == 'true';
     });
@@ -104,6 +106,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
       intensity = ThinkingIntensity.none;
     }
 
+    if (!mounted) return;
     setState(() {
       _thinkingIntensity = intensity;
       _systemPrompt = savedPrompt;
@@ -114,15 +117,14 @@ class _AnalysisPageState extends State<AnalysisPage> {
   Future<void> _checkAiStatus() async {
     try {
       final status = await ApiService.checkAiStatus();
+      if (!mounted) return;
       setState(() {
         _aiStatus = status;
         _statusError = null;
       });
-      if (status.isConfigured) {
-        _loadChatHistory();
-      }
     } catch (e) {
       final appError = ErrorHandler.handleError(e);
+      if (!mounted) return;
       setState(() {
         _statusError = appError;
         _aiStatus = AiStatus(
@@ -140,6 +142,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
       final session = await ApiService.getChatHistory(
         conversationId: _conversationId,
       );
+      if (!mounted) return;
       setState(() {
         _messages = List<ChatMessage>.from(session.messages);
         if (_conversationId == null && session.conversationId.isNotEmpty) {
@@ -191,6 +194,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
       final session = await ApiService.getChatHistory(
         conversationId: conversationId,
       );
+      if (!mounted) return;
       final newMessages = List<ChatMessage>.from(session.messages);
       final cachedMessages = _conversationCache[conversationId];
       final hasChanged =
@@ -310,13 +314,34 @@ class _AnalysisPageState extends State<AnalysisPage> {
     _currentRequestId = requestId;
     final isNewConversation = _conversationId == null;
 
+    final hasRecords = _recordsStartDate != null && _recordsEndDate != null;
+    List<BowelRecord>? attachedRecords;
+    String? recordsDateRange;
+
+    if (hasRecords) {
+      try {
+        attachedRecords = await LocalDbService.getRecords(
+          startDate: _recordsStartDate,
+          endDate: _recordsEndDate,
+        );
+        if (attachedRecords.isNotEmpty) {
+          recordsDateRange = '$_recordsStartDate 至 $_recordsEndDate';
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+
     final tempUserMessage = ChatMessage(
       messageId: 'temp-$requestId',
       conversationId: _conversationId ?? '',
       role: 'user',
       content: message,
       createdAt: DateTime.now().toIso8601String(),
+      attachedRecords: attachedRecords,
+      recordsDateRange: recordsDateRange,
     );
+
     setState(() {
       _messages.add(tempUserMessage);
       _chatLoading = true;
@@ -330,6 +355,8 @@ class _AnalysisPageState extends State<AnalysisPage> {
         tempUserMessage,
         requestId,
         isNewConversation,
+        attachedRecords,
+        recordsDateRange,
       );
     } else {
       await _sendMessageNormal(
@@ -337,6 +364,8 @@ class _AnalysisPageState extends State<AnalysisPage> {
         tempUserMessage,
         requestId,
         isNewConversation,
+        attachedRecords,
+        recordsDateRange,
       );
     }
   }
@@ -368,6 +397,8 @@ class _AnalysisPageState extends State<AnalysisPage> {
     ChatMessage tempUserMessage,
     String requestId,
     bool isNewConversation,
+    List<BowelRecord>? attachedRecords,
+    String? recordsDateRange,
   ) async {
     final tempAssistantMessageId = 'temp-assistant-$requestId';
     final tempAssistantMessage = ChatMessage(
@@ -394,12 +425,15 @@ class _AnalysisPageState extends State<AnalysisPage> {
                 ? _thinkingIntensity.toApiValue()
                 : null,
         systemPrompt: _systemPrompt,
+        attachedRecords: attachedRecords,
+        recordsDateRange: recordsDateRange,
       );
 
       if (_currentRequestId != requestId) {
         return;
       }
 
+      if (!mounted) return;
       final response = result.message;
       final actualStartDate = result.actualStartDate;
 
@@ -412,15 +446,20 @@ class _AnalysisPageState extends State<AnalysisPage> {
       setState(() {
         _messages.removeWhere((m) => m.messageId == tempUserMessage.messageId);
         _messages.removeWhere((m) => m.messageId == tempAssistantMessageId);
+
         _conversationId ??= newConversationId;
+
         final userMessage = ChatMessage(
           messageId: 'user-$requestId',
           conversationId: newConversationId,
           role: 'user',
           content: message,
           createdAt: response.createdAt,
+          attachedRecords: attachedRecords,
+          recordsDateRange: recordsDateRange,
         );
         _messages.add(userMessage);
+
         _messages.add(response);
         _chatLoading = false;
         _actualRecordsStartDate = actualStartDate;
@@ -435,25 +474,24 @@ class _AnalysisPageState extends State<AnalysisPage> {
       _scrollToBottom();
 
       if (isNewConversation && newConversationId.isNotEmpty) {
-        await _autoRenameConversation(newConversationId, message);
+        _autoRenameConversation(newConversationId, message);
       }
     } catch (e) {
       if (_currentRequestId != requestId) {
         return;
       }
+      if (!mounted) return;
       final appError = ErrorHandler.handleError(e);
       setState(() {
         _messages.removeWhere((m) => m.messageId == tempUserMessage.messageId);
         _messages.removeWhere((m) => m.messageId == tempAssistantMessageId);
         _chatLoading = false;
       });
-      if (mounted) {
-        ErrorDialog.showFromAppError(
-          context,
-          error: appError,
-          onRetry: () => _sendMessage(),
-        );
-      }
+      ErrorDialog.showFromAppError(
+        context,
+        error: appError,
+        onRetry: () => _sendMessage(),
+      );
     }
   }
 
@@ -462,6 +500,8 @@ class _AnalysisPageState extends State<AnalysisPage> {
     ChatMessage tempUserMessage,
     String requestId,
     bool isNewConversation,
+    List<BowelRecord>? attachedRecords,
+    String? recordsDateRange,
   ) async {
     String? finalMessageId;
     String? streamConversationId;
@@ -476,14 +516,18 @@ class _AnalysisPageState extends State<AnalysisPage> {
 
     setState(() {
       _messages.removeWhere((m) => m.messageId == tempUserMessage.messageId);
+
       final userMessage = ChatMessage(
         messageId: 'user-$requestId',
         conversationId: _conversationId ?? '',
         role: 'user',
         content: message,
         createdAt: DateTime.now().toIso8601String(),
+        attachedRecords: attachedRecords,
+        recordsDateRange: recordsDateRange,
       );
       _messages.add(userMessage);
+
       _messages.add(tempAssistantMessage);
     });
     _scrollToBottom();
@@ -499,6 +543,8 @@ class _AnalysisPageState extends State<AnalysisPage> {
                 ? _thinkingIntensity.toApiValue()
                 : null,
         systemPrompt: _systemPrompt,
+        attachedRecords: attachedRecords,
+        recordsDateRange: recordsDateRange,
       )) {
         if (chunk.conversationId != null && streamConversationId == null) {
           final convId = chunk.conversationId!;
@@ -509,19 +555,26 @@ class _AnalysisPageState extends State<AnalysisPage> {
             requestId: requestId,
           );
 
-          if (_currentRequestId == requestId) {
+          if (isNewConversation) {
+            _autoRenameConversation(convId, message);
+          }
+
+          if (_currentRequestId == requestId && mounted) {
             setState(() {
               _conversationId = streamConversationId;
               final userMsgIndex = _messages.indexWhere(
                 (m) => m.role == 'user' && m.conversationId.isEmpty,
               );
               if (userMsgIndex != -1) {
+                final oldMsg = _messages[userMsgIndex];
                 _messages[userMsgIndex] = ChatMessage(
-                  messageId: _messages[userMsgIndex].messageId,
+                  messageId: oldMsg.messageId,
                   conversationId: streamConversationId!,
                   role: 'user',
-                  content: _messages[userMsgIndex].content,
-                  createdAt: _messages[userMsgIndex].createdAt,
+                  content: oldMsg.content,
+                  createdAt: oldMsg.createdAt,
+                  attachedRecords: oldMsg.attachedRecords,
+                  recordsDateRange: oldMsg.recordsDateRange,
                 );
               }
             });
@@ -529,7 +582,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
         }
 
         if (chunk.actualStartDate != null && _actualRecordsStartDate == null) {
-          if (_currentRequestId == requestId) {
+          if (_currentRequestId == requestId && mounted) {
             final wasAdjusted =
                 _recordsStartDate != null &&
                 chunk.actualStartDate != _recordsStartDate;
@@ -554,7 +607,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
             }
           }
 
-          if (_currentRequestId == requestId) {
+          if (_currentRequestId == requestId && mounted) {
             setState(() {
               final index = _messages.indexWhere(
                 (m) => m.messageId == tempAssistantMessageId,
@@ -592,7 +645,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
         }
       }
 
-      if (_currentRequestId == requestId) {
+      if (_currentRequestId == requestId && mounted) {
         setState(() {
           final index = _messages.indexWhere(
             (m) => m.messageId == tempAssistantMessageId,
@@ -622,10 +675,6 @@ class _AnalysisPageState extends State<AnalysisPage> {
           _backgroundChats.containsKey(streamConversationId)) {
         _backgroundChats.remove(streamConversationId);
       }
-
-      if (isNewConversation && streamConversationId != null) {
-        await _autoRenameConversation(streamConversationId, message);
-      }
     } catch (e) {
       final appError = ErrorHandler.handleError(e);
 
@@ -635,18 +684,18 @@ class _AnalysisPageState extends State<AnalysisPage> {
         _backgroundChats[streamConversationId]!.isComplete = true;
       }
 
-      if (_currentRequestId == requestId) {
+      if (_currentRequestId == requestId && mounted) {
         setState(() {
           _messages.removeWhere((m) => m.messageId == tempAssistantMessageId);
+          _messages.removeWhere((m) => m.messageId.startsWith('temp-records-'));
+          _messages.removeWhere((m) => m.messageId.startsWith('records-'));
           _chatLoading = false;
         });
-        if (mounted) {
-          ErrorDialog.showFromAppError(
-            context,
-            error: appError,
-            onRetry: () => _sendMessage(),
-          );
-        }
+        ErrorDialog.showFromAppError(
+          context,
+          error: appError,
+          onRetry: () => _sendMessage(),
+        );
       }
     }
   }
@@ -661,11 +710,13 @@ class _AnalysisPageState extends State<AnalysisPage> {
       final result = await LocalDbService.analyzeLocally(
         analysisType: _analysisType,
       );
+      if (!mounted) return;
       setState(() {
         _result = result;
         _analysisLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _error = e.toString().replaceAll('Exception: ', '');
         _analysisLoading = false;
@@ -859,6 +910,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
                   Expanded(
                     child: CompactTabContent(
                       currentIndex: _currentTab,
+                      enableSwipe: true,
                       onTabChanged:
                           (index) => setState(() => _currentTab = index),
                       tabs: [
@@ -1049,7 +1101,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
             ),
             const SizedBox(height: 8),
             Text(
-              '询问关于肠道健康的问题',
+              '询问关于肠胃健康的问题',
               style: TextStyle(color: colors.textHint, fontSize: 12),
             ),
           ],
@@ -1066,13 +1118,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
             itemCount: _messages.length,
             itemBuilder: (context, index) {
               final message = _messages[index];
-              final delay = Duration(
-                milliseconds: AppAnimations.staggerIntervalMs * (index % 10),
-              );
-              return AnimatedMessageBubble(
-                delay: delay,
-                child: MessageBubble(message: message),
-              );
+              return MessageBubble(message: message);
             },
           ),
         ),
@@ -1465,27 +1511,70 @@ class _AnalysisPageState extends State<AnalysisPage> {
           ),
           const SizedBox(height: 8),
           Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Expanded(
-                child: TextField(
-                  controller: _messageController,
-                  decoration: InputDecoration(
-                    hintText: '输入消息...',
-                    hintStyle: TextStyle(color: colors.textHint),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(24),
-                      borderSide: BorderSide.none,
+                child: Stack(
+                  children: [
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxHeight: 120),
+                      child: SingleChildScrollView(
+                        child: TextField(
+                          controller: _messageController,
+                          decoration: InputDecoration(
+                            hintText: '输入消息...',
+                            hintStyle: TextStyle(color: colors.textHint),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(24),
+                              borderSide: BorderSide.none,
+                            ),
+                            filled: true,
+                            fillColor: colors.surfaceVariant,
+                            contentPadding: const EdgeInsets.only(
+                              left: 16,
+                              right: 40,
+                              top: 12,
+                              bottom: 12,
+                            ),
+                          ),
+                          maxLines: null,
+                          textInputAction: TextInputAction.send,
+                          onSubmitted: (_) => _sendMessage(),
+                          onChanged: (_) => setState(() {}),
+                        ),
+                      ),
                     ),
-                    filled: true,
-                    fillColor: colors.surfaceVariant,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
-                  ),
-                  maxLines: null,
-                  textInputAction: TextInputAction.send,
-                  onSubmitted: (_) => _sendMessage(),
+                    if (_messageController.text.length > 100)
+                      Positioned(
+                        right: 4,
+                        top: 4,
+                        child: IconButton(
+                          icon: Icon(
+                            Icons.open_in_full,
+                            size: 18,
+                            color: colors.textSecondary,
+                          ),
+                          tooltip: '展开编辑',
+                          onPressed: () async {
+                            final result = await ExpandedTextEditorDialog.show(
+                              context,
+                              title: '编辑消息',
+                              hintText: '输入消息...',
+                              initialText: _messageController.text,
+                              showClearButton: true,
+                            );
+                            if (result != null) {
+                              _messageController.text = result;
+                            }
+                          },
+                          padding: const EdgeInsets.all(8),
+                          constraints: const BoxConstraints(
+                            minWidth: 32,
+                            minHeight: 32,
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ),
               const SizedBox(width: 8),

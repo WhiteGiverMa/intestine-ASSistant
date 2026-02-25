@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/scheduler.dart';
 import 'package:provider/provider.dart';
 import '../providers/theme_provider.dart';
 import '../theme/theme_colors.dart';
 
-class CompactTabBar extends StatelessWidget {
+class CompactTabBar extends StatefulWidget {
   final int currentIndex;
   final List<CompactTabItem> tabs;
   final ValueChanged<int> onTabChanged;
@@ -17,6 +16,56 @@ class CompactTabBar extends StatelessWidget {
   });
 
   @override
+  State<CompactTabBar> createState() => _CompactTabBarState();
+}
+
+class _CompactTabBarState extends State<CompactTabBar> {
+  final List<GlobalKey> _tabKeys = [];
+  double _indicatorWidth = 0;
+  double _indicatorLeft = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabKeys.addAll(List.generate(widget.tabs.length, (_) => GlobalKey()));
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _updateIndicatorPosition(),
+    );
+  }
+
+  @override
+  void didUpdateWidget(CompactTabBar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.currentIndex != widget.currentIndex) {
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _updateIndicatorPosition(),
+      );
+    }
+  }
+
+  void _updateIndicatorPosition() {
+    if (!mounted || widget.currentIndex >= _tabKeys.length) return;
+
+    final currentKey = _tabKeys[widget.currentIndex];
+    final renderBox =
+        currentKey.currentContext?.findRenderObject() as RenderBox?;
+    if (renderBox == null) return;
+
+    final containerContext = context.findRenderObject() as RenderBox?;
+    if (containerContext == null) return;
+
+    final tabPosition = renderBox.localToGlobal(
+      Offset.zero,
+      ancestor: containerContext,
+    );
+
+    setState(() {
+      _indicatorWidth = renderBox.size.width;
+      _indicatorLeft = tabPosition.dx;
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final colors = context.watch<ThemeProvider>().colors;
 
@@ -27,24 +76,44 @@ class CompactTabBar extends StatelessWidget {
         color: colors.cardBackground.withValues(alpha: 0.8),
         borderRadius: BorderRadius.circular(16),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: List.generate(tabs.length, (index) {
-          return _buildTabButton(tabs[index], index, colors);
-        }),
+      child: Stack(
+        children: [
+          AnimatedPositioned(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOutCubic,
+            left: _indicatorLeft,
+            top: 0,
+            bottom: 0,
+            width: _indicatorWidth,
+            child: Container(
+              decoration: BoxDecoration(
+                color: colors.primary,
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: List.generate(widget.tabs.length, (index) {
+              return _buildTabButton(widget.tabs[index], index, colors);
+            }),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildTabButton(CompactTabItem tab, int index, ThemeColors colors) {
-    final isSelected = currentIndex == index;
+    final isSelected = index == widget.currentIndex;
 
     return GestureDetector(
-      onTap: () => onTabChanged(index),
+      key: _tabKeys[index],
+      onTap: () => widget.onTabChanged(index),
+      behavior: HitTestBehavior.opaque,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         decoration: BoxDecoration(
-          color: isSelected ? colors.primary : Colors.transparent,
+          color: Colors.transparent,
           borderRadius: BorderRadius.circular(12),
         ),
         child:
@@ -106,81 +175,141 @@ class CompactTabContent extends StatefulWidget {
   });
 
   @override
-  State<CompactTabContent> createState() => CompactTabContentState();
+  State<CompactTabContent> createState() => _CompactTabContentState();
 }
 
-class CompactTabContentState extends State<CompactTabContent>
+class _CompactTabContentState extends State<CompactTabContent>
     with SingleTickerProviderStateMixin {
-  TabController? _tabController;
+  late AnimationController _controller;
+  late Animation<double> _animation;
+
+  int _displayedIndex = 0;
+  int _previousIndex = 0;
+  bool _isAnimating = false;
+  int _pendingIndex = -1;
 
   @override
   void initState() {
     super.initState();
-    if (widget.enableSwipe) {
-      _tabController = TabController(
-        length: widget.tabs.length,
-        vsync: this,
-        initialIndex: widget.currentIndex,
-      );
-      _tabController!.addListener(_onTabControllerChanged);
-    }
+    _displayedIndex = widget.currentIndex;
+    _previousIndex = widget.currentIndex;
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 250),
+    );
+    _controller.value = 1.0;
+    _animation = CurvedAnimation(parent: _controller, curve: Curves.easeOut);
   }
 
   @override
   void didUpdateWidget(CompactTabContent oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (_tabController != null &&
-        oldWidget.currentIndex != widget.currentIndex) {
-      if (_tabController!.index != widget.currentIndex) {
-        _tabController!.animateTo(widget.currentIndex);
+    if (oldWidget.currentIndex != widget.currentIndex) {
+      if (_isAnimating) {
+        _pendingIndex = widget.currentIndex;
+        _controller.stop();
+        _controller.value = 1.0;
+        setState(() {
+          _displayedIndex = _pendingIndex;
+          _previousIndex = _pendingIndex;
+          _isAnimating = false;
+          _pendingIndex = -1;
+        });
+      } else {
+        _animateToPage(widget.currentIndex);
       }
     }
   }
 
-  void _onTabControllerChanged() {
-    if (_tabController!.indexIsChanging) {
-      SchedulerBinding.instance.addPostFrameCallback((_) {
-        widget.onTabChanged?.call(_tabController!.index);
-      });
-    }
+  void _animateToPage(int newIndex) {
+    if (_displayedIndex == newIndex) return;
+
+    setState(() {
+      _previousIndex = _displayedIndex;
+      _displayedIndex = newIndex;
+      _isAnimating = true;
+    });
+
+    _controller.forward(from: 0).then((_) {
+      if (mounted) {
+        setState(() {
+          _isAnimating = false;
+        });
+        if (_pendingIndex >= 0 && _pendingIndex != _displayedIndex) {
+          final pending = _pendingIndex;
+          _pendingIndex = -1;
+          _animateToPage(pending);
+        }
+      }
+    });
   }
 
   @override
   void dispose() {
-    _tabController?.removeListener(_onTabControllerChanged);
-    _tabController?.dispose();
+    _controller.dispose();
     super.dispose();
+  }
+
+  void _handleSwipe(DragEndDetails details) {
+    final velocity = details.primaryVelocity ?? 0;
+    if (velocity < -300 && widget.currentIndex < widget.tabs.length - 1) {
+      widget.onTabChanged?.call(widget.currentIndex + 1);
+    } else if (velocity > 300 && widget.currentIndex > 0) {
+      widget.onTabChanged?.call(widget.currentIndex - 1);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (widget.enableSwipe && _tabController != null) {
-      return TabBarView(
-        controller: _tabController,
-        children: widget.tabs.map((tab) => tab.content).toList(),
-      );
-    }
-    return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 300),
-      switchInCurve: Curves.easeInOut,
-      switchOutCurve: Curves.easeInOut,
-      transitionBuilder: (child, animation) {
-        return FadeTransition(
-          opacity: animation,
-          child: SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(0.1, 0),
-              end: Offset.zero,
-            ).animate(animation),
-            child: child,
+    final goingForward = _displayedIndex > _previousIndex;
+    final screenWidth = MediaQuery.of(context).size.width;
+
+    final content = Stack(
+      children: [
+        if (_isAnimating)
+          Positioned.fill(
+            child: AnimatedBuilder(
+              animation: _animation,
+              builder: (context, child) {
+                return Transform.translate(
+                  offset: Offset(
+                    goingForward
+                        ? -screenWidth * _animation.value
+                        : screenWidth * _animation.value,
+                    0,
+                  ),
+                  child: widget.tabs[_previousIndex].content,
+                );
+              },
+            ),
           ),
-        );
-      },
-      child: KeyedSubtree(
-        key: ValueKey(widget.currentIndex),
-        child: widget.tabs[widget.currentIndex].content,
-      ),
+        Positioned.fill(
+          child: AnimatedBuilder(
+            animation: _animation,
+            builder: (context, child) {
+              if (!_isAnimating) {
+                return widget.tabs[_displayedIndex].content;
+              }
+              return Transform.translate(
+                offset: Offset(
+                  goingForward
+                      ? screenWidth * (1 - _animation.value)
+                      : -screenWidth * (1 - _animation.value),
+                  0,
+                ),
+                child: widget.tabs[_displayedIndex].content,
+              );
+            },
+          ),
+        ),
+      ],
     );
+
+    if (widget.enableSwipe) {
+      return GestureDetector(onHorizontalDragEnd: _handleSwipe, child: content);
+    }
+
+    return content;
   }
 }
 

@@ -8,6 +8,7 @@ import '../theme/theme_decorations.dart';
 import '../widgets/themed_switch.dart';
 import '../widgets/app_header.dart';
 import '../utils/animations.dart';
+import '../utils/responsive_utils.dart';
 import 'about_page.dart';
 import 'misc_settings_page.dart';
 import 'dev_tools_page.dart';
@@ -33,6 +34,7 @@ class SettingsPageContent extends StatelessWidget {
 
 class _SettingsPageState extends State<SettingsPage> {
   bool _devMode = false;
+  bool _initialized = false;
 
   @override
   void initState() {
@@ -42,9 +44,12 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Future<void> _loadDevMode() async {
     final savedValue = await LocalDbService.getSetting('dev_mode');
-    setState(() {
-      _devMode = savedValue == 'true';
-    });
+    if (mounted) {
+      setState(() {
+        _devMode = savedValue == 'true';
+        _initialized = true;
+      });
+    }
   }
 
   @override
@@ -64,47 +69,53 @@ class _SettingsPageState extends State<SettingsPage> {
             children: [
               const AppHeader(title: '设置'),
               Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    children: [
-                      AnimatedEntrance(
-                        child: _buildThemeButton(colors),
-                      ),
-                      const SizedBox(height: 16),
-                      AnimatedEntrance(
-                        delay: const Duration(milliseconds: 50),
-                        child: _buildAiChatOptionsButton(colors),
-                      ),
-                      const SizedBox(height: 16),
-                      AnimatedEntrance(
-                        delay: const Duration(milliseconds: 100),
-                        child: _buildUserButton(colors, authProvider),
-                      ),
-                      const SizedBox(height: 16),
-                      AnimatedEntrance(
-                        delay: const Duration(milliseconds: 150),
-                        child: _buildMiscButton(colors),
-                      ),
-                      const SizedBox(height: 16),
-                      AnimatedEntrance(
-                        delay: const Duration(milliseconds: 200),
-                        child: _buildDevModeToggle(colors),
-                      ),
-                      const SizedBox(height: 16),
-                      if (_devMode)
-                        AnimatedEntrance(
-                          delay: const Duration(milliseconds: 250),
-                          child: _buildDevTools(colors),
+                child: _initialized
+                    ? SingleChildScrollView(
+                        padding: ResponsiveUtils.responsivePadding(context),
+                        child: ResponsiveUtils.constrainedContent(
+                          context: context,
+                          maxWidth: 700,
+                          child: Column(
+                            children: [
+                              AnimatedEntrance(
+                                child: _buildThemeButton(colors),
+                              ),
+                              const SizedBox(height: 16),
+                              AnimatedEntrance(
+                                delay: const Duration(milliseconds: 50),
+                                child: _buildAiChatOptionsButton(colors),
+                              ),
+                              const SizedBox(height: 16),
+                              AnimatedEntrance(
+                                delay: const Duration(milliseconds: 100),
+                                child: _buildUserButton(colors, authProvider),
+                              ),
+                              const SizedBox(height: 16),
+                              AnimatedEntrance(
+                                delay: const Duration(milliseconds: 150),
+                                child: _buildMiscButton(colors),
+                              ),
+                              const SizedBox(height: 16),
+                              AnimatedEntrance(
+                                delay: const Duration(milliseconds: 200),
+                                child: _buildDevModeToggle(colors),
+                              ),
+                              const SizedBox(height: 16),
+                              if (_devMode)
+                                AnimatedEntrance(
+                                  delay: const Duration(milliseconds: 250),
+                                  child: _buildDevTools(colors),
+                                ),
+                              if (_devMode) const SizedBox(height: 16),
+                              AnimatedEntrance(
+                                delay: const Duration(milliseconds: 300),
+                                child: _buildAboutButton(colors),
+                              ),
+                            ],
+                          ),
                         ),
-                      if (_devMode) const SizedBox(height: 16),
-                      AnimatedEntrance(
-                        delay: const Duration(milliseconds: 300),
-                        child: _buildAboutButton(colors),
-                      ),
-                    ],
-                  ),
-                ),
+                      )
+                    : const Center(child: CircularProgressIndicator()),
               ),
             ],
           ),

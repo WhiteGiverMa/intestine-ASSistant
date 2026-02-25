@@ -455,7 +455,7 @@ Please reply in Chinese, maintaining a professional yet friendly tone.''';
   }
 
   static String _getAnalysisSystemPrompt() {
-    return '''你是一个专业的肠道健康分析助手。请根据用户提供的排便记录数据进行分析。
+    return '''你是一个专业的肠胃健康分析助手。请根据用户提供的排便记录数据进行分析。
 
 请以JSON格式返回分析结果，格式如下：
 {

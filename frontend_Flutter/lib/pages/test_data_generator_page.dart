@@ -6,6 +6,7 @@ import '../theme/theme_colors.dart';
 import '../theme/theme_decorations.dart';
 import '../widgets/app_header.dart';
 import '../services/local_db_service.dart';
+import '../utils/responsive_utils.dart';
 
 const Map<int, String> kStoolTypeLabels = {
   1: '坚果状',
@@ -100,21 +101,29 @@ class _TestDataGeneratorPageState extends State<TestDataGeneratorPage> {
             children: [
               const AppHeader(title: '测试数据生成器', showBackButton: true),
               Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    children: [
-                      _buildDateRangeSection(colors),
-                      const SizedBox(height: 16),
-                      _buildDailyCountSection(colors),
-                      const SizedBox(height: 16),
-                      _buildModeToggle(colors),
-                      const SizedBox(height: 16),
-                      if (_isCustomMode) _buildCustomConfigSection(colors),
-                      if (_isCustomMode) const SizedBox(height: 16),
-                      _buildGenerateButton(colors),
-                    ],
-                  ),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    return SingleChildScrollView(
+                      padding: ResponsiveUtils.responsivePadding(context),
+                      child: ResponsiveUtils.constrainedContent(
+                        context: context,
+                        maxWidth: 700,
+                        child: Column(
+                          children: [
+                            _buildDateRangeSection(colors, constraints),
+                            const SizedBox(height: 16),
+                            _buildDailyCountSection(colors, constraints),
+                            const SizedBox(height: 16),
+                            _buildModeToggle(colors),
+                            const SizedBox(height: 16),
+                            if (_isCustomMode) _buildCustomConfigSection(colors),
+                            if (_isCustomMode) const SizedBox(height: 16),
+                            _buildGenerateButton(colors),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ),
             ],
@@ -124,7 +133,9 @@ class _TestDataGeneratorPageState extends State<TestDataGeneratorPage> {
     );
   }
 
-  Widget _buildDateRangeSection(ThemeColors colors) {
+  Widget _buildDateRangeSection(ThemeColors colors, BoxConstraints constraints) {
+    final isNarrow = constraints.maxWidth < 400;
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: ThemeDecorations.card(context),
@@ -146,27 +157,46 @@ class _TestDataGeneratorPageState extends State<TestDataGeneratorPage> {
             ],
           ),
           const Divider(height: 24),
-          Row(
-            children: [
-              Expanded(
-                child: _buildDateButton(
+          if (isNarrow)
+            Column(
+              children: [
+                _buildDateButton(
                   colors,
                   '开始日期',
                   _startDate,
                   () => _selectDate(true),
                 ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _buildDateButton(
+                const SizedBox(height: 12),
+                _buildDateButton(
                   colors,
                   '结束日期',
                   _endDate,
                   () => _selectDate(false),
                 ),
-              ),
-            ],
-          ),
+              ],
+            )
+          else
+            Row(
+              children: [
+                Expanded(
+                  child: _buildDateButton(
+                    colors,
+                    '开始日期',
+                    _startDate,
+                    () => _selectDate(true),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: _buildDateButton(
+                    colors,
+                    '结束日期',
+                    _endDate,
+                    () => _selectDate(false),
+                  ),
+                ),
+              ],
+            ),
           const SizedBox(height: 8),
           Text(
             '共 ${_endDate.difference(_startDate).inDays + 1} 天',
@@ -233,7 +263,9 @@ class _TestDataGeneratorPageState extends State<TestDataGeneratorPage> {
     }
   }
 
-  Widget _buildDailyCountSection(ThemeColors colors) {
+  Widget _buildDailyCountSection(ThemeColors colors, BoxConstraints constraints) {
+    final isNarrow = constraints.maxWidth < 400;
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: ThemeDecorations.card(context),
@@ -255,10 +287,10 @@ class _TestDataGeneratorPageState extends State<TestDataGeneratorPage> {
             ],
           ),
           const Divider(height: 24),
-          Row(
-            children: [
-              Expanded(
-                child: _buildNumberInput(
+          if (isNarrow)
+            Column(
+              children: [
+                _buildNumberInput(
                   colors,
                   '最少',
                   _minDailyCount,
@@ -270,10 +302,8 @@ class _TestDataGeneratorPageState extends State<TestDataGeneratorPage> {
                   }),
                   max: 10,
                 ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _buildNumberInput(
+                const SizedBox(height: 16),
+                _buildNumberInput(
                   colors,
                   '最多',
                   _maxDailyCount,
@@ -285,9 +315,42 @@ class _TestDataGeneratorPageState extends State<TestDataGeneratorPage> {
                   }),
                   max: 10,
                 ),
-              ),
-            ],
-          ),
+              ],
+            )
+          else
+            Row(
+              children: [
+                Expanded(
+                  child: _buildNumberInput(
+                    colors,
+                    '最少',
+                    _minDailyCount,
+                    (v) => setState(() {
+                      _minDailyCount = v;
+                      if (_minDailyCount > _maxDailyCount) {
+                        _maxDailyCount = _minDailyCount;
+                      }
+                    }),
+                    max: 10,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: _buildNumberInput(
+                    colors,
+                    '最多',
+                    _maxDailyCount,
+                    (v) => setState(() {
+                      _maxDailyCount = v;
+                      if (_maxDailyCount < _minDailyCount) {
+                        _minDailyCount = _maxDailyCount;
+                      }
+                    }),
+                    max: 10,
+                  ),
+                ),
+              ],
+            ),
         ],
       ),
     );
@@ -800,30 +863,29 @@ class _TestDataGeneratorPageState extends State<TestDataGeneratorPage> {
   }
 
   Widget _buildDurationSelector(ThemeColors colors) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          '时长 (分钟)',
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-            color: colors.textPrimary,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Row(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isNarrow = constraints.maxWidth < 400;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: Row(
+            Text(
+              '时长 (分钟)',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: colors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            if (isNarrow)
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    '最少:',
-                    style: TextStyle(fontSize: 12, color: colors.textSecondary),
-                  ),
-                  const SizedBox(width: 8),
-                  _buildSmallNumberButton(
+                  _buildDurationInput(
                     colors,
+                    '最少:',
                     _minDuration,
                     () => setState(() {
                       if (_minDuration > 1) {
@@ -833,65 +895,22 @@ class _TestDataGeneratorPageState extends State<TestDataGeneratorPage> {
                         }
                       }
                     }),
-                    Icons.remove,
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    child: Text(
-                      '$_minDuration',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: colors.textPrimary,
-                      ),
-                    ),
-                  ),
-                  _buildSmallNumberButton(
-                    colors,
-                    _minDuration,
                     () => setState(() {
                       if (_minDuration < 60 && _minDuration < _maxDuration) {
                         _minDuration++;
                       }
                     }),
-                    Icons.add,
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Row(
-                children: [
-                  Text(
-                    '最多:',
-                    style: TextStyle(fontSize: 12, color: colors.textSecondary),
-                  ),
-                  const SizedBox(width: 8),
-                  _buildSmallNumberButton(
+                  const SizedBox(height: 12),
+                  _buildDurationInput(
                     colors,
+                    '最多:',
                     _maxDuration,
                     () => setState(() {
                       if (_maxDuration > _minDuration) {
                         _maxDuration--;
                       }
                     }),
-                    Icons.remove,
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    child: Text(
-                      '$_maxDuration',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: colors.textPrimary,
-                      ),
-                    ),
-                  ),
-                  _buildSmallNumberButton(
-                    colors,
-                    _maxDuration,
                     () => setState(() {
                       if (_maxDuration < 60) {
                         _maxDuration++;
@@ -900,13 +919,88 @@ class _TestDataGeneratorPageState extends State<TestDataGeneratorPage> {
                         }
                       }
                     }),
-                    Icons.add,
+                  ),
+                ],
+              )
+            else
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildDurationInput(
+                      colors,
+                      '最少:',
+                      _minDuration,
+                      () => setState(() {
+                        if (_minDuration > 1) {
+                          _minDuration--;
+                          if (_minDuration > _maxDuration) {
+                            _maxDuration = _minDuration;
+                          }
+                        }
+                      }),
+                      () => setState(() {
+                        if (_minDuration < 60 && _minDuration < _maxDuration) {
+                          _minDuration++;
+                        }
+                      }),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: _buildDurationInput(
+                      colors,
+                      '最多:',
+                      _maxDuration,
+                      () => setState(() {
+                        if (_maxDuration > _minDuration) {
+                          _maxDuration--;
+                        }
+                      }),
+                      () => setState(() {
+                        if (_maxDuration < 60) {
+                          _maxDuration++;
+                          if (_maxDuration < _minDuration) {
+                            _minDuration = _maxDuration;
+                          }
+                        }
+                      }),
+                    ),
                   ),
                 ],
               ),
-            ),
           ],
+        );
+      },
+    );
+  }
+
+  Widget _buildDurationInput(
+    ThemeColors colors,
+    String label,
+    int value,
+    VoidCallback onDecrease,
+    VoidCallback onIncrease,
+  ) {
+    return Row(
+      children: [
+        Text(
+          label,
+          style: TextStyle(fontSize: 12, color: colors.textSecondary),
         ),
+        const SizedBox(width: 8),
+        _buildSmallNumberButton(colors, value, onDecrease, Icons.remove),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          child: Text(
+            '$value',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: colors.textPrimary,
+            ),
+          ),
+        ),
+        _buildSmallNumberButton(colors, value, onIncrease, Icons.add),
       ],
     );
   }

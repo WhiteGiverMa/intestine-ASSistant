@@ -5,6 +5,7 @@ import '../services/local_db_service.dart';
 import '../theme/theme_colors.dart';
 import '../theme/theme_decorations.dart';
 import '../widgets/app_header.dart';
+import '../utils/responsive_utils.dart';
 
 class MiscSettingsPage extends StatefulWidget {
   const MiscSettingsPage({super.key});
@@ -100,8 +101,12 @@ class _MiscSettingsPageState extends State<MiscSettingsPage> {
               const AppHeader(title: '其他设置', showBackButton: true),
               Expanded(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(children: [_buildYearSetting(colors)]),
+                  padding: ResponsiveUtils.responsivePadding(context),
+                  child: ResponsiveUtils.constrainedContent(
+                    context: context,
+                    maxWidth: 600,
+                    child: Column(children: [_buildYearSetting(colors)]),
+                  ),
                 ),
               ),
             ],

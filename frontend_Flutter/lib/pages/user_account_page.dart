@@ -13,6 +13,7 @@ import '../theme/theme_decorations.dart';
 import '../widgets/app_header.dart';
 import '../widgets/export_options_dialog.dart';
 import '../utils/file_download.dart';
+import '../utils/responsive_utils.dart';
 
 class UserAccountPage extends StatefulWidget {
   const UserAccountPage({super.key});
@@ -83,19 +84,23 @@ class _UserAccountPageState extends State<UserAccountPage> {
               const AppHeader(title: '用户信息', showBackButton: true),
               Expanded(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    children: [
-                      _buildInfoCard(colors, authProvider),
-                      const SizedBox(height: 16),
-                      _buildNicknameCard(colors),
-                      const SizedBox(height: 16),
-                      _buildDataManagementCard(colors),
-                      if (_message != null) ...[
+                  padding: ResponsiveUtils.responsivePadding(context),
+                  child: ResponsiveUtils.constrainedContent(
+                    context: context,
+                    maxWidth: 600,
+                    child: Column(
+                      children: [
+                        _buildInfoCard(colors, authProvider),
                         const SizedBox(height: 16),
-                        _buildMessage(colors),
+                        _buildNicknameCard(colors),
+                        const SizedBox(height: 16),
+                        _buildDataManagementCard(colors),
+                        if (_message != null) ...[
+                          const SizedBox(height: 16),
+                          _buildMessage(colors),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
                 ),
               ),

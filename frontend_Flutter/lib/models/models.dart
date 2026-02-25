@@ -81,6 +81,24 @@ class BowelRecord {
       createdAt: json['created_at'],
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'record_id': recordId,
+      'lid': lid,
+      'record_date': recordDate,
+      'record_time': recordTime,
+      'duration_minutes': durationMinutes,
+      'stool_type': stoolType,
+      'color': color,
+      'smell_level': smellLevel,
+      'feeling': feeling,
+      'symptoms': symptoms,
+      'notes': notes,
+      'is_no_bowel': isNoBowel,
+      'created_at': createdAt,
+    };
+  }
 }
 
 class StatsSummary {
@@ -277,6 +295,8 @@ class ChatMessage {
   final String content;
   final String? thinkingContent;
   final String createdAt;
+  final List<BowelRecord>? attachedRecords;
+  final String? recordsDateRange;
 
   ChatMessage({
     required this.messageId,
@@ -285,6 +305,8 @@ class ChatMessage {
     required this.content,
     this.thinkingContent,
     required this.createdAt,
+    this.attachedRecords,
+    this.recordsDateRange,
   });
 
   factory ChatMessage.fromJson(Map<String, dynamic> json) {
@@ -295,7 +317,25 @@ class ChatMessage {
       content: json['content'],
       thinkingContent: json['thinking_content'],
       createdAt: json['created_at'],
+      attachedRecords:
+          (json['attached_records'] as List?)
+              ?.map((e) => BowelRecord.fromJson(e))
+              .toList(),
+      recordsDateRange: json['records_date_range'],
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'message_id': messageId,
+      'conversation_id': conversationId,
+      'role': role,
+      'content': content,
+      'thinking_content': thinkingContent,
+      'created_at': createdAt,
+      'attached_records': attachedRecords?.map((e) => e.toJson()).toList(),
+      'records_date_range': recordsDateRange,
+    };
   }
 }
 

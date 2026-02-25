@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../providers/theme_provider.dart';
+import '../services/url_launcher_service.dart';
 import '../theme/theme_colors.dart';
 import '../theme/theme_decorations.dart';
 import '../widgets/app_header.dart';
+import '../utils/responsive_utils.dart';
 
-const String appVersion = '1.1.2';
+const String appVersion = '1.2.0';
 
 class AboutPage extends StatelessWidget {
   const AboutPage({super.key});
@@ -27,17 +28,21 @@ class AboutPage extends StatelessWidget {
               const AppHeader(title: '关于', showBackButton: true),
               Expanded(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    children: [
-                      _buildAppInfo(colors),
-                      const SizedBox(height: 16),
-                      _buildVersionCard(context, colors),
-                      const SizedBox(height: 16),
-                      _buildDeveloperCard(context, colors),
-                      const SizedBox(height: 16),
-                      _buildPoweredByCard(context, colors),
-                    ],
+                  padding: ResponsiveUtils.responsivePadding(context),
+                  child: ResponsiveUtils.constrainedContent(
+                    context: context,
+                    maxWidth: 600,
+                    child: Column(
+                      children: [
+                        _buildAppInfo(colors),
+                        const SizedBox(height: 16),
+                        _buildVersionCard(context, colors),
+                        const SizedBox(height: 16),
+                        _buildDeveloperCard(context, colors),
+                        const SizedBox(height: 16),
+                        _buildPoweredByCard(context, colors),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -81,7 +86,7 @@ class AboutPage extends StatelessWidget {
         ),
         const SizedBox(height: 4),
         Text(
-          '肠道健康智能追踪助手',
+          '肠胃健康智能追踪助手',
           style: TextStyle(fontSize: 14, color: colors.textSecondary),
         ),
       ],
@@ -175,7 +180,10 @@ class AboutPage extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       '马戈 (WhiteGiverMa)',
-                      style: TextStyle(fontSize: 12, color: colors.textSecondary),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: colors.textSecondary,
+                      ),
                     ),
                   ],
                 ),
@@ -211,10 +219,11 @@ class AboutPage extends StatelessWidget {
     ThemeColors colors,
   ) {
     return GestureDetector(
-      onTap: () async {
-        final uri = Uri.parse(url);
-        if (await canLaunchUrl(uri)) {
-          await launchUrl(uri, mode: LaunchMode.externalApplication);
+      onTap: () {
+        if (url.contains('bilibili.com')) {
+          UrlLauncherService.launchBilibiliUrl(context, url);
+        } else {
+          UrlLauncherService.launchWebUrl(context, url);
         }
       },
       child: Container(
