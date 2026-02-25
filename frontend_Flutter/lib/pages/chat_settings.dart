@@ -109,19 +109,22 @@ class _ChatSettingsState extends State<ChatSettings> {
   @override
   Widget build(BuildContext context) {
     final colors = context.watch<ThemeProvider>().colors;
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: ThemeDecorations.card(context),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _buildStreamingSection(colors),
-          const Divider(height: 24),
-          _buildThinkingSection(colors),
-          const Divider(height: 24),
-          _buildSystemPromptSection(colors),
-        ],
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: ThemeDecorations.card(context),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildStreamingSection(colors),
+            const Divider(height: 24),
+            _buildThinkingSection(colors),
+            const Divider(height: 24),
+            _buildSystemPromptSection(colors),
+          ],
+        ),
       ),
     );
   }

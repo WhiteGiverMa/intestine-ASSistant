@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/theme_provider.dart';
 import '../theme/theme_colors.dart';
-import '../theme/theme_decorations.dart';
-import '../widgets/app_header.dart';
+import '../widgets/base_page.dart';
 import '../utils/animations.dart';
 import '../utils/responsive_utils.dart';
 
@@ -14,44 +13,32 @@ class ThemeSelectorPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
 
-    return Scaffold(
-      body: AnimatedTheme(
+    return BasePage(
+      title: '选择主题',
+      showBackButton: true,
+      useScrollView: false,
+      builder: (context) => AnimatedTheme(
         data: Theme.of(context),
         duration: AppAnimations.durationNormal,
-        child: Container(
-          decoration: ThemeDecorations.backgroundGradient(
-            context,
-            mode: themeProvider.mode,
-          ),
-          child: SafeArea(
-            child: Column(
-              children: [
-                const AppHeader(title: '选择主题', showBackButton: true),
-                Expanded(
-                  child: ListView.builder(
-                    padding: ResponsiveUtils.responsivePadding(context),
-                    itemCount: AppThemeMode.values.length,
-                    itemBuilder: (context, index) {
-                      final mode = AppThemeMode.values[index];
-                      final delay = Duration(
-                        milliseconds: AppAnimations.staggerIntervalMs * index,
-                      );
-                      return ResponsiveUtils.constrainedContent(
-                        context: context,
-                        maxWidth: 600,
-                        child: _buildAnimatedThemeCard(
-                          context,
-                          mode,
-                          themeProvider,
-                          delay,
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
+        child: ListView.builder(
+          padding: ResponsiveUtils.responsivePadding(context),
+          itemCount: AppThemeMode.values.length,
+          itemBuilder: (context, index) {
+            final mode = AppThemeMode.values[index];
+            final delay = Duration(
+              milliseconds: AppAnimations.staggerIntervalMs * index,
+            );
+            return ResponsiveUtils.constrainedContent(
+              context: context,
+              maxWidth: 600,
+              child: _buildAnimatedThemeCard(
+                context,
+                mode,
+                themeProvider,
+                delay,
+              ),
+            );
+          },
         ),
       ),
     );

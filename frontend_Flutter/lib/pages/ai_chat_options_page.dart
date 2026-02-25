@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import '../services/api_service.dart';
 import '../services/deepseek_service.dart';
 import '../services/url_launcher_service.dart';
-import '../widgets/app_header.dart';
+import '../widgets/base_page.dart';
 import '../widgets/error_dialog.dart';
 import '../providers/theme_provider.dart';
 import '../theme/theme_colors.dart';
@@ -204,49 +204,28 @@ class _AiChatOptionsPageState extends State<AiChatOptionsPage> {
     final colors = themeProvider.colors;
 
     if (_loading) {
-      return Scaffold(
-        body: Container(
-          decoration: ThemeDecorations.backgroundGradient(
-            context,
-            mode: themeProvider.mode,
-          ),
-          child: Center(
-            child: Text(
-              '加载中...',
-              style: TextStyle(color: colors.textSecondary),
-            ),
-          ),
+      return BasePage(
+        title: 'AI对话选项',
+        showBackButton: true,
+        useScrollView: false,
+        child: Center(
+          child: Text('加载中...', style: TextStyle(color: colors.textSecondary)),
         ),
       );
     }
 
-    return Scaffold(
-      body: Container(
-        decoration: ThemeDecorations.backgroundGradient(
-          context,
-          mode: themeProvider.mode,
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              const AppHeader(title: 'AI对话选项', showBackButton: true),
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    children: [
-                      _buildApiConfigSection(colors),
-                      const SizedBox(height: 16),
-                      _buildSystemPromptSection(colors),
-                      const SizedBox(height: 16),
-                      _buildClearChatSection(colors),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
+    return BasePage(
+      title: 'AI对话选项',
+      showBackButton: true,
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          _buildApiConfigSection(colors),
+          const SizedBox(height: 16),
+          _buildSystemPromptSection(colors),
+          const SizedBox(height: 16),
+          _buildClearChatSection(colors),
+        ],
       ),
     );
   }

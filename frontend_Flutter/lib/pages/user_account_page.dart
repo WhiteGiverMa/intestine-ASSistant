@@ -10,10 +10,9 @@ import '../services/database_service.dart';
 import '../services/local_db_service.dart';
 import '../theme/theme_colors.dart';
 import '../theme/theme_decorations.dart';
-import '../widgets/app_header.dart';
+import '../widgets/base_page.dart';
 import '../widgets/export_options_dialog.dart';
 import '../utils/file_download.dart';
-import '../utils/responsive_utils.dart';
 
 class UserAccountPage extends StatefulWidget {
   const UserAccountPage({super.key});
@@ -72,41 +71,22 @@ class _UserAccountPageState extends State<UserAccountPage> {
     final authProvider = context.watch<AuthProvider>();
     final colors = themeProvider.colors;
 
-    return Scaffold(
-      body: Container(
-        decoration: ThemeDecorations.backgroundGradient(
-          context,
-          mode: themeProvider.mode,
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              const AppHeader(title: '用户信息', showBackButton: true),
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: ResponsiveUtils.responsivePadding(context),
-                  child: ResponsiveUtils.constrainedContent(
-                    context: context,
-                    maxWidth: 600,
-                    child: Column(
-                      children: [
-                        _buildInfoCard(colors, authProvider),
-                        const SizedBox(height: 16),
-                        _buildNicknameCard(colors),
-                        const SizedBox(height: 16),
-                        _buildDataManagementCard(colors),
-                        if (_message != null) ...[
-                          const SizedBox(height: 16),
-                          _buildMessage(colors),
-                        ],
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
+    return BasePage(
+      title: '用户信息',
+      showBackButton: true,
+      maxWidth: 600,
+      child: Column(
+        children: [
+          _buildInfoCard(colors, authProvider),
+          const SizedBox(height: 16),
+          _buildNicknameCard(colors),
+          const SizedBox(height: 16),
+          _buildDataManagementCard(colors),
+          if (_message != null) ...[
+            const SizedBox(height: 16),
+            _buildMessage(colors),
+          ],
+        ],
       ),
     );
   }

@@ -10,11 +10,13 @@
 //   - chat_messages: AI对话消息
 //   - settings: 应用设置
 // @brief: SQLite数据库服务，管理本地数据存储
+import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:sqflite/sqflite.dart';
 import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
 import 'package:path/path.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:path_provider/path_provider.dart'
+    show getApplicationSupportDirectory, getApplicationDocumentsDirectory;
 
 class DatabaseService {
   static Database? _database;
@@ -31,8 +33,34 @@ class DatabaseService {
     if (kIsWeb) {
       return _databaseName;
     } else {
-      final documentsDirectory = await getApplicationDocumentsDirectory();
-      return join(documentsDirectory.path, _databaseName);
+      final appSupportDir = await getApplicationSupportDirectory();
+      return join(appSupportDir.path, _databaseName);
+    }
+  }
+
+  static Future<String> _getOldDatabasePath() async {
+    if (kIsWeb) {
+      return _databaseName;
+    } else {
+      final documentsDir = await getApplicationDocumentsDirectory();
+      return join(documentsDir.path, _databaseName);
+    }
+  }
+
+  static Future<void> _migrateDatabaseIfNeeded() async {
+    if (kIsWeb) return;
+
+    final newPath = await _getDatabasePath();
+    final oldPath = await _getOldDatabasePath();
+
+    final newFile = File(newPath);
+    final oldFile = File(oldPath);
+
+    if (!await newFile.exists() && await oldFile.exists()) {
+      try {
+        await newFile.parent.create(recursive: true);
+        await oldFile.copy(newPath);
+      } catch (_) {}
     }
   }
 
@@ -40,6 +68,8 @@ class DatabaseService {
     if (kIsWeb) {
       databaseFactory = databaseFactoryFfiWeb;
     }
+
+    await _migrateDatabaseIfNeeded();
 
     final path = await _getDatabasePath();
 

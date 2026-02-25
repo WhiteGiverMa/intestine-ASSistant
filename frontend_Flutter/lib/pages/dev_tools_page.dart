@@ -3,9 +3,8 @@ import 'package:provider/provider.dart';
 import '../providers/theme_provider.dart';
 import '../theme/theme_colors.dart';
 import '../theme/theme_decorations.dart';
-import '../widgets/app_header.dart';
+import '../widgets/base_page.dart';
 import '../services/local_db_service.dart';
-import '../utils/responsive_utils.dart';
 import 'test_data_generator_page.dart';
 
 class DevToolsPage extends StatefulWidget {
@@ -36,39 +35,20 @@ class _DevToolsPageState extends State<DevToolsPage> {
     final themeProvider = context.watch<ThemeProvider>();
     final colors = themeProvider.colors;
 
-    return Scaffold(
-      body: Container(
-        decoration: ThemeDecorations.backgroundGradient(
-          context,
-          mode: themeProvider.mode,
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              const AppHeader(title: '开发者工具', showBackButton: true),
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: ResponsiveUtils.responsivePadding(context),
-                  child: ResponsiveUtils.constrainedContent(
-                    context: context,
-                    maxWidth: 600,
-                    child: Column(
-                      children: [
-                        _buildWarningCard(colors),
-                        const SizedBox(height: 16),
-                        _buildTestDataGeneratorEntry(colors),
-                        const SizedBox(height: 16),
-                        _buildShowRequestDetailsToggle(colors),
-                        const SizedBox(height: 16),
-                        _buildClearDataButton(colors),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
+    return BasePage(
+      title: '开发者工具',
+      showBackButton: true,
+      maxWidth: 600,
+      child: Column(
+        children: [
+          _buildWarningCard(colors),
+          const SizedBox(height: 16),
+          _buildTestDataGeneratorEntry(colors),
+          const SizedBox(height: 16),
+          _buildShowRequestDetailsToggle(colors),
+          const SizedBox(height: 16),
+          _buildClearDataButton(colors),
+        ],
       ),
     );
   }

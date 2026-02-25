@@ -102,29 +102,21 @@ class _SplashBodyState extends State<_SplashBody>
       width: 120,
       height: 120,
       decoration: BoxDecoration(
-        gradient: LinearGradient(
+        gradient: const LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [
-            Color(0xFF00D2BE),
-            Color(0xFF00A996),
-          ],
+          colors: [Color(0xFF00D2BE), Color(0xFF00A996)],
         ),
         borderRadius: BorderRadius.circular(28),
         boxShadow: [
           BoxShadow(
-            color: Color(0xFF00C8B4).withValues(alpha: 0.3),
+            color: const Color(0xFF00C8B4).withValues(alpha: 0.3),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
         ],
       ),
-      child: const Center(
-        child: Text(
-          '🚽',
-          style: TextStyle(fontSize: 64),
-        ),
-      ),
+      child: const Center(child: Text('🚽', style: TextStyle(fontSize: 64))),
     );
   }
 

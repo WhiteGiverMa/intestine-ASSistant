@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import '../providers/theme_provider.dart';
 import '../theme/theme_colors.dart';
 import '../theme/theme_decorations.dart';
-import '../widgets/app_header.dart';
+import '../widgets/base_page.dart';
 import '../services/local_db_service.dart';
 import '../utils/responsive_utils.dart';
 
@@ -90,45 +90,33 @@ class _TestDataGeneratorPageState extends State<TestDataGeneratorPage> {
     final themeProvider = context.watch<ThemeProvider>();
     final colors = themeProvider.colors;
 
-    return Scaffold(
-      body: Container(
-        decoration: ThemeDecorations.backgroundGradient(
-          context,
-          mode: themeProvider.mode,
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              const AppHeader(title: '测试数据生成器', showBackButton: true),
-              Expanded(
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    return SingleChildScrollView(
-                      padding: ResponsiveUtils.responsivePadding(context),
-                      child: ResponsiveUtils.constrainedContent(
-                        context: context,
-                        maxWidth: 700,
-                        child: Column(
-                          children: [
-                            _buildDateRangeSection(colors, constraints),
-                            const SizedBox(height: 16),
-                            _buildDailyCountSection(colors, constraints),
-                            const SizedBox(height: 16),
-                            _buildModeToggle(colors),
-                            const SizedBox(height: 16),
-                            if (_isCustomMode) _buildCustomConfigSection(colors),
-                            if (_isCustomMode) const SizedBox(height: 16),
-                            _buildGenerateButton(colors),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
+    return BasePage(
+      title: '测试数据生成器',
+      showBackButton: true,
+      useScrollView: false,
+      builder: (context) => LayoutBuilder(
+        builder: (context, constraints) {
+          return SingleChildScrollView(
+            padding: ResponsiveUtils.responsivePadding(context),
+            child: ResponsiveUtils.constrainedContent(
+              context: context,
+              maxWidth: 700,
+              child: Column(
+                children: [
+                  _buildDateRangeSection(colors, constraints),
+                  const SizedBox(height: 16),
+                  _buildDailyCountSection(colors, constraints),
+                  const SizedBox(height: 16),
+                  _buildModeToggle(colors),
+                  const SizedBox(height: 16),
+                  if (_isCustomMode) _buildCustomConfigSection(colors),
+                  if (_isCustomMode) const SizedBox(height: 16),
+                  _buildGenerateButton(colors),
+                ],
               ),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       ),
     );
   }

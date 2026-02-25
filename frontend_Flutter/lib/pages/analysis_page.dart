@@ -849,87 +849,90 @@ class _AnalysisPageState extends State<AnalysisPage> {
     final colors = themeProvider.colors;
 
     return Scaffold(
-      body: Container(
-        decoration: ThemeDecorations.backgroundGradient(
-          context,
-          mode: themeProvider.mode,
-        ),
-        child: SafeArea(
-          child: Stack(
-            children: [
-              Column(
-                children: [
-                  AppHeader(
-                    titleWidget: Row(
-                      children: [
-                        Text(
-                          'AI 健康分析',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: colors.headerText,
+      body: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: Container(
+          decoration: ThemeDecorations.backgroundGradient(
+            context,
+            mode: themeProvider.mode,
+          ),
+          child: SafeArea(
+            child: Stack(
+              children: [
+                Column(
+                  children: [
+                    AppHeader(
+                      titleWidget: Row(
+                        children: [
+                          Text(
+                            'AI 健康分析',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: colors.headerText,
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        CompactTabBar(
-                          currentIndex: _currentTab,
-                          onTabChanged:
-                              (index) => setState(() => _currentTab = index),
-                          tabs: const [
-                            CompactTabItem(
-                              label: 'AI 对话',
-                              content: SizedBox.shrink(),
-                            ),
-                            CompactTabItem(
-                              label: '本地分析',
-                              content: SizedBox.shrink(),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                    trailing:
-                        _aiStatus?.isConfigured == true
-                            ? GestureDetector(
-                              onTap: _openSettings,
-                              child: Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: colors.cardBackground,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Icon(
-                                  Icons.settings,
-                                  color: colors.textSecondary,
-                                  size: 20,
-                                ),
+                          const SizedBox(width: 12),
+                          CompactTabBar(
+                            currentIndex: _currentTab,
+                            onTabChanged:
+                                (index) => setState(() => _currentTab = index),
+                            tabs: const [
+                              CompactTabItem(
+                                label: 'AI 对话',
+                                content: SizedBox.shrink(),
                               ),
-                            )
-                            : null,
-                  ),
-                  Expanded(
-                    child: CompactTabContent(
-                      currentIndex: _currentTab,
-                      enableSwipe: true,
-                      onTabChanged:
-                          (index) => setState(() => _currentTab = index),
-                      tabs: [
-                        CompactTabItem(
-                          label: 'AI 对话',
-                          content: _buildChatLayout(colors),
-                        ),
-                        CompactTabItem(
-                          label: '本地分析',
-                          content: _buildLocalAnalysisView(colors),
-                        ),
-                      ],
+                              CompactTabItem(
+                                label: '本地分析',
+                                content: SizedBox.shrink(),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      trailing:
+                          _aiStatus?.isConfigured == true
+                              ? GestureDetector(
+                                onTap: _openSettings,
+                                child: Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: colors.cardBackground,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Icon(
+                                    Icons.settings,
+                                    color: colors.textSecondary,
+                                    size: 20,
+                                  ),
+                                ),
+                              )
+                              : null,
                     ),
-                  ),
-                ],
-              ),
-              if (_currentTab == 0 && _aiStatus?.isConfigured == true)
-                _buildAnimatedSidebar(colors),
-            ],
+                    Expanded(
+                      child: CompactTabContent(
+                        currentIndex: _currentTab,
+                        enableSwipe: true,
+                        onTabChanged:
+                            (index) => setState(() => _currentTab = index),
+                        tabs: [
+                          CompactTabItem(
+                            label: 'AI 对话',
+                            content: _buildChatLayout(colors),
+                          ),
+                          CompactTabItem(
+                            label: '本地分析',
+                            content: _buildLocalAnalysisView(colors),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                if (_currentTab == 0 && _aiStatus?.isConfigured == true)
+                  _buildAnimatedSidebar(colors),
+              ],
+            ),
           ),
         ),
       ),

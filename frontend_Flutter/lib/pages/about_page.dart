@@ -4,10 +4,9 @@ import '../providers/theme_provider.dart';
 import '../services/url_launcher_service.dart';
 import '../theme/theme_colors.dart';
 import '../theme/theme_decorations.dart';
-import '../widgets/app_header.dart';
-import '../utils/responsive_utils.dart';
+import '../widgets/base_page.dart';
 
-const String appVersion = '1.2.1';
+const String appVersion = '1.3.0';
 
 class AboutPage extends StatelessWidget {
   const AboutPage({super.key});
@@ -16,39 +15,20 @@ class AboutPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final themeProvider = context.watch<ThemeProvider>();
     final colors = themeProvider.colors;
-    return Scaffold(
-      body: Container(
-        decoration: ThemeDecorations.backgroundGradient(
-          context,
-          mode: themeProvider.mode,
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              const AppHeader(title: '关于', showBackButton: true),
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: ResponsiveUtils.responsivePadding(context),
-                  child: ResponsiveUtils.constrainedContent(
-                    context: context,
-                    maxWidth: 600,
-                    child: Column(
-                      children: [
-                        _buildAppInfo(colors),
-                        const SizedBox(height: 16),
-                        _buildVersionCard(context, colors),
-                        const SizedBox(height: 16),
-                        _buildDeveloperCard(context, colors),
-                        const SizedBox(height: 16),
-                        _buildPoweredByCard(context, colors),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
+    return BasePage(
+      title: '关于',
+      showBackButton: true,
+      maxWidth: 600,
+      child: Column(
+        children: [
+          _buildAppInfo(colors),
+          const SizedBox(height: 16),
+          _buildVersionCard(context, colors),
+          const SizedBox(height: 16),
+          _buildDeveloperCard(context, colors),
+          const SizedBox(height: 16),
+          _buildPoweredByCard(context, colors),
+        ],
       ),
     );
   }

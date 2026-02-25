@@ -6,7 +6,7 @@ import '../services/api_service.dart';
 import '../services/local_db_service.dart';
 import '../widgets/date_input_field.dart';
 import '../widgets/record_form_selectors.dart';
-import '../widgets/app_header.dart';
+import '../widgets/base_page.dart';
 import '../providers/theme_provider.dart';
 import '../theme/theme_colors.dart';
 import '../theme/theme_decorations.dart';
@@ -154,40 +154,28 @@ class _RecordPageState extends State<RecordPage> {
   Widget build(BuildContext context) {
     final themeProvider = context.watch<ThemeProvider>();
     final colors = themeProvider.colors;
-    return Scaffold(
-      body: Container(
-        decoration: ThemeDecorations.backgroundGradient(
-          context,
-          mode: themeProvider.mode,
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              const AppHeader(title: '记录排便', showBackButton: true),
-              Expanded(
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    return SingleChildScrollView(
-                      padding: ResponsiveUtils.responsivePadding(context),
-                      child: ResponsiveUtils.constrainedContent(
-                        context: context,
-                        maxWidth: 600,
-                        child: Column(
-                          children: [
-                            _buildModeToggle(colors),
-                            const SizedBox(height: 16),
-                            if (_isTimerMode) _buildTimerSection(colors),
-                            _buildFormSection(colors, constraints),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
+    return BasePage(
+      title: '记录排便',
+      showBackButton: true,
+      useScrollView: false,
+      builder: (context) => LayoutBuilder(
+        builder: (context, constraints) {
+          return SingleChildScrollView(
+            padding: ResponsiveUtils.responsivePadding(context),
+            child: ResponsiveUtils.constrainedContent(
+              context: context,
+              maxWidth: 600,
+              child: Column(
+                children: [
+                  _buildModeToggle(colors),
+                  const SizedBox(height: 16),
+                  if (_isTimerMode) _buildTimerSection(colors),
+                  _buildFormSection(colors, constraints),
+                ],
               ),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       ),
     );
   }

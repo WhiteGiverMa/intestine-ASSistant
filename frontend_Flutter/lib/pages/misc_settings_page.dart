@@ -4,8 +4,7 @@ import '../providers/theme_provider.dart';
 import '../services/local_db_service.dart';
 import '../theme/theme_colors.dart';
 import '../theme/theme_decorations.dart';
-import '../widgets/app_header.dart';
-import '../utils/responsive_utils.dart';
+import '../widgets/base_page.dart';
 
 class MiscSettingsPage extends StatefulWidget {
   const MiscSettingsPage({super.key});
@@ -73,46 +72,24 @@ class _MiscSettingsPageState extends State<MiscSettingsPage> {
     final colors = themeProvider.colors;
 
     if (_loading) {
-      return Scaffold(
-        body: Container(
-          decoration: ThemeDecorations.backgroundGradient(
-            context,
-            mode: themeProvider.mode,
-          ),
-          child: Center(
-            child: Text(
-              '加载中...',
-              style: TextStyle(color: colors.textSecondary),
-            ),
+      return BasePage(
+        title: '其他设置',
+        showBackButton: true,
+        useScrollView: false,
+        child: Center(
+          child: Text(
+            '加载中...',
+            style: TextStyle(color: colors.textSecondary),
           ),
         ),
       );
     }
 
-    return Scaffold(
-      body: Container(
-        decoration: ThemeDecorations.backgroundGradient(
-          context,
-          mode: themeProvider.mode,
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              const AppHeader(title: '其他设置', showBackButton: true),
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: ResponsiveUtils.responsivePadding(context),
-                  child: ResponsiveUtils.constrainedContent(
-                    context: context,
-                    maxWidth: 600,
-                    child: Column(children: [_buildYearSetting(colors)]),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+    return BasePage(
+      title: '其他设置',
+      showBackButton: true,
+      maxWidth: 600,
+      child: Column(children: [_buildYearSetting(colors)]),
     );
   }
 

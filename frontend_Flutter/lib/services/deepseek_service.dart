@@ -249,7 +249,6 @@ Please reply in Chinese, maintaining a professional yet friendly tone.''';
           url: url,
           headers: headers,
           body: requestBody,
-          statusCode: null,
           errorMessage: e.toString(),
           duration: duration,
         );
@@ -389,7 +388,7 @@ Please reply in Chinese, maintaining a professional yet friendly tone.''';
         body: requestBody,
         statusCode: statusCode,
         responseBody:
-            '{"choices":[{"message":{"content":"${buffer.length > 500 ? buffer.toString().substring(0, 500) + '... (${buffer.length} chars)' : buffer.toString()}"}}]}',
+            '{"choices":[{"message":{"content":"${buffer.length > 500 ? '${buffer.toString().substring(0, 500)}... (${buffer.length} chars)' : buffer.toString()}"}}]}',
         duration: duration,
       );
     } catch (e) {

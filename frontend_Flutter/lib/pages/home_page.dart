@@ -118,7 +118,6 @@ class _HomePageState extends State<HomePage> {
     final isWide = constraints.maxWidth >= Breakpoints.tablet;
     final crossAxisCount = ResponsiveUtils.getGridCrossAxisCount(
       context,
-      minItems: 2,
       maxItems: 3,
     );
 

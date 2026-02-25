@@ -528,7 +528,7 @@ class ChatRequestDetails {
     });
     buffer.writeln('Body:');
     try {
-      final encoder = const JsonEncoder.withIndent('  ');
+      const encoder = JsonEncoder.withIndent('  ');
       final maskedBody = Map<String, dynamic>.from(body);
       if (maskedBody.containsKey('messages') && maskedBody['messages'] is List) {
         final messages = maskedBody['messages'] as List;
@@ -555,7 +555,7 @@ class ChatRequestDetails {
     if (responseBody != null) {
       buffer.writeln('Body:');
       try {
-        final encoder = const JsonEncoder.withIndent('  ');
+        const encoder = JsonEncoder.withIndent('  ');
         final decoded = jsonDecode(responseBody!);
         if (decoded is Map && decoded.containsKey('choices')) {
           final choices = decoded['choices'] as List;
