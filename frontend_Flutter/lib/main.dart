@@ -46,10 +46,7 @@ class _AppInitializerState extends State<AppInitializer> {
   Future<void> _init() async {
     final themeProvider = context.read<ThemeProvider>();
     final authProvider = context.read<AuthProvider>();
-    await Future.wait([
-      themeProvider.initialize(),
-      authProvider.initialize(),
-    ]);
+    await Future.wait([themeProvider.initialize(), authProvider.initialize()]);
     if (mounted) {
       setState(() {
         _initialized = true;
@@ -71,9 +68,7 @@ class _AppInitializerState extends State<AppInitializer> {
       supportedLocales: const [Locale('zh', 'CN'), Locale('en', 'US')],
       locale: const Locale('zh', 'CN'),
       theme: AppTheme.getTheme(themeProvider.mode),
-      home: _initialized
-          ? const MainContainer()
-          : const SplashPage(),
+      home: _initialized ? const MainContainer() : const SplashPage(),
     );
   }
 }

@@ -59,9 +59,22 @@ class _CompactTabBarState extends State<CompactTabBar> {
       ancestor: containerContext,
     );
 
+    final containerWidth = containerContext.size.width;
+    final tabWidth = renderBox.size.width;
+
+    double indicatorLeft = tabPosition.dx;
+    final double indicatorWidth = tabWidth;
+
+    if (indicatorLeft + indicatorWidth > containerWidth) {
+      indicatorLeft = containerWidth - indicatorWidth;
+    }
+    if (indicatorLeft < 0) {
+      indicatorLeft = 0;
+    }
+
     setState(() {
-      _indicatorWidth = renderBox.size.width;
-      _indicatorLeft = tabPosition.dx;
+      _indicatorWidth = indicatorWidth;
+      _indicatorLeft = indicatorLeft;
     });
   }
 

@@ -125,35 +125,41 @@ class _ExpandedTextEditorDialogState extends State<ExpandedTextEditorDialog> {
         children: [
           Icon(Icons.edit_note, size: 24, color: colors.primary),
           const SizedBox(width: 12),
-          Text(
-            widget.title,
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: colors.textPrimary,
+          Flexible(
+            child: Text(
+              widget.title,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: colors.textPrimary,
+              ),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
             ),
           ),
-          const Spacer(),
+          const SizedBox(width: 12),
           if (widget.showClearButton)
             TextButton(
               onPressed: () => _controller.clear(),
               style: TextButton.styleFrom(
                 foregroundColor: colors.textSecondary,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
               ),
               child: const Text('清空'),
             ),
           if (widget.defaultText != null) ...[
             if (widget.showClearButton)
-              const SizedBox(width: 8),
+              const SizedBox(width: 4),
             TextButton(
               onPressed: () => _controller.text = widget.defaultText!,
               style: TextButton.styleFrom(
                 foregroundColor: colors.textSecondary,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
               ),
               child: const Text('恢复默认'),
             ),
           ],
-          const SizedBox(width: 8),
+          const SizedBox(width: 4),
           IconButton(
             onPressed: () => Navigator.pop(context),
             icon: Icon(Icons.close, color: colors.textSecondary),

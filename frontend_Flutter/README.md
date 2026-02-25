@@ -1,11 +1,6 @@
 # Intestine Assistant - Flutter 前端
 
-> **🚀 当前启用版本 v0.5.0**
->
 > 此 Flutter 前端是当前正在开发和维护的版本。
->
-> **注意**：React Web 分支 (v0.2.0) 中已修复的许多 Bug 尚未迁移到此 Flutter 分支。
-
 ---
 
 ## 技术栈

@@ -1,21 +1,61 @@
-MIT License
+非商业公益软件许可协议
 
-Copyright (c) 2026 WhiteGiverMa
+版权所有 (c) 2026 马戈
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+一、授权范围
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+本软件（包括源代码、设计文档、界面设计等全部内容）依据本协议授权。
+版权持有人特此免费授予您在遵守以下条款的前提下，使用、复制、修改、
+合并、发布、分发本软件的权利。
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+二、非商业使用
+
+本软件仅授权用于非商业用途。您不得：
+
+1. 将本软件用于任何商业目的，包括但不限于：
+   - 在商业产品或服务中使用本软件
+   - 以营利为目的销售本软件或其衍生作品
+   - 将本软件嵌入商业产品中分发
+   - 使用本软件提供付费服务
+
+2. 商业用途的定义：
+   商业用途指任何以获取经济利益为主要目的的活动，
+   包括但不限于直接销售、商业服务、商业推广等。
+
+三、商业授权
+
+如需将本软件用于商业用途，必须事先获得版权持有人的书面授权。
+商业授权可能需要支付费用或遵守额外的许可条款。
+
+商业授权联系：A1337365614@outlook.com
+
+四、使用条件
+
+无论何种用途，您必须遵守以下条件：
+
+1. 保留本软件中的版权声明和许可声明
+2. 在衍生作品中注明原作者和原项目来源
+3. 衍生作品必须以相同条款发布（相同方式共享）
+4. 不得移除或修改任何所有权标识
+
+五、声明与保证
+
+本软件按"原样"提供，不附带任何形式的明示或暗示担保。
+在任何情况下，版权持有人均不对因使用本软件而产生的任何损失
+承担责任。
+
+六、条款解释
+
+如对本许可协议条款的理解存在争议，以版权持有人发布的官方书面
+解释为准。版权持有人保留对协议条款进行补充说明的权利。
+
+七、违约责任
+
+如违反本协议任何条款，本授权将自动终止，您应立即停止使用本软件
+并销毁所有副本。
+
+八、联系信息
+
+版权持有人：马戈
+联系邮箱：A1337365614@outlook.com
+项目地址：(https://github.com/WhiteGiverMa/intestine-ASSistant)

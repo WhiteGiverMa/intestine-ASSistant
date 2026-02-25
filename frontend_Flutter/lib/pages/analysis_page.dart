@@ -873,20 +873,23 @@ class _AnalysisPageState extends State<AnalysisPage> {
                             ),
                           ),
                           const SizedBox(width: 12),
-                          CompactTabBar(
-                            currentIndex: _currentTab,
-                            onTabChanged:
-                                (index) => setState(() => _currentTab = index),
-                            tabs: const [
-                              CompactTabItem(
-                                label: 'AI 对话',
-                                content: SizedBox.shrink(),
-                              ),
-                              CompactTabItem(
-                                label: '本地分析',
-                                content: SizedBox.shrink(),
-                              ),
-                            ],
+                          Expanded(
+                            child: CompactTabBar(
+                              currentIndex: _currentTab,
+                              onTabChanged:
+                                  (index) =>
+                                      setState(() => _currentTab = index),
+                              tabs: const [
+                                CompactTabItem(
+                                  label: 'AI 对话',
+                                  content: SizedBox.shrink(),
+                                ),
+                                CompactTabItem(
+                                  label: '本地分析',
+                                  content: SizedBox.shrink(),
+                                ),
+                              ],
+                            ),
                           ),
                         ],
                       ),

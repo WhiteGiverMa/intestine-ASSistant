@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../services/api_service.dart';
 import '../services/local_db_service.dart';
+import '../services/timer_notification_service.dart';
 import '../widgets/date_input_field.dart';
 import '../widgets/record_form_selectors.dart';
 import '../widgets/base_page.dart';
@@ -25,6 +26,7 @@ class _RecordPageState extends State<RecordPage> {
   bool _isTimerRunning = false;
   int _timerSeconds = 0;
   Timer? _timer;
+  final TimerNotificationService _notificationService = TimerNotificationService();
 
   DateTime _selectedDate = DateTime.now();
   final _timeController = TextEditingController();
@@ -80,6 +82,7 @@ class _RecordPageState extends State<RecordPage> {
         _timerSeconds++;
       });
     });
+    _notificationService.startTimer();
   }
 
   void _stopTimer() {
@@ -89,6 +92,7 @@ class _RecordPageState extends State<RecordPage> {
       _durationController.text = (_timerSeconds / 60).ceil().toString();
       _timeController.text = DateFormat('HH:mm').format(DateTime.now());
     });
+    _notificationService.stopTimer();
   }
 
   String _formatTime(int seconds) {

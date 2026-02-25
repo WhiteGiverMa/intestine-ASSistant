@@ -5,6 +5,7 @@ import '../services/deepseek_service.dart';
 import '../services/url_launcher_service.dart';
 import '../widgets/base_page.dart';
 import '../widgets/error_dialog.dart';
+import '../widgets/top_feedback.dart';
 import '../providers/theme_provider.dart';
 import '../theme/theme_colors.dart';
 import '../theme/theme_decorations.dart';
@@ -111,9 +112,13 @@ class _AiChatOptionsPageState extends State<AiChatOptionsPage> {
         defaultSystemPrompt: promptToSave,
       );
       if (mounted) {
-        ScaffoldMessenger.of(
+        final colors = context.read<ThemeProvider>().colors;
+        TopFeedback.show(
           context,
-        ).showSnackBar(const SnackBar(content: Text('AI配置保存成功')));
+          message: 'AI配置保存成功',
+          colors: colors,
+          icon: Icons.save_outlined,
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -137,9 +142,13 @@ class _AiChatOptionsPageState extends State<AiChatOptionsPage> {
     try {
       await DeepSeekService.testConnection();
       if (mounted) {
-        ScaffoldMessenger.of(
+        final colors = context.read<ThemeProvider>().colors;
+        TopFeedback.show(
           context,
-        ).showSnackBar(const SnackBar(content: Text('✅ 连接测试成功！API 配置有效')));
+          message: '连接测试成功！API 配置有效',
+          colors: colors,
+          icon: Icons.check_circle_outline,
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -181,9 +190,13 @@ class _AiChatOptionsPageState extends State<AiChatOptionsPage> {
       try {
         await ApiService.clearChatHistory();
         if (mounted) {
-          ScaffoldMessenger.of(
+          final colors = context.read<ThemeProvider>().colors;
+          TopFeedback.show(
             context,
-          ).showSnackBar(const SnackBar(content: Text('所有对话已清除')));
+            message: '所有对话已清除',
+            colors: colors,
+            icon: Icons.delete_outline,
+          );
         }
       } catch (e) {
         if (mounted) {

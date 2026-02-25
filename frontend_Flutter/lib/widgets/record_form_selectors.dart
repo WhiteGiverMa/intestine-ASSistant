@@ -15,9 +15,9 @@ class StoolTypeSelector extends StatelessWidget {
 
   static const _bristolTypes = [
     {'emoji': '🪨', 'label': '硬块', 'status': '便秘'},
-    {'emoji': '🥜', 'label': '香肠结块', 'status': '轻便秘'},
-    {'emoji': '🌭', 'label': '香肠裂纹', 'status': '正常'},
-    {'emoji': '🍌', 'label': '香肠光滑', 'status': '理想'},
+    {'emoji': '🥜', 'label': '结块', 'status': '轻便秘'},
+    {'emoji': '🌭', 'label': '裂纹', 'status': '正常'},
+    {'emoji': '🍌', 'label': '光滑', 'status': '理想'},
     {'emoji': '🫘', 'label': '柔软断块', 'status': '缺纤维'},
     {'emoji': '🥣', 'label': '糊状', 'status': '轻腹泻'},
     {'emoji': '💧', 'label': '液体', 'status': '腹泻'},
@@ -36,90 +36,190 @@ class StoolTypeSelector extends StatelessWidget {
             color: colors.textPrimary,
           ),
         ),
-        const SizedBox(height: 10),
-        Row(
-          children: List.generate(7, (index) {
-            final type = index + 1;
-            final isSelected = value == type;
-            final bristol = _bristolTypes[index];
-            final status = bristol['status'] as String;
+        const SizedBox(height: 12),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final width = constraints.maxWidth;
 
-            Color statusColor;
-            if (status == '理想') {
-              statusColor = colors.success;
-            } else if (status == '正常') {
-              statusColor = colors.success.withValues(alpha: 0.8);
-            } else if (status.contains('便秘') || status.contains('腹泻')) {
-              statusColor = colors.error;
+            if (width >= 600) {
+              return _buildGridLayout(crossAxisCount: 7, spacing: 8);
+            } else if (width >= 450) {
+              return Column(
+                children: [
+                  _buildRowLayout(startIndex: 0, count: 4, spacing: 8),
+                  const SizedBox(height: 8),
+                  _buildRowLayout(startIndex: 4, count: 3, spacing: 8),
+                ],
+              );
+            } else if (width >= 360) {
+              return Column(
+                children: [
+                  _buildRowLayout(startIndex: 0, count: 3, spacing: 6),
+                  const SizedBox(height: 6),
+                  _buildRowLayout(startIndex: 3, count: 2, spacing: 6),
+                  const SizedBox(height: 6),
+                  _buildRowLayout(startIndex: 5, count: 2, spacing: 6),
+                ],
+              );
             } else {
-              statusColor = colors.warning;
+              return Column(
+                children: [
+                  _buildRowLayout(startIndex: 0, count: 2, spacing: 6),
+                  const SizedBox(height: 6),
+                  _buildRowLayout(startIndex: 2, count: 2, spacing: 6),
+                  const SizedBox(height: 6),
+                  _buildRowLayout(startIndex: 4, count: 2, spacing: 6),
+                  const SizedBox(height: 6),
+                  _buildRowLayout(startIndex: 6, count: 1, spacing: 6),
+                ],
+              );
             }
-
-            return Expanded(
-              child: GestureDetector(
-                onTap: () => onChanged(type),
-                child: Container(
-                  margin: EdgeInsets.only(left: index == 0 ? 0 : 4),
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 14),
-                  decoration: BoxDecoration(
-                    color: isSelected ? colors.primary : colors.surfaceVariant,
-                    borderRadius: BorderRadius.circular(10),
-                    border: isSelected ? Border.all(color: statusColor, width: 2) : null,
-                    boxShadow: isSelected
-                        ? [BoxShadow(color: statusColor.withValues(alpha: 0.3), blurRadius: 6, offset: const Offset(0, 2))]
-                        : null,
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        bristol['emoji'] as String,
-                        style: const TextStyle(fontSize: 28),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        '$type',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: isSelected ? colors.textOnPrimary : colors.textPrimary,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        bristol['label'] as String,
-                        textAlign: TextAlign.center,
-                        maxLines: 2,
-                        style: TextStyle(
-                          fontSize: 14,
-                          height: 1.2,
-                          color: isSelected ? colors.textOnPrimary.withValues(alpha: 0.9) : colors.textSecondary,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: statusColor.withValues(alpha: isSelected ? 0.3 : 0.15),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          status,
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: isSelected ? colors.textOnPrimary : statusColor,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          }),
+          },
         ),
       ],
+    );
+  }
+
+  Widget _buildGridLayout({required int crossAxisCount, required double spacing}) {
+    return GridView.count(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisCount: crossAxisCount,
+      mainAxisSpacing: spacing,
+      crossAxisSpacing: spacing,
+      childAspectRatio: 0.85,
+      children: List.generate(7, (index) => _buildTypeCard(index)),
+    );
+  }
+
+  Widget _buildRowLayout({
+    required int startIndex,
+    required int count,
+    required double spacing,
+  }) {
+    return Row(
+      children: List.generate(count, (i) {
+        final index = startIndex + i;
+        return Expanded(
+          child: Padding(
+            padding: EdgeInsets.only(left: i > 0 ? spacing : 0),
+            child: AspectRatio(
+              aspectRatio: 0.85,
+              child: _buildTypeCard(index),
+            ),
+          ),
+        );
+      }),
+    );
+  }
+
+  Widget _buildTypeCard(int index) {
+    final type = index + 1;
+    final isSelected = value == type;
+    final bristol = _bristolTypes[index];
+    final status = bristol['status'] as String;
+
+    Color statusColor;
+    if (status == '理想') {
+      statusColor = colors.success;
+    } else if (status == '正常') {
+      statusColor = colors.success.withValues(alpha: 0.8);
+    } else if (status.contains('便秘') || status.contains('腹泻')) {
+      statusColor = colors.error;
+    } else {
+      statusColor = colors.warning;
+    }
+
+    return GestureDetector(
+      onTap: () => onChanged(type),
+      child: Container(
+        decoration: BoxDecoration(
+          color: isSelected ? colors.primary : colors.surfaceVariant,
+          borderRadius: BorderRadius.circular(12),
+          border: isSelected ? Border.all(color: statusColor, width: 2.5) : null,
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: statusColor.withValues(alpha: 0.4),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ]
+              : [
+                  BoxShadow(
+                    color: colors.shadow.withValues(alpha: 0.05),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // 类型编号 + 标签（重点突出）
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 24,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? colors.textOnPrimary.withValues(alpha: 0.2)
+                        : colors.primary.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: Text(
+                      '$type',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: isSelected ? colors.textOnPrimary : colors.primary,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  bristol['label'] as String,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: isSelected
+                        ? colors.textOnPrimary
+                        : colors.textPrimary,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            // Emoji 缩小
+            Text(
+              bristol['emoji'] as String,
+              style: const TextStyle(fontSize: 20),
+            ),
+            const SizedBox(height: 6),
+            // 状态标签
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: statusColor.withValues(alpha: isSelected ? 0.25 : 0.12),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                status,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: isSelected ? colors.textOnPrimary : statusColor,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -163,48 +263,46 @@ class ColorSelector extends StatelessWidget {
         Wrap(
           spacing: 8,
           runSpacing: 8,
-          children:
-              _options.map((c) {
-                final isSelected = value == c['value'];
-                return GestureDetector(
-                  onTap: () => onChanged(c['value'] as String),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
+          children: _options.map((c) {
+            final isSelected = value == c['value'];
+            return GestureDetector(
+              onTap: () => onChanged(c['value'] as String),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: colors.surfaceVariant,
+                  borderRadius: BorderRadius.circular(16),
+                  border: isSelected
+                      ? Border.all(color: colors.primary, width: 2)
+                      : null,
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 12,
+                      height: 12,
+                      decoration: BoxDecoration(
+                        color: c['color'] as Color,
+                        shape: BoxShape.circle,
+                      ),
                     ),
-                    decoration: BoxDecoration(
-                      color: colors.surfaceVariant,
-                      borderRadius: BorderRadius.circular(16),
-                      border:
-                          isSelected
-                              ? Border.all(color: colors.primary, width: 2)
-                              : null,
+                    const SizedBox(width: 6),
+                    Text(
+                      c['label'] as String,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: colors.textPrimary,
+                      ),
                     ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 12,
-                          height: 12,
-                          decoration: BoxDecoration(
-                            color: c['color'] as Color,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          c['label'] as String,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: colors.textPrimary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              }).toList(),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
         ),
       ],
     );
@@ -249,8 +347,7 @@ class SmellSelector extends StatelessWidget {
                   margin: const EdgeInsets.symmetric(horizontal: 2),
                   padding: const EdgeInsets.symmetric(vertical: 10),
                   decoration: BoxDecoration(
-                    color:
-                        value == level ? colors.primary : colors.surfaceVariant,
+                    color: value == level ? colors.primary : colors.surfaceVariant,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
@@ -258,10 +355,9 @@ class SmellSelector extends StatelessWidget {
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 12,
-                      color:
-                          value == level
-                              ? colors.textOnPrimary
-                              : colors.textSecondary,
+                      color: value == level
+                          ? colors.textOnPrimary
+                          : colors.textSecondary,
                     ),
                   ),
                 ),
@@ -311,44 +407,41 @@ class FeelingSelector extends StatelessWidget {
         Wrap(
           spacing: 8,
           runSpacing: 8,
-          children:
-              _feelings.map((f) {
-                final isSelected = value == f['value'];
-                return GestureDetector(
-                  onTap: () => onChanged(f['value'] as String),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
+          children: _feelings.map((f) {
+            final isSelected = value == f['value'];
+            return GestureDetector(
+              onTap: () => onChanged(f['value'] as String),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: isSelected ? colors.primary : colors.surfaceVariant,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      f['emoji'] as String,
+                      style: const TextStyle(fontSize: 16),
                     ),
-                    decoration: BoxDecoration(
-                      color:
-                          isSelected ? colors.primary : colors.surfaceVariant,
-                      borderRadius: BorderRadius.circular(8),
+                    const SizedBox(width: 4),
+                    Text(
+                      f['label'] as String,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isSelected
+                            ? colors.textOnPrimary
+                            : colors.textSecondary,
+                      ),
                     ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          f['emoji'] as String,
-                          style: const TextStyle(fontSize: 16),
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          f['label'] as String,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color:
-                                isSelected
-                                    ? colors.textOnPrimary
-                                    : colors.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              }).toList(),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
         ),
       ],
     );
@@ -386,42 +479,39 @@ class SymptomsSelector extends StatelessWidget {
         Wrap(
           spacing: 8,
           runSpacing: 8,
-          children:
-              _allSymptoms.map((s) {
-                final isSelected = value.contains(s);
-                return GestureDetector(
-                  onTap: () {
-                    final newList = List<String>.from(value);
-                    if (isSelected) {
-                      newList.remove(s);
-                    } else {
-                      newList.add(s);
-                    }
-                    onChanged(newList);
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color:
-                          isSelected ? colors.primary : colors.surfaceVariant,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Text(
-                      s,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color:
-                            isSelected
-                                ? colors.textOnPrimary
-                                : colors.textSecondary,
-                      ),
-                    ),
+          children: _allSymptoms.map((s) {
+            final isSelected = value.contains(s);
+            return GestureDetector(
+              onTap: () {
+                final newList = List<String>.from(value);
+                if (isSelected) {
+                  newList.remove(s);
+                } else {
+                  newList.add(s);
+                }
+                onChanged(newList);
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: isSelected ? colors.primary : colors.surfaceVariant,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Text(
+                  s,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isSelected
+                        ? colors.textOnPrimary
+                        : colors.textSecondary,
                   ),
-                );
-              }).toList(),
+                ),
+              ),
+            );
+          }).toList(),
         ),
       ],
     );

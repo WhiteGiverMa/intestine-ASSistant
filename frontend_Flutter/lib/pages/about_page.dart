@@ -6,7 +6,7 @@ import '../theme/theme_colors.dart';
 import '../theme/theme_decorations.dart';
 import '../widgets/base_page.dart';
 
-const String appVersion = '1.3.0';
+const String appVersion = '1.3.1';
 
 class AboutPage extends StatelessWidget {
   const AboutPage({super.key});
