@@ -4,6 +4,7 @@ import '../services/api_service.dart';
 import '../services/deepseek_service.dart';
 import '../services/url_launcher_service.dart';
 import '../widgets/app_header.dart';
+import '../widgets/error_dialog.dart';
 import '../providers/theme_provider.dart';
 import '../theme/theme_colors.dart';
 import '../theme/theme_decorations.dart';
@@ -20,7 +21,6 @@ class _AiChatOptionsPageState extends State<AiChatOptionsPage> {
   bool _loading = true;
   bool _saving = false;
   bool _testing = false;
-  String? _message;
   bool _obscureApiKey = true;
 
   final _aiApiKeyController = TextEditingController();
@@ -94,7 +94,6 @@ class _AiChatOptionsPageState extends State<AiChatOptionsPage> {
   Future<void> _handleSaveAiConfig() async {
     setState(() {
       _saving = true;
-      _message = null;
     });
 
     try {
@@ -111,13 +110,20 @@ class _AiChatOptionsPageState extends State<AiChatOptionsPage> {
         aiModel: _aiModelController.text.trim(),
         defaultSystemPrompt: promptToSave,
       );
-      setState(() {
-        _message = 'AI配置保存成功';
-      });
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('AI配置保存成功')));
+      }
     } catch (e) {
-      setState(() {
-        _message = e.toString().replaceAll('Exception: ', '');
-      });
+      if (mounted) {
+        ErrorDialog.show(
+          context,
+          title: '保存失败',
+          message: 'AI配置保存失败',
+          details: e.toString().replaceAll('Exception: ', ''),
+        );
+      }
     } finally {
       setState(() => _saving = false);
     }
@@ -126,18 +132,25 @@ class _AiChatOptionsPageState extends State<AiChatOptionsPage> {
   Future<void> _testConnection() async {
     setState(() {
       _testing = true;
-      _message = null;
     });
 
     try {
       await DeepSeekService.testConnection();
-      setState(() {
-        _message = '✅ 连接测试成功！API 配置有效';
-      });
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('✅ 连接测试成功！API 配置有效')));
+      }
     } catch (e) {
-      setState(() {
-        _message = '❌ ${e.toString().replaceAll('Exception: ', '')}';
-      });
+      if (mounted) {
+        ErrorDialog.show(
+          context,
+          title: '连接测试失败',
+          message: 'API 连接测试失败，请检查配置',
+          details: e.toString().replaceAll('Exception: ', ''),
+          errorType: ErrorType.network,
+        );
+      }
     } finally {
       setState(() => _testing = false);
     }
@@ -167,13 +180,20 @@ class _AiChatOptionsPageState extends State<AiChatOptionsPage> {
     if (confirm == true) {
       try {
         await ApiService.clearChatHistory();
-        setState(() {
-          _message = '所有对话已清除';
-        });
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('所有对话已清除')));
+        }
       } catch (e) {
-        setState(() {
-          _message = e.toString().replaceAll('Exception: ', '');
-        });
+        if (mounted) {
+          ErrorDialog.show(
+            context,
+            title: '清除失败',
+            message: '清除对话记录失败',
+            details: e.toString().replaceAll('Exception: ', ''),
+          );
+        }
       }
     }
   }
@@ -220,10 +240,6 @@ class _AiChatOptionsPageState extends State<AiChatOptionsPage> {
                       _buildSystemPromptSection(colors),
                       const SizedBox(height: 16),
                       _buildClearChatSection(colors),
-                      if (_message != null) ...[
-                        const SizedBox(height: 16),
-                        _buildMessage(colors),
-                      ],
                     ],
                   ),
                 ),
@@ -288,6 +304,7 @@ class _AiChatOptionsPageState extends State<AiChatOptionsPage> {
             decoration: InputDecoration(
               labelText: 'API URL',
               hintText: '如: https://api.deepseek.com',
+              helperText: '请输入基础URL，/v1/chat/completions 会自动补全',
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
               ),
@@ -420,7 +437,7 @@ class _AiChatOptionsPageState extends State<AiChatOptionsPage> {
             ),
             _buildQuickConfigChip(
               '硅基流动',
-              'https://api.siliconflow.cn/v1',
+              'https://api.siliconflow.cn',
               'deepseek-ai/DeepSeek-V3.2',
               colors,
             ),
@@ -647,32 +664,6 @@ class _AiChatOptionsPageState extends State<AiChatOptionsPage> {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildMessage(ThemeColors colors) {
-    final isSuccess =
-        _message!.contains('成功') ||
-        _message!.contains('已清除') ||
-        _message!.contains('已开启') ||
-        _message!.contains('已关闭');
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color:
-            isSuccess
-                ? colors.success.withValues(alpha: 0.1)
-                : colors.errorBackground,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        _message!,
-        textAlign: TextAlign.center,
-        style: TextStyle(
-          fontSize: 12,
-          color: isSuccess ? colors.success : colors.error,
-        ),
       ),
     );
   }

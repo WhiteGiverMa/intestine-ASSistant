@@ -30,6 +30,24 @@ Please reply in Chinese, maintaining a professional yet friendly tone.''';
   static http.Client? _httpClient;
   static StreamSubscription? _streamSubscription;
 
+  static String _buildApiUrl(String baseUrl) {
+    var url = baseUrl.trim();
+    if (url.isEmpty) {
+      return '$_defaultBaseUrl/v1/chat/completions';
+    }
+    if (url.endsWith('/')) {
+      url = url.substring(0, url.length - 1);
+    }
+    if (url.endsWith('/chat/completions')) {
+      return url;
+    }
+    final versionPattern = RegExp(r'/v\d+$');
+    if (versionPattern.hasMatch(url)) {
+      return '$url/chat/completions';
+    }
+    return '$url/v1/chat/completions';
+  }
+
   static void cancelRequest() {
     _httpClient?.close();
     _httpClient = null;
@@ -109,7 +127,7 @@ Please reply in Chinese, maintaining a professional yet friendly tone.''';
 
     final response = await http
         .post(
-          Uri.parse('$apiUrl/v1/chat/completions'),
+          Uri.parse(_buildApiUrl(apiUrl)),
           headers: {
             'Content-Type': 'application/json',
             'Authorization': 'Bearer $apiKey',
@@ -179,7 +197,7 @@ Please reply in Chinese, maintaining a professional yet friendly tone.''';
       requestBody['thinking_intensity'] = thinkingIntensity;
     }
 
-    final url = '$apiUrl/v1/chat/completions';
+    final url = _buildApiUrl(apiUrl);
     final headers = {
       'Content-Type': 'application/json',
       'Authorization': 'Bearer $apiKey',
@@ -284,7 +302,7 @@ Please reply in Chinese, maintaining a professional yet friendly tone.''';
       requestBody['thinking_intensity'] = thinkingIntensity;
     }
 
-    final url = '$apiUrl/v1/chat/completions';
+    final url = _buildApiUrl(apiUrl);
     final headers = {
       'Content-Type': 'application/json',
       'Authorization': 'Bearer $apiKey',
