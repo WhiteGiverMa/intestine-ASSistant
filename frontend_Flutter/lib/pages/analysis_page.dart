@@ -37,7 +37,11 @@ class AnalysisPageContent extends StatelessWidget {
   }
 }
 
-class _AnalysisPageState extends State<AnalysisPage> {
+class _AnalysisPageState extends State<AnalysisPage>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
   int _currentTab = 0;
 
   AiStatus? _aiStatus;
@@ -845,6 +849,7 @@ class _AnalysisPageState extends State<AnalysisPage> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final themeProvider = context.watch<ThemeProvider>();
     final colors = themeProvider.colors;
 

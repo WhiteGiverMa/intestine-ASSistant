@@ -1,15 +1,25 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/theme_provider.dart';
 import '../theme/theme_decorations.dart';
 import '../theme/theme_colors.dart';
 import '../widgets/app_bottom_nav.dart';
-import '../widgets/page_flip_container.dart';
 import '../utils/responsive_utils.dart';
 import 'home_page.dart';
 import 'data_page.dart';
 import 'analysis_page.dart';
 import 'settings_page.dart';
+
+/// 页面切换容器，使用 PageView 支持滑动手势切换。
+///
+/// @module: main_container
+/// @type: widget
+/// @layer: frontend
+/// @depends: [providers.theme_provider, theme.theme_decorations, widgets.app_bottom_nav]
+/// @exports: [MainContainer]
+/// @brief: 应用主容器，管理四个主 Tab 页面的切换和状态保持。
+///         使用 PageView 实现滑动手势切换，Tab 点击使用 jumpToPage 无动画切换。
 
 class MainContainer extends StatefulWidget {
   const MainContainer({super.key});
@@ -20,11 +30,13 @@ class MainContainer extends StatefulWidget {
 
 class _MainContainerState extends State<MainContainer> {
   int _currentIndex = 0;
+  late final PageController _pageController;
   late final List<Widget> _pages;
 
   @override
   void initState() {
     super.initState();
+    _pageController = PageController(initialPage: _currentIndex);
     _pages = [
       HomePage(onNavigate: _onNavigate),
       const DataPage(),
@@ -33,13 +45,40 @@ class _MainContainerState extends State<MainContainer> {
     ];
   }
 
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
   void _onNavigate(NavTab tab) {
     final index = tab.index;
+    if (index != _currentIndex) {
+      _pageController.jumpToPage(index);
+      setState(() {
+        _currentIndex = index;
+      });
+    }
+  }
+
+  void _onPageChanged(int index) {
     if (index != _currentIndex) {
       setState(() {
         _currentIndex = index;
       });
     }
+  }
+
+  ScrollPhysics _getPlatformPhysics() {
+    // Web 平台使用默认物理效果，移动端根据平台适配
+    if (kIsWeb) {
+      return const ClampingScrollPhysics();
+    }
+    // iOS 使用弹性效果，Android 使用阻尼效果
+    if (defaultTargetPlatform == TargetPlatform.iOS) {
+      return const BouncingScrollPhysics();
+    }
+    return const ClampingScrollPhysics();
   }
 
   @override
@@ -61,8 +100,10 @@ class _MainContainerState extends State<MainContainer> {
               children: [
                 if (isWide) _buildNavigationRail(colors),
                 Expanded(
-                  child: PageFlipContainer(
-                    currentIndex: _currentIndex,
+                  child: PageView(
+                    controller: _pageController,
+                    physics: _getPlatformPhysics(),
+                    onPageChanged: _onPageChanged,
                     children: _pages,
                   ),
                 ),
@@ -85,6 +126,7 @@ class _MainContainerState extends State<MainContainer> {
       selectedIndex: _currentIndex,
       onDestinationSelected: (index) {
         if (index != _currentIndex) {
+          _pageController.jumpToPage(index);
           setState(() {
             _currentIndex = index;
           });

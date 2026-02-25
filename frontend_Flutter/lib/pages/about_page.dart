@@ -2,14 +2,53 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/theme_provider.dart';
 import '../services/url_launcher_service.dart';
+import '../services/update_check_service.dart';
 import '../theme/theme_colors.dart';
 import '../theme/theme_decorations.dart';
 import '../widgets/base_page.dart';
 
 const String appVersion = '1.3.1';
 
-class AboutPage extends StatelessWidget {
+class AboutPage extends StatefulWidget {
   const AboutPage({super.key});
+
+  @override
+  State<AboutPage> createState() => _AboutPageState();
+}
+
+class _AboutPageState extends State<AboutPage> {
+  final UpdateCheckService _updateService = UpdateCheckService();
+  UpdateCheckResult? _updateResult;
+  bool _isChecking = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkForUpdate();
+  }
+
+  Future<void> _checkForUpdate() async {
+    final result = await _updateService.checkForUpdate();
+    if (mounted) {
+      setState(() {
+        _updateResult = result;
+        _isChecking = false;
+      });
+    }
+  }
+
+  Future<void> _refreshUpdateCheck() async {
+    setState(() {
+      _isChecking = true;
+    });
+    final result = await _updateService.checkForUpdate(forceRefresh: true);
+    if (mounted) {
+      setState(() {
+        _updateResult = result;
+        _isChecking = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -77,48 +116,190 @@ class AboutPage extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: ThemeDecorations.card(context),
-      child: Row(
+      child: Column(
         children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: colors.info.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Center(
-              child: Text('📱', style: TextStyle(fontSize: 20)),
-            ),
+          Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: colors.info.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Center(
+                  child: Text('📱', style: TextStyle(fontSize: 20)),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '版本号',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: colors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '当前版本',
+                      style: TextStyle(fontSize: 12, color: colors.textSecondary),
+                    ),
+                  ],
+                ),
+              ),
+              Text(
+                'v$appVersion',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color: colors.primary,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          if (_isChecking) ...[
+            const SizedBox(height: 16),
+            Row(
               children: [
-                Text(
-                  '版本号',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: colors.textPrimary,
+                SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: colors.primary,
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(width: 12),
                 Text(
-                  '当前版本',
-                  style: TextStyle(fontSize: 12, color: colors.textSecondary),
+                  '正在检查更新...',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: colors.textSecondary,
+                  ),
                 ),
               ],
             ),
-          ),
-          Text(
-            'v$appVersion',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-              color: colors.primary,
+          ] else if (_updateResult?.hasUpdate == true) ...[
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: colors.warning.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: colors.warning.withValues(alpha: 0.3),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.error_outline,
+                        color: colors.warning,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        '发现新版本',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: colors.warning,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '最新版本: v${_updateResult!.latestVersion}',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: colors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        final url = _updateResult?.downloadUrl ??
+                            'https://github.com/WhiteGiverMa/intestine-ASSistant/releases/latest';
+                        UrlLauncherService.launchWebUrl(
+                          context,
+                          url,
+                          errorMessage: '无法打开下载页面',
+                        );
+                      },
+                      icon: const Icon(Icons.download),
+                      label: const Text('前往下载'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: colors.warning,
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
+          ] else if (_updateResult?.errorMessage != null) ...[
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Icon(
+                  Icons.error_outline,
+                  color: colors.error,
+                  size: 16,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    _updateResult!.errorMessage!,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: colors.error,
+                    ),
+                  ),
+                ),
+                TextButton.icon(
+                  onPressed: _refreshUpdateCheck,
+                  icon: const Icon(Icons.refresh, size: 16),
+                  label: const Text('重试'),
+                ),
+              ],
+            ),
+          ] else ...[
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Icon(
+                  Icons.check_circle_outline,
+                  color: colors.success,
+                  size: 16,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '已是最新版本',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: colors.textSecondary,
+                  ),
+                ),
+                const Spacer(),
+                TextButton.icon(
+                  onPressed: _refreshUpdateCheck,
+                  icon: const Icon(Icons.refresh, size: 16),
+                  label: const Text('检查更新'),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );

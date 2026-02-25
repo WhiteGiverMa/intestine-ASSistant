@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/theme_provider.dart';
 import '../providers/auth_provider.dart';
 import '../services/local_db_service.dart';
+import '../services/update_check_service.dart';
 import '../theme/theme_colors.dart';
 import '../theme/theme_decorations.dart';
 import '../widgets/themed_switch.dart';
@@ -32,14 +33,21 @@ class SettingsPageContent extends StatelessWidget {
   }
 }
 
-class _SettingsPageState extends State<SettingsPage> {
+class _SettingsPageState extends State<SettingsPage>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
   bool _devMode = false;
   bool _initialized = false;
+  bool _hasUpdate = false;
+  String? _latestVersion;
 
   @override
   void initState() {
     super.initState();
     _loadDevMode();
+    _checkForUpdate();
   }
 
   Future<void> _loadDevMode() async {
@@ -52,8 +60,20 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
+  Future<void> _checkForUpdate() async {
+    final updateService = UpdateCheckService();
+    final result = await updateService.checkForUpdate();
+    if (mounted && result.hasUpdate) {
+      setState(() {
+        _hasUpdate = true;
+        _latestVersion = result.latestVersion;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final themeProvider = context.watch<ThemeProvider>();
     final authProvider = context.watch<AuthProvider>();
     final colors = themeProvider.colors;
@@ -457,20 +477,37 @@ class _SettingsPageState extends State<SettingsPage> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      '关于',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: colors.textPrimary,
-                      ),
+                    Row(
+                      children: [
+                        Text(
+                          '关于',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: colors.textPrimary,
+                          ),
+                        ),
+                        if (_hasUpdate) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: colors.warning,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '版本信息、开发者',
+                      _hasUpdate
+                          ? '发现新版本 v$_latestVersion'
+                          : '版本信息、开发者',
                       style: TextStyle(
                         fontSize: 12,
-                        color: colors.textSecondary,
+                        color: _hasUpdate ? colors.warning : colors.textSecondary,
                       ),
                     ),
                   ],

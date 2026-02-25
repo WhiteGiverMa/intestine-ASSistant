@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../providers/theme_provider.dart';
 import '../theme/theme_colors.dart';
@@ -52,10 +53,14 @@ class AppBottomNav extends StatelessWidget {
 
     return Expanded(
       child: GestureDetector(
-        onTap: () => onNavigate?.call(item.tab),
+        onTap: () {
+          HapticFeedback.lightImpact();
+          onNavigate?.call(item.tab);
+        },
         behavior: HitTestBehavior.opaque,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOutCubic,
           padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
           decoration: BoxDecoration(
             color: isActive ? colors.primary.withValues(alpha: 0.12) : null,
@@ -64,19 +69,25 @@ class AppBottomNav extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                item.icon,
-                color: isActive ? colors.primary : colors.textSecondary,
-                size: 24,
+              AnimatedScale(
+                scale: isActive ? 1.15 : 1.0,
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeOutCubic,
+                child: Icon(
+                  item.icon,
+                  color: isActive ? colors.primary : colors.textSecondary,
+                  size: 24,
+                ),
               ),
               const SizedBox(height: 4),
-              Text(
-                item.label,
+              AnimatedDefaultTextStyle(
+                duration: const Duration(milliseconds: 200),
                 style: TextStyle(
                   fontSize: 11,
                   color: isActive ? colors.primary : colors.textSecondary,
                   fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
                 ),
+                child: Text(item.label),
               ),
             ],
           ),

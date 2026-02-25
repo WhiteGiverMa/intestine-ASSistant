@@ -33,9 +33,14 @@ class DataPageContent extends StatelessWidget {
   }
 }
 
-class _DataPageState extends State<DataPage> {
+class _DataPageState extends State<DataPage>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final themeProvider = context.watch<ThemeProvider>();
     final colors = themeProvider.colors;
 
