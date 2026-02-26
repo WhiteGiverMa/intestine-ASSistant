@@ -73,10 +73,29 @@ class _AnalysisPageState extends State<AnalysisPage>
   final Map<String, _BackgroundChatState> _backgroundChats = {};
   final Map<String, List<ChatMessage>> _conversationCache = {};
 
+  DateTime? _lastStatusCheck;
+
   @override
   void initState() {
     super.initState();
     _initPage();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // 当页面依赖变化时（包括页面切换回来），刷新AI状态
+    _checkAiStatusIfNeeded();
+  }
+
+  void _checkAiStatusIfNeeded() {
+    // 限制检查频率，最少间隔1秒
+    final now = DateTime.now();
+    if (_lastStatusCheck == null ||
+        now.difference(_lastStatusCheck!).inSeconds >= 1) {
+      _lastStatusCheck = now;
+      _checkAiStatus();
+    }
   }
 
   Future<void> _initPage() async {
@@ -988,7 +1007,7 @@ class _AnalysisPageState extends State<AnalysisPage>
     final screenWidth = MediaQuery.of(context).size.width;
     final sidebarWidth = isMobile ? screenWidth * 0.8 : 280.0;
     final topPadding = MediaQuery.of(context).padding.top;
-    final sidebarTop = 0.0;
+    const sidebarTop = 0.0;
     final buttonTop = topPadding + 56;
 
     return Stack(
@@ -1064,48 +1083,60 @@ class _AnalysisPageState extends State<AnalysisPage>
   }
 
   Widget _buildNoApiPrompt(ThemeColors colors) {
-    return Center(
-      child: Container(
-        margin: const EdgeInsets.all(24),
-        padding: const EdgeInsets.all(32),
-        decoration: ThemeDecorations.card(context),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('🔒', style: TextStyle(fontSize: 64)),
-            const SizedBox(height: 16),
-            Text(
-              '当前未配置 AI API',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: colors.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '无法进行对话，请前往设置页面配置',
-              style: TextStyle(color: colors.textSecondary),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: () {
-                widget.onNavigate?.call(NavTab.settings);
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: colors.primary,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 32,
-                  vertical: 16,
+    return RefreshIndicator(
+      onRefresh: _checkAiStatus,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: Center(
+          child: Container(
+            margin: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(32),
+            decoration: ThemeDecorations.card(context),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('🔒', style: TextStyle(fontSize: 64)),
+                const SizedBox(height: 16),
+                Text(
+                  '当前未配置 AI API',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: colors.textPrimary,
+                  ),
                 ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                const SizedBox(height: 8),
+                Text(
+                  '无法进行对话，请前往设置页面配置',
+                  style: TextStyle(color: colors.textSecondary),
+                  textAlign: TextAlign.center,
                 ),
-              ),
-              child: const Text('前往设置', style: TextStyle(fontSize: 16)),
+                const SizedBox(height: 8),
+                Text(
+                  '下拉可刷新状态',
+                  style: TextStyle(color: colors.textHint, fontSize: 12),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton(
+                  onPressed: () {
+                    widget.onNavigate?.call(NavTab.settings);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: colors.primary,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 32,
+                      vertical: 16,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text('前往设置', style: TextStyle(fontSize: 16)),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -1113,22 +1144,34 @@ class _AnalysisPageState extends State<AnalysisPage>
 
   Widget _buildMessageList(ThemeColors colors) {
     if (_messages.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('💬', style: TextStyle(fontSize: 64)),
-            const SizedBox(height: 16),
-            Text(
-              '开始与 AI 对话',
-              style: TextStyle(color: colors.textSecondary, fontSize: 16),
+      return RefreshIndicator(
+        onRefresh: _checkAiStatus,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(height: 100),
+                const Text('💬', style: TextStyle(fontSize: 64)),
+                const SizedBox(height: 16),
+                Text(
+                  '开始与 AI 对话',
+                  style: TextStyle(color: colors.textSecondary, fontSize: 16),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '询问关于肠胃健康的问题',
+                  style: TextStyle(color: colors.textHint, fontSize: 12),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '下拉可刷新状态',
+                  style: TextStyle(color: colors.textHint, fontSize: 12),
+                ),
+              ],
             ),
-            const SizedBox(height: 8),
-            Text(
-              '询问关于肠胃健康的问题',
-              style: TextStyle(color: colors.textHint, fontSize: 12),
-            ),
-          ],
+          ),
         ),
       );
     }
@@ -1136,14 +1179,18 @@ class _AnalysisPageState extends State<AnalysisPage>
     return Column(
       children: [
         Expanded(
-          child: ListView.builder(
-            controller: _scrollController,
-            padding: const EdgeInsets.all(16),
-            itemCount: _messages.length,
-            itemBuilder: (context, index) {
-              final message = _messages[index];
-              return MessageBubble(message: message);
-            },
+          child: RefreshIndicator(
+            onRefresh: _checkAiStatus,
+            child: ListView.builder(
+              controller: _scrollController,
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.all(16),
+              itemCount: _messages.length,
+              itemBuilder: (context, index) {
+                final message = _messages[index];
+                return MessageBubble(message: message);
+              },
+            ),
           ),
         ),
         if (_showRequestDetailsButton && !_chatLoading)

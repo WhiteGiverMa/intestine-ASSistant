@@ -81,7 +81,7 @@ class AppHeader extends StatelessWidget {
                         }
                       },
                   child: Container(
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                     child: Icon(
                       Icons.arrow_back,
                       size: 24,

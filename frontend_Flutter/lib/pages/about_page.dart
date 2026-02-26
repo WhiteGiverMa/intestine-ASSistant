@@ -7,7 +7,7 @@ import '../theme/theme_colors.dart';
 import '../theme/theme_decorations.dart';
 import '../widgets/base_page.dart';
 
-const String appVersion = '1.3.3-alpha';
+const String appVersion = '1.3.5';
 
 class AboutPage extends StatefulWidget {
   const AboutPage({super.key});
@@ -147,7 +147,10 @@ class _AboutPageState extends State<AboutPage> {
                     const SizedBox(height: 4),
                     Text(
                       '当前版本',
-                      style: TextStyle(fontSize: 12, color: colors.textSecondary),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: colors.textSecondary,
+                      ),
                     ),
                   ],
                 ),
@@ -177,10 +180,7 @@ class _AboutPageState extends State<AboutPage> {
                 const SizedBox(width: 12),
                 Text(
                   '正在检查更新...',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: colors.textSecondary,
-                  ),
+                  style: TextStyle(fontSize: 14, color: colors.textSecondary),
                 ),
               ],
             ),
@@ -219,17 +219,15 @@ class _AboutPageState extends State<AboutPage> {
                   const SizedBox(height: 8),
                   Text(
                     '最新版本: v${_updateResult!.latestVersion}',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: colors.textPrimary,
-                    ),
+                    style: TextStyle(fontSize: 14, color: colors.textPrimary),
                   ),
                   const SizedBox(height: 12),
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
                       onPressed: () {
-                        final url = _updateResult?.downloadUrl ??
+                        final url =
+                            _updateResult?.downloadUrl ??
                             'https://github.com/WhiteGiverMa/intestine-ASSistant/releases/latest';
                         UrlLauncherService.launchWebUrl(
                           context,
@@ -252,19 +250,12 @@ class _AboutPageState extends State<AboutPage> {
             const SizedBox(height: 16),
             Row(
               children: [
-                Icon(
-                  Icons.error_outline,
-                  color: colors.error,
-                  size: 16,
-                ),
+                Icon(Icons.error_outline, color: colors.error, size: 16),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     _updateResult!.errorMessage!,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: colors.error,
-                    ),
+                    style: TextStyle(fontSize: 12, color: colors.error),
                   ),
                 ),
                 TextButton.icon(
@@ -287,19 +278,12 @@ class _AboutPageState extends State<AboutPage> {
               ),
               child: Row(
                 children: [
-                  Icon(
-                    Icons.science,
-                    color: colors.primary,
-                    size: 20,
-                  ),
+                  Icon(Icons.science, color: colors.primary, size: 20),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       '当前为测试版本 (v$appVersion)',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: colors.primary,
-                      ),
+                      style: TextStyle(fontSize: 14, color: colors.primary),
                     ),
                   ),
                 ],
@@ -317,10 +301,7 @@ class _AboutPageState extends State<AboutPage> {
                 const SizedBox(width: 8),
                 Text(
                   '已是最新版本',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: colors.textSecondary,
-                  ),
+                  style: TextStyle(fontSize: 14, color: colors.textSecondary),
                 ),
                 const Spacer(),
                 TextButton.icon(
