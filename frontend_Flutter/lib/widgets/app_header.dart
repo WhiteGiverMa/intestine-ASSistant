@@ -80,17 +80,17 @@ class AppHeader extends StatelessWidget {
                           Navigator.pop(context);
                         }
                       },
-                  child: Padding(
-                    padding: const EdgeInsets.all(4),
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
                     child: Icon(
                       Icons.arrow_back,
-                      size: 20,
+                      size: 24,
                       color: colors.textSecondary,
                     ),
                   ),
                 )
               else
-                const SizedBox(width: 28),
+                const SizedBox(width: 48),
               if (showBackButton) const SizedBox(width: 8),
               Expanded(
                 child:
