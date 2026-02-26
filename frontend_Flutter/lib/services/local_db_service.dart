@@ -30,7 +30,7 @@ class LocalUser {
   factory LocalUser.fromJson(Map<String, dynamic> json) {
     return LocalUser(
       userId: json['id'] ?? json['user_id'],
-      nickname: json['nickname'] ?? 'Local User',
+      nickname: json['nickname'] ?? '用户',
       createdAt: json['created_at'] ?? '',
     );
   }
@@ -57,7 +57,7 @@ class LocalDbService {
     final db = await DatabaseService.database;
     final user = LocalUser(
       userId: _generateId(),
-      nickname: nickname ?? 'Local User',
+      nickname: nickname ?? '用户',
       createdAt: _getNowIso(),
     );
 

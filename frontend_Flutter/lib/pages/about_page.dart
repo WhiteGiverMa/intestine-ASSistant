@@ -7,7 +7,7 @@ import '../theme/theme_colors.dart';
 import '../theme/theme_decorations.dart';
 import '../widgets/base_page.dart';
 
-const String appVersion = '1.3.1';
+const String appVersion = '1.3.3-alpha';
 
 class AboutPage extends StatefulWidget {
   const AboutPage({super.key});
@@ -273,6 +273,37 @@ class _AboutPageState extends State<AboutPage> {
                   label: const Text('重试'),
                 ),
               ],
+            ),
+          ] else if (_updateResult?.isPreRelease == true) ...[
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: colors.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: colors.primary.withValues(alpha: 0.3),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.science,
+                    color: colors.primary,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '当前为测试版本 (v$appVersion)',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: colors.primary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ] else ...[
             const SizedBox(height: 16),

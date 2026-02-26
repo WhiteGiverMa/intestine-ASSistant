@@ -35,6 +35,7 @@ class ErrorHandler {
   static AppError handleError(dynamic error, {String context = ''}) {
     String message = '操作失败';
     ErrorType type = ErrorType.unknown;
+    String? details;
 
     if (error is AppError) {
       return error;
@@ -42,25 +43,53 @@ class ErrorHandler {
 
     if (error is Exception) {
       final errorStr = error.toString();
-      if (errorStr.contains('网络') || errorStr.contains('connection')) {
+      if (errorStr.contains('网络') ||
+          errorStr.contains('connection') ||
+          errorStr.contains('SocketException') ||
+          errorStr.contains('TimeoutException')) {
         type = ErrorType.network;
         message = '网络连接失败';
+        details = '请检查网络连接后重试';
       } else if (errorStr.contains('认证') ||
           errorStr.contains('token') ||
-          errorStr.contains('登录')) {
+          errorStr.contains('登录') ||
+          errorStr.contains('401') ||
+          errorStr.contains('403')) {
         type = ErrorType.auth;
         message = '认证失败';
-      } else if (errorStr.contains('API') || errorStr.contains('Key')) {
+        details = 'API Key 可能无效或已过期，请检查配置';
+      } else if (errorStr.contains('API') ||
+          errorStr.contains('Key') ||
+          errorStr.contains('请先配置')) {
         type = ErrorType.server;
         message = 'API调用失败';
+        details = errorStr.replaceAll('Exception: ', '');
+      } else if (errorStr.contains('500') ||
+          errorStr.contains('502') ||
+          errorStr.contains('503') ||
+          errorStr.contains('504')) {
+        type = ErrorType.server;
+        message = '服务器错误';
+        details = 'AI服务暂时不可用，请稍后重试';
       }
     }
+
+    // 构建详细的错误信息
+    final originalError = error.toString();
+    final fullDetails = <String>[];
+    if (context.isNotEmpty) {
+      fullDetails.add(context);
+    }
+    if (details != null && details.isNotEmpty) {
+      fullDetails.add(details);
+    }
+    fullDetails.add('原始错误: $originalError');
 
     return AppError(
       type: type,
       message: message,
-      details: context.isNotEmpty ? context : null,
-      originalError: error.toString(),
+      details: fullDetails.join('\n'),
+      originalError: originalError,
     );
   }
 }

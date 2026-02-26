@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/theme_provider.dart';
@@ -21,6 +23,16 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage>
     with AutomaticKeepAliveClientMixin {
+  static const List<String> _slogans = [
+    '记录您的肠胃健康，智能分析守护您',
+    '愿你的排便像我们的UI一般轻快，愿你的肠胃像本应用的使用体验一样轻松！',
+    '肠胃健康——轻装上阵，轻松生活',
+    '肠胃健康，生活品质的关键因素',
+  ];
+
+  String get _randomSlogan =>
+      _slogans[Random().nextInt(_slogans.length)];
+
   @override
   bool get wantKeepAlive => true;
 
@@ -111,7 +123,7 @@ class _HomePageState extends State<HomePage>
           ),
           const SizedBox(height: 8),
           Text(
-            '记录您的肠胃健康，智能分析守护您',
+            _randomSlogan,
             style: TextStyle(color: colors.textSecondary),
           ),
         ],

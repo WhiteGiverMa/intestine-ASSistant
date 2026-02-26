@@ -17,30 +17,31 @@ class ThemeSelectorPage extends StatelessWidget {
       title: '选择主题',
       showBackButton: true,
       useScrollView: false,
-      builder: (context) => AnimatedTheme(
-        data: Theme.of(context),
-        duration: AppAnimations.durationNormal,
-        child: ListView.builder(
-          padding: ResponsiveUtils.responsivePadding(context),
-          itemCount: AppThemeMode.values.length,
-          itemBuilder: (context, index) {
-            final mode = AppThemeMode.values[index];
-            final delay = Duration(
-              milliseconds: AppAnimations.staggerIntervalMs * index,
-            );
-            return ResponsiveUtils.constrainedContent(
-              context: context,
-              maxWidth: 600,
-              child: _buildAnimatedThemeCard(
-                context,
-                mode,
-                themeProvider,
-                delay,
-              ),
-            );
-          },
-        ),
-      ),
+      builder:
+          (context) => AnimatedTheme(
+            data: Theme.of(context),
+            duration: AppAnimations.durationNormal,
+            child: ListView.builder(
+              padding: ResponsiveUtils.responsivePadding(context),
+              itemCount: AppThemeMode.values.length,
+              itemBuilder: (context, index) {
+                final mode = AppThemeMode.values[index];
+                final delay = Duration(
+                  milliseconds: AppAnimations.staggerIntervalMs * index,
+                );
+                return ResponsiveUtils.constrainedContent(
+                  context: context,
+                  maxWidth: 600,
+                  child: _buildAnimatedThemeCard(
+                    context,
+                    mode,
+                    themeProvider,
+                    delay,
+                  ),
+                );
+              },
+            ),
+          ),
     );
   }
 
@@ -231,7 +232,10 @@ class ThemeSelectorPage extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 4),
-          Text(label, style: TextStyle(fontSize: 10, color: colors.textSecondary)),
+          Text(
+            label,
+            style: TextStyle(fontSize: 10, color: colors.textSecondary),
+          ),
         ],
       ),
     );
@@ -245,6 +249,8 @@ class ThemeSelectorPage extends StatelessWidget {
         return '纯白简约风格，现代设计';
       case AppThemeMode.darkOled:
         return '纯黑背景，OLED 省电优化';
+      case AppThemeMode.brownYellow:
+        return '暖阳棕黄配色，温馨舒适';
     }
   }
 }

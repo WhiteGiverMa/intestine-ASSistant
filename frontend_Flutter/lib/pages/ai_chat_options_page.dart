@@ -135,17 +135,46 @@ class _AiChatOptionsPageState extends State<AiChatOptionsPage> {
   }
 
   Future<void> _testConnection() async {
+    final inputApiKey = _aiApiKeyController.text.trim();
+    if (inputApiKey.isEmpty) {
+      ErrorDialog.show(
+        context,
+        title: '未输入 API Key',
+        message: '请先输入 API Key 再测试连接',
+      );
+      return;
+    }
+
     setState(() {
       _testing = true;
     });
 
     try {
-      await DeepSeekService.testConnection();
+      await DeepSeekService.testConnection(
+        apiKey: _aiApiKeyController.text.trim(),
+        apiUrl: _aiApiUrlController.text.trim(),
+        model: _aiModelController.text.trim(),
+      );
+      // 测试成功，自动保存配置
+      final promptText = _systemPromptController.text.trim();
+      final promptToSave =
+          (promptText.isEmpty ||
+                  promptText == DeepSeekService.kDefaultSystemPrompt)
+              ? ''
+              : promptText;
+
+      await ApiService.updateUserSettings(
+        aiApiKey: _aiApiKeyController.text.trim(),
+        aiApiUrl: _aiApiUrlController.text.trim(),
+        aiModel: _aiModelController.text.trim(),
+        defaultSystemPrompt: promptToSave,
+      );
+
       if (mounted) {
         final colors = context.read<ThemeProvider>().colors;
         TopFeedback.show(
           context,
-          message: '连接测试成功！API 配置有效',
+          message: '连接测试成功！配置已自动保存',
           colors: colors,
           icon: Icons.check_circle_outline,
         );
@@ -445,6 +474,13 @@ class _AiChatOptionsPageState extends State<AiChatOptionsPage> {
     String model,
     ThemeColors colors,
   ) {
+    // DeepSeek 始终蓝色，硅基流动始终紫色
+    final Color chipColor = label == 'DeepSeek'
+        ? Colors.blue
+        : label == '硅基流动'
+            ? Colors.purple
+            : colors.primary;
+
     return GestureDetector(
       onTap: () {
         setState(() {
@@ -455,15 +491,15 @@ class _AiChatOptionsPageState extends State<AiChatOptionsPage> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: colors.primary.withValues(alpha: 0.1),
+          color: chipColor.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: colors.primary.withValues(alpha: 0.3)),
+          border: Border.all(color: chipColor.withValues(alpha: 0.3)),
         ),
         child: Text(
           label,
           style: TextStyle(
             fontSize: 12,
-            color: colors.primary,
+            color: chipColor,
             fontWeight: FontWeight.w500,
           ),
         ),

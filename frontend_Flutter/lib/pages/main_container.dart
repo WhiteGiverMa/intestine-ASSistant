@@ -70,11 +70,9 @@ class _MainContainerState extends State<MainContainer> {
   }
 
   ScrollPhysics _getPlatformPhysics() {
-    // Web 平台使用默认物理效果，移动端根据平台适配
     if (kIsWeb) {
       return const ClampingScrollPhysics();
     }
-    // iOS 使用弹性效果，Android 使用阻尼效果
     if (defaultTargetPlatform == TargetPlatform.iOS) {
       return const BouncingScrollPhysics();
     }
@@ -110,59 +108,62 @@ class _MainContainerState extends State<MainContainer> {
               ],
             ),
           ),
-          bottomNavigationBar: isWide
-              ? null
-              : AppBottomNav(
-                  activeTab: NavTab.values[_currentIndex],
-                  onNavigate: _onNavigate,
-                ),
+          bottomNavigationBar:
+              isWide
+                  ? null
+                  : AppBottomNav(
+                    activeTab: NavTab.values[_currentIndex],
+                    onNavigate: _onNavigate,
+                  ),
         );
       },
     );
   }
 
   Widget _buildNavigationRail(ThemeColors colors) {
-    return NavigationRail(
-      selectedIndex: _currentIndex,
-      onDestinationSelected: (index) {
-        if (index != _currentIndex) {
-          _pageController.jumpToPage(index);
-          setState(() {
-            _currentIndex = index;
-          });
-        }
-      },
-      labelType: NavigationRailLabelType.all,
-      backgroundColor: colors.card.withValues(alpha: 0.95),
-      selectedIconTheme: IconThemeData(color: colors.primary),
-      unselectedIconTheme: IconThemeData(color: colors.textSecondary),
-      selectedLabelTextStyle: TextStyle(
-        color: colors.primary,
-        fontWeight: FontWeight.w600,
+    return SafeArea(
+      child: NavigationRail(
+        selectedIndex: _currentIndex,
+        onDestinationSelected: (index) {
+          if (index != _currentIndex) {
+            _pageController.jumpToPage(index);
+            setState(() {
+              _currentIndex = index;
+            });
+          }
+        },
+        labelType: NavigationRailLabelType.all,
+        backgroundColor: colors.card.withValues(alpha: 0.95),
+        selectedIconTheme: IconThemeData(color: colors.primary),
+        unselectedIconTheme: IconThemeData(color: colors.textSecondary),
+        selectedLabelTextStyle: TextStyle(
+          color: colors.primary,
+          fontWeight: FontWeight.w600,
+        ),
+        unselectedLabelTextStyle: TextStyle(color: colors.textSecondary),
+        destinations: const [
+          NavigationRailDestination(
+            icon: Icon(Icons.home_outlined),
+            selectedIcon: Icon(Icons.home),
+            label: Text('首页'),
+          ),
+          NavigationRailDestination(
+            icon: Icon(Icons.storage_outlined),
+            selectedIcon: Icon(Icons.storage),
+            label: Text('数据'),
+          ),
+          NavigationRailDestination(
+            icon: Icon(Icons.analytics_outlined),
+            selectedIcon: Icon(Icons.analytics),
+            label: Text('分析'),
+          ),
+          NavigationRailDestination(
+            icon: Icon(Icons.settings_outlined),
+            selectedIcon: Icon(Icons.settings),
+            label: Text('设置'),
+          ),
+        ],
       ),
-      unselectedLabelTextStyle: TextStyle(color: colors.textSecondary),
-      destinations: const [
-        NavigationRailDestination(
-          icon: Icon(Icons.home_outlined),
-          selectedIcon: Icon(Icons.home),
-          label: Text('首页'),
-        ),
-        NavigationRailDestination(
-          icon: Icon(Icons.storage_outlined),
-          selectedIcon: Icon(Icons.storage),
-          label: Text('数据'),
-        ),
-        NavigationRailDestination(
-          icon: Icon(Icons.analytics_outlined),
-          selectedIcon: Icon(Icons.analytics),
-          label: Text('分析'),
-        ),
-        NavigationRailDestination(
-          icon: Icon(Icons.settings_outlined),
-          selectedIcon: Icon(Icons.settings),
-          label: Text('设置'),
-        ),
-      ],
     );
   }
 }

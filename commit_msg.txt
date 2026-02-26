@@ -1,8 +1,0 @@
-v1.3.2
-
-refactor:
-- IndexedStacks再次坠机，再次启用PageView方案重做了翻页动画
-
-feat:
-- 加入在线更新检测
-- 加入下载直链Github工作流

@@ -40,47 +40,37 @@ class StoolTypeSelector extends StatelessWidget {
         LayoutBuilder(
           builder: (context, constraints) {
             final width = constraints.maxWidth;
+            int crossAxisCount;
+            double spacing;
 
             if (width >= 600) {
-              return _buildGridLayout(crossAxisCount: 7, spacing: 8);
+              crossAxisCount = 7;
+              spacing = 8;
             } else if (width >= 450) {
-              return Column(
-                children: [
-                  _buildRowLayout(startIndex: 0, count: 4, spacing: 8),
-                  const SizedBox(height: 8),
-                  _buildRowLayout(startIndex: 4, count: 3, spacing: 8),
-                ],
-              );
+              crossAxisCount = 4;
+              spacing = 8;
             } else if (width >= 360) {
-              return Column(
-                children: [
-                  _buildRowLayout(startIndex: 0, count: 3, spacing: 6),
-                  const SizedBox(height: 6),
-                  _buildRowLayout(startIndex: 3, count: 2, spacing: 6),
-                  const SizedBox(height: 6),
-                  _buildRowLayout(startIndex: 5, count: 2, spacing: 6),
-                ],
-              );
+              crossAxisCount = 3;
+              spacing = 6;
             } else {
-              return Column(
-                children: [
-                  _buildRowLayout(startIndex: 0, count: 2, spacing: 6),
-                  const SizedBox(height: 6),
-                  _buildRowLayout(startIndex: 2, count: 2, spacing: 6),
-                  const SizedBox(height: 6),
-                  _buildRowLayout(startIndex: 4, count: 2, spacing: 6),
-                  const SizedBox(height: 6),
-                  _buildRowLayout(startIndex: 6, count: 1, spacing: 6),
-                ],
-              );
+              crossAxisCount = 2;
+              spacing = 6;
             }
+
+            return _buildGridLayout(
+              crossAxisCount: crossAxisCount,
+              spacing: spacing,
+            );
           },
         ),
       ],
     );
   }
 
-  Widget _buildGridLayout({required int crossAxisCount, required double spacing}) {
+  Widget _buildGridLayout({
+    required int crossAxisCount,
+    required double spacing,
+  }) {
     return GridView.count(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -89,27 +79,6 @@ class StoolTypeSelector extends StatelessWidget {
       crossAxisSpacing: spacing,
       childAspectRatio: 0.85,
       children: List.generate(7, (index) => _buildTypeCard(index)),
-    );
-  }
-
-  Widget _buildRowLayout({
-    required int startIndex,
-    required int count,
-    required double spacing,
-  }) {
-    return Row(
-      children: List.generate(count, (i) {
-        final index = startIndex + i;
-        return Expanded(
-          child: Padding(
-            padding: EdgeInsets.only(left: i > 0 ? spacing : 0),
-            child: AspectRatio(
-              aspectRatio: 0.85,
-              child: _buildTypeCard(index),
-            ),
-          ),
-        );
-      }),
     );
   }
 
@@ -136,22 +105,24 @@ class StoolTypeSelector extends StatelessWidget {
         decoration: BoxDecoration(
           color: isSelected ? colors.primary : colors.surfaceVariant,
           borderRadius: BorderRadius.circular(12),
-          border: isSelected ? Border.all(color: statusColor, width: 2.5) : null,
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: statusColor.withValues(alpha: 0.4),
-                    blurRadius: 8,
-                    offset: const Offset(0, 3),
-                  ),
-                ]
-              : [
-                  BoxShadow(
-                    color: colors.shadow.withValues(alpha: 0.05),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
+          border:
+              isSelected ? Border.all(color: statusColor, width: 2.5) : null,
+          boxShadow:
+              isSelected
+                  ? [
+                    BoxShadow(
+                      color: statusColor.withValues(alpha: 0.4),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
+                  ]
+                  : [
+                    BoxShadow(
+                      color: colors.shadow.withValues(alpha: 0.05),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -164,9 +135,10 @@ class StoolTypeSelector extends StatelessWidget {
                   width: 24,
                   height: 24,
                   decoration: BoxDecoration(
-                    color: isSelected
-                        ? colors.textOnPrimary.withValues(alpha: 0.2)
-                        : colors.primary.withValues(alpha: 0.1),
+                    color:
+                        isSelected
+                            ? colors.textOnPrimary.withValues(alpha: 0.2)
+                            : colors.primary.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
                   child: Center(
@@ -175,7 +147,8 @@ class StoolTypeSelector extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
-                        color: isSelected ? colors.textOnPrimary : colors.primary,
+                        color:
+                            isSelected ? colors.textOnPrimary : colors.primary,
                       ),
                     ),
                   ),
@@ -187,9 +160,8 @@ class StoolTypeSelector extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: isSelected
-                        ? colors.textOnPrimary
-                        : colors.textPrimary,
+                    color:
+                        isSelected ? colors.textOnPrimary : colors.textPrimary,
                   ),
                 ),
               ],
@@ -263,46 +235,48 @@ class ColorSelector extends StatelessWidget {
         Wrap(
           spacing: 8,
           runSpacing: 8,
-          children: _options.map((c) {
-            final isSelected = value == c['value'];
-            return GestureDetector(
-              onTap: () => onChanged(c['value'] as String),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: colors.surfaceVariant,
-                  borderRadius: BorderRadius.circular(16),
-                  border: isSelected
-                      ? Border.all(color: colors.primary, width: 2)
-                      : null,
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 12,
-                      height: 12,
-                      decoration: BoxDecoration(
-                        color: c['color'] as Color,
-                        shape: BoxShape.circle,
-                      ),
+          children:
+              _options.map((c) {
+                final isSelected = value == c['value'];
+                return GestureDetector(
+                  onTap: () => onChanged(c['value'] as String),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
                     ),
-                    const SizedBox(width: 6),
-                    Text(
-                      c['label'] as String,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: colors.textPrimary,
-                      ),
+                    decoration: BoxDecoration(
+                      color: colors.surfaceVariant,
+                      borderRadius: BorderRadius.circular(16),
+                      border:
+                          isSelected
+                              ? Border.all(color: colors.primary, width: 2)
+                              : null,
                     ),
-                  ],
-                ),
-              ),
-            );
-          }).toList(),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 12,
+                          height: 12,
+                          decoration: BoxDecoration(
+                            color: c['color'] as Color,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          c['label'] as String,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: colors.textPrimary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }).toList(),
         ),
       ],
     );
@@ -347,7 +321,8 @@ class SmellSelector extends StatelessWidget {
                   margin: const EdgeInsets.symmetric(horizontal: 2),
                   padding: const EdgeInsets.symmetric(vertical: 10),
                   decoration: BoxDecoration(
-                    color: value == level ? colors.primary : colors.surfaceVariant,
+                    color:
+                        value == level ? colors.primary : colors.surfaceVariant,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
@@ -355,9 +330,10 @@ class SmellSelector extends StatelessWidget {
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 12,
-                      color: value == level
-                          ? colors.textOnPrimary
-                          : colors.textSecondary,
+                      color:
+                          value == level
+                              ? colors.textOnPrimary
+                              : colors.textSecondary,
                     ),
                   ),
                 ),
@@ -407,41 +383,44 @@ class FeelingSelector extends StatelessWidget {
         Wrap(
           spacing: 8,
           runSpacing: 8,
-          children: _feelings.map((f) {
-            final isSelected = value == f['value'];
-            return GestureDetector(
-              onTap: () => onChanged(f['value'] as String),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: isSelected ? colors.primary : colors.surfaceVariant,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      f['emoji'] as String,
-                      style: const TextStyle(fontSize: 16),
+          children:
+              _feelings.map((f) {
+                final isSelected = value == f['value'];
+                return GestureDetector(
+                  onTap: () => onChanged(f['value'] as String),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
                     ),
-                    const SizedBox(width: 4),
-                    Text(
-                      f['label'] as String,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: isSelected
-                            ? colors.textOnPrimary
-                            : colors.textSecondary,
-                      ),
+                    decoration: BoxDecoration(
+                      color:
+                          isSelected ? colors.primary : colors.surfaceVariant,
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                  ],
-                ),
-              ),
-            );
-          }).toList(),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          f['emoji'] as String,
+                          style: const TextStyle(fontSize: 16),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          f['label'] as String,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color:
+                                isSelected
+                                    ? colors.textOnPrimary
+                                    : colors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }).toList(),
         ),
       ],
     );
@@ -460,7 +439,15 @@ class SymptomsSelector extends StatelessWidget {
     required this.colors,
   });
 
-  static const _allSymptoms = ['腹痛', '腹胀', '恶心', '便血', '粘液'];
+  static const _allSymptoms = [
+    '腹痛',
+    '腹胀',
+    '恶心',
+    '便血',
+    '粘液',
+    '排气增多/胀气',
+    '肛门发烫/疼痛',
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -479,39 +466,42 @@ class SymptomsSelector extends StatelessWidget {
         Wrap(
           spacing: 8,
           runSpacing: 8,
-          children: _allSymptoms.map((s) {
-            final isSelected = value.contains(s);
-            return GestureDetector(
-              onTap: () {
-                final newList = List<String>.from(value);
-                if (isSelected) {
-                  newList.remove(s);
-                } else {
-                  newList.add(s);
-                }
-                onChanged(newList);
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: isSelected ? colors.primary : colors.surfaceVariant,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Text(
-                  s,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: isSelected
-                        ? colors.textOnPrimary
-                        : colors.textSecondary,
+          children:
+              _allSymptoms.map((s) {
+                final isSelected = value.contains(s);
+                return GestureDetector(
+                  onTap: () {
+                    final newList = List<String>.from(value);
+                    if (isSelected) {
+                      newList.remove(s);
+                    } else {
+                      newList.add(s);
+                    }
+                    onChanged(newList);
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color:
+                          isSelected ? colors.primary : colors.surfaceVariant,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Text(
+                      s,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color:
+                            isSelected
+                                ? colors.textOnPrimary
+                                : colors.textSecondary,
+                      ),
+                    ),
                   ),
-                ),
-              ),
-            );
-          }).toList(),
+                );
+              }).toList(),
         ),
       ],
     );

@@ -142,6 +142,10 @@ class _ConversationSidebarState extends State<ConversationSidebar> {
     return Container(
       color: colors.surface,
       child: SafeArea(
+        bottom: true,
+        left: false,
+        right: false,
+        top: false,
         child: Column(
           children: [
             _buildHeader(colors),

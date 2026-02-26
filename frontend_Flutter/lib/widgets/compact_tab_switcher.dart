@@ -173,156 +173,22 @@ class _CompactTabBarState extends State<CompactTabBar> {
   }
 }
 
-class CompactTabContent extends StatefulWidget {
+class CompactTabContent extends StatelessWidget {
   final int currentIndex;
   final List<CompactTabItem> tabs;
-  final bool enableSwipe;
-  final ValueChanged<int>? onTabChanged;
 
   const CompactTabContent({
     super.key,
     required this.currentIndex,
     required this.tabs,
-    this.enableSwipe = false,
-    this.onTabChanged,
   });
 
   @override
-  State<CompactTabContent> createState() => _CompactTabContentState();
-}
-
-class _CompactTabContentState extends State<CompactTabContent>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _animation;
-
-  int _displayedIndex = 0;
-  int _previousIndex = 0;
-  bool _isAnimating = false;
-  int _pendingIndex = -1;
-
-  @override
-  void initState() {
-    super.initState();
-    _displayedIndex = widget.currentIndex;
-    _previousIndex = widget.currentIndex;
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 250),
-    );
-    _controller.value = 1.0;
-    _animation = CurvedAnimation(parent: _controller, curve: Curves.easeOut);
-  }
-
-  @override
-  void didUpdateWidget(CompactTabContent oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.currentIndex != widget.currentIndex) {
-      if (_isAnimating) {
-        _pendingIndex = widget.currentIndex;
-        _controller.stop();
-        _controller.value = 1.0;
-        setState(() {
-          _displayedIndex = _pendingIndex;
-          _previousIndex = _pendingIndex;
-          _isAnimating = false;
-          _pendingIndex = -1;
-        });
-      } else {
-        _animateToPage(widget.currentIndex);
-      }
-    }
-  }
-
-  void _animateToPage(int newIndex) {
-    if (_displayedIndex == newIndex) return;
-
-    setState(() {
-      _previousIndex = _displayedIndex;
-      _displayedIndex = newIndex;
-      _isAnimating = true;
-    });
-
-    _controller.forward(from: 0).then((_) {
-      if (mounted) {
-        setState(() {
-          _isAnimating = false;
-        });
-        if (_pendingIndex >= 0 && _pendingIndex != _displayedIndex) {
-          final pending = _pendingIndex;
-          _pendingIndex = -1;
-          _animateToPage(pending);
-        }
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  void _handleSwipe(DragEndDetails details) {
-    final velocity = details.primaryVelocity ?? 0;
-    if (velocity < -300 && widget.currentIndex < widget.tabs.length - 1) {
-      widget.onTabChanged?.call(widget.currentIndex + 1);
-    } else if (velocity > 300 && widget.currentIndex > 0) {
-      widget.onTabChanged?.call(widget.currentIndex - 1);
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final goingForward = _displayedIndex > _previousIndex;
-    final screenWidth = MediaQuery.of(context).size.width;
-
-    final content = Stack(
-      children: [
-        if (_isAnimating)
-          Positioned.fill(
-            child: AnimatedBuilder(
-              animation: _animation,
-              builder: (context, child) {
-                return Transform.translate(
-                  offset: Offset(
-                    goingForward
-                        ? -screenWidth * _animation.value
-                        : screenWidth * _animation.value,
-                    0,
-                  ),
-                  child: widget.tabs[_previousIndex].content,
-                );
-              },
-            ),
-          ),
-        Positioned.fill(
-          child: AnimatedBuilder(
-            animation: _animation,
-            builder: (context, child) {
-              if (!_isAnimating) {
-                return widget.tabs[_displayedIndex].content;
-              }
-              return Transform.translate(
-                offset: Offset(
-                  goingForward
-                      ? screenWidth * (1 - _animation.value)
-                      : -screenWidth * (1 - _animation.value),
-                  0,
-                ),
-                child: widget.tabs[_displayedIndex].content,
-              );
-            },
-          ),
-        ),
-      ],
+    return IndexedStack(
+      index: currentIndex,
+      children: tabs.map((tab) => tab.content).toList(),
     );
-
-    if (widget.enableSwipe) {
-      return GestureDetector(onHorizontalDragEnd: _handleSwipe, child: content);
-    }
-
-    return content;
   }
 }
 

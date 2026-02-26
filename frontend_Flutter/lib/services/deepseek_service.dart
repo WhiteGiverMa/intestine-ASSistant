@@ -116,24 +116,28 @@ Please reply in Chinese, maintaining a professional yet friendly tone.''';
     );
   }
 
-  static Future<bool> testConnection() async {
-    final apiKey = await getApiKey();
-    if (apiKey == null || apiKey.isEmpty) {
+  static Future<bool> testConnection({
+    String? apiKey,
+    String? apiUrl,
+    String? model,
+  }) async {
+    final keyToUse = apiKey ?? await getApiKey();
+    if (keyToUse == null || keyToUse.isEmpty) {
       throw Exception('请先配置 API Key');
     }
 
-    final apiUrl = await getApiUrl() ?? _defaultBaseUrl;
-    final model = await getModel() ?? _defaultModel;
+    final urlToUse = apiUrl ?? await getApiUrl() ?? _defaultBaseUrl;
+    final modelToUse = model ?? await getModel() ?? _defaultModel;
 
     final response = await http
         .post(
-          Uri.parse(_buildApiUrl(apiUrl)),
+          Uri.parse(_buildApiUrl(urlToUse)),
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': 'Bearer $apiKey',
+            'Authorization': 'Bearer $keyToUse',
           },
           body: jsonEncode({
-            'model': model,
+            'model': modelToUse,
             'messages': [
               {'role': 'user', 'content': 'Hi'},
             ],

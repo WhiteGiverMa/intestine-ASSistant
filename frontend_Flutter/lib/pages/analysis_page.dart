@@ -138,6 +138,17 @@ class _AnalysisPageState extends State<AnalysisPage>
           isConfigured: false,
         );
       });
+      // 显示错误弹窗，让用户可以看到详细错误信息并复制
+      if (mounted) {
+        ErrorDialog.showFromAppError(
+          context,
+          error: appError,
+          onRetry: () {
+            setState(() => _statusError = null);
+            _checkAiStatus();
+          },
+        );
+      }
     }
   }
 
@@ -160,7 +171,10 @@ class _AnalysisPageState extends State<AnalysisPage>
       });
       _scrollToBottom();
     } catch (e) {
-      // ignore
+      final appError = ErrorHandler.handleError(e, context: '加载对话历史失败');
+      if (mounted) {
+        ErrorDialog.showFromAppError(context, error: appError);
+      }
     }
   }
 
@@ -920,9 +934,6 @@ class _AnalysisPageState extends State<AnalysisPage>
                     Expanded(
                       child: CompactTabContent(
                         currentIndex: _currentTab,
-                        enableSwipe: true,
-                        onTabChanged:
-                            (index) => setState(() => _currentTab = index),
                         tabs: [
                           CompactTabItem(
                             label: 'AI 对话',
@@ -976,7 +987,9 @@ class _AnalysisPageState extends State<AnalysisPage>
     final isMobile = _isMobile();
     final screenWidth = MediaQuery.of(context).size.width;
     final sidebarWidth = isMobile ? screenWidth * 0.8 : 280.0;
-    const buttonTop = 72.0;
+    final topPadding = MediaQuery.of(context).padding.top;
+    final sidebarTop = 0.0;
+    final buttonTop = topPadding + 56;
 
     return Stack(
       children: [
@@ -993,7 +1006,7 @@ class _AnalysisPageState extends State<AnalysisPage>
           duration: AppAnimations.durationSlow,
           curve: AppAnimations.curveEnter,
           left: _sidebarOpen ? 0 : -sidebarWidth,
-          top: 0,
+          top: sidebarTop,
           bottom: 0,
           width: sidebarWidth,
           child: ConversationSidebar(

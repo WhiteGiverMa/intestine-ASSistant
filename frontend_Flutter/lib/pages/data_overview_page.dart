@@ -364,8 +364,6 @@ class _DataOverviewPageState extends State<DataOverviewPage> {
               Expanded(
                 child: CompactTabContent(
                   currentIndex: _currentTab,
-                  enableSwipe: true,
-                  onTabChanged: (index) => setState(() => _currentTab = index),
                   tabs: [
                     CompactTabItem(
                       label: '统计',

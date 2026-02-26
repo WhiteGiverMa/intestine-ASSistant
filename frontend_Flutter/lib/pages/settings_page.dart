@@ -41,6 +41,7 @@ class _SettingsPageState extends State<SettingsPage>
   bool _devMode = false;
   bool _initialized = false;
   bool _hasUpdate = false;
+  bool _isPreRelease = false;
   String? _latestVersion;
 
   @override
@@ -63,10 +64,11 @@ class _SettingsPageState extends State<SettingsPage>
   Future<void> _checkForUpdate() async {
     final updateService = UpdateCheckService();
     final result = await updateService.checkForUpdate();
-    if (mounted && result.hasUpdate) {
+    if (mounted) {
       setState(() {
-        _hasUpdate = true;
+        _hasUpdate = result.hasUpdate;
         _latestVersion = result.latestVersion;
+        _isPreRelease = result.isPreRelease;
       });
     }
   }
@@ -504,10 +506,16 @@ class _SettingsPageState extends State<SettingsPage>
                     Text(
                       _hasUpdate
                           ? '发现新版本 v$_latestVersion'
-                          : '版本信息、开发者',
+                          : _isPreRelease
+                              ? '当前为测试版本'
+                              : '版本信息、开发者',
                       style: TextStyle(
                         fontSize: 12,
-                        color: _hasUpdate ? colors.warning : colors.textSecondary,
+                        color: _hasUpdate
+                            ? colors.warning
+                            : _isPreRelease
+                                ? colors.primary
+                                : colors.textSecondary,
                       ),
                     ),
                   ],

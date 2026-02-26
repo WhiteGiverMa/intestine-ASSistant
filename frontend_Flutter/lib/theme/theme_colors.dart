@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 enum AppThemeMode {
   greenClassic('绿色经典', 'green_classic'),
   whiteMinimal('白色简约', 'white_minimal'),
-  darkOled('暗黑模式', 'dark_oled');
+  darkOled('暗黑模式', 'dark_oled'),
+  brownYellow('棕黄暖阳', 'brown_yellow');
 
   final String label;
   final String storageKey;
@@ -157,6 +158,34 @@ class ThemeColors {
     headerText: Color(0xFFFFFFFF),
   );
 
+  static ThemeColors get brownYellow => const ThemeColors(
+    primary: Color(0xFF8D6E63),
+    primaryLight: Color(0xFFBCAAA4),
+    primaryDark: Color(0xFF5D4037),
+    background: Color(0xFFFFF8E1),
+    backgroundGradientStart: Color(0xFFFFF8E1),
+    backgroundGradientEnd: Color(0xFFFFECB3),
+    surface: Color(0xFFFFFFFF),
+    surfaceVariant: Color(0xFFFFECB3),
+    card: Color(0xFFFFFFFF),
+    cardBackground: Color(0xFFFFFDE7),
+    divider: Color(0xFFD7CCC8),
+    textPrimary: Color(0xFF4E342E),
+    textSecondary: Color(0xFF6D4C41),
+    textHint: Color(0xFFA1887F),
+    textOnPrimary: Color(0xFFFFFFFF),
+    error: Color(0xFFD84315),
+    errorBackground: Color(0xFFFBE9E7),
+    success: Color(0xFF558B2F),
+    warning: Color(0xFFFF8F00),
+    info: Color(0xFF0277BD),
+    secondary: Color(0xFF6A1B9A),
+    accent: Color(0xFFFFD54F),
+    shadow: Color(0x1A5D4037),
+    headerBackground: Color(0xFFFFFDE7),
+    headerText: Color(0xFF5D4037),
+  );
+
   static ThemeColors forMode(AppThemeMode mode) {
     switch (mode) {
       case AppThemeMode.greenClassic:
@@ -165,6 +194,8 @@ class ThemeColors {
         return whiteMinimal;
       case AppThemeMode.darkOled:
         return darkOled;
+      case AppThemeMode.brownYellow:
+        return brownYellow;
     }
   }
 }

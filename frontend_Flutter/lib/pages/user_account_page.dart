@@ -33,7 +33,7 @@ class _UserAccountPageState extends State<UserAccountPage> {
   void initState() {
     super.initState();
     final authProvider = context.read<AuthProvider>();
-    _nicknameController.text = authProvider.localUser?.nickname ?? 'Local User';
+    _nicknameController.text = authProvider.localUser?.nickname ?? '用户';
   }
 
   @override
@@ -403,7 +403,7 @@ class _UserAccountPageState extends State<UserAccountPage> {
         final authProvider = context.read<AuthProvider>();
         await authProvider.refreshUser();
         _nicknameController.text =
-            authProvider.localUser?.nickname ?? 'Local User';
+            authProvider.localUser?.nickname ?? '用户';
         _showSuccess('数据导入成功');
       }
     } catch (e) {

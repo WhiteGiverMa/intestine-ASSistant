@@ -4,6 +4,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 
 class UpdateCheckResult {
   final bool hasUpdate;
+  final bool isPreRelease;
   final String? latestVersion;
   final String? downloadUrl;
   final String? releaseNotes;
@@ -11,6 +12,7 @@ class UpdateCheckResult {
 
   UpdateCheckResult({
     required this.hasUpdate,
+    this.isPreRelease = false,
     this.latestVersion,
     this.downloadUrl,
     this.releaseNotes,
@@ -29,8 +31,15 @@ class UpdateCheckResult {
     return UpdateCheckResult(
       hasUpdate: true,
       latestVersion: latestVersion,
-      downloadUrl: downloadUrl,
+      downloadUrl: downloadUrl ?? 'https://github.com/WhiteGiverMa/intestine-ASSistant/releases/latest',
       releaseNotes: releaseNotes,
+    );
+  }
+
+  factory UpdateCheckResult.preRelease() {
+    return UpdateCheckResult(
+      hasUpdate: false,
+      isPreRelease: true,
     );
   }
 
@@ -89,6 +98,7 @@ class UpdateCheckService {
         }
 
         final hasUpdate = _compareVersions(currentVersion, latestVersion) < 0;
+        final isPreRelease = _compareVersions(currentVersion, latestVersion) > 0;
 
         final result = hasUpdate
             ? UpdateCheckResult.withUpdate(
@@ -96,7 +106,9 @@ class UpdateCheckService {
                 downloadUrl: downloadUrl ?? _githubReleaseUrl,
                 releaseNotes: releaseNotes,
               )
-            : UpdateCheckResult.noUpdate();
+            : isPreRelease
+                ? UpdateCheckResult.preRelease()
+                : UpdateCheckResult.noUpdate();
 
         _cachedResult = result;
         _lastCheckTime = DateTime.now();
@@ -128,8 +140,11 @@ class UpdateCheckService {
   }
 
   int _compareVersions(String v1, String v2) {
-    final parts1 = v1.split('.').map(int.tryParse).toList();
-    final parts2 = v2.split('.').map(int.tryParse).toList();
+    final cleanV1 = v1.replaceAll(RegExp(r'-.*$'), '');
+    final cleanV2 = v2.replaceAll(RegExp(r'-.*$'), '');
+    
+    final parts1 = cleanV1.split('.').map(int.tryParse).toList();
+    final parts2 = cleanV2.split('.').map(int.tryParse).toList();
 
     for (var i = 0; i < 3; i++) {
       final p1 = i < parts1.length ? (parts1[i] ?? 0) : 0;
