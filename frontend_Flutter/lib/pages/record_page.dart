@@ -26,7 +26,8 @@ class _RecordPageState extends State<RecordPage> {
   bool _isTimerRunning = false;
   int _timerSeconds = 0;
   Timer? _timer;
-  final TimerNotificationService _notificationService = TimerNotificationService();
+  final TimerNotificationService _notificationService =
+      TimerNotificationService();
 
   DateTime _selectedDate = DateTime.now();
   final _timeController = TextEditingController();
@@ -162,25 +163,26 @@ class _RecordPageState extends State<RecordPage> {
       title: '记录排便',
       showBackButton: true,
       useScrollView: false,
-      builder: (context) => LayoutBuilder(
-        builder: (context, constraints) {
-          return SingleChildScrollView(
-            padding: ResponsiveUtils.responsivePadding(context),
-            child: ResponsiveUtils.constrainedContent(
-              context: context,
-              maxWidth: 600,
-              child: Column(
-                children: [
-                  _buildModeToggle(colors),
-                  const SizedBox(height: 16),
-                  if (_isTimerMode) _buildTimerSection(colors),
-                  _buildFormSection(colors, constraints),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
+      builder:
+          (context) => LayoutBuilder(
+            builder: (context, constraints) {
+              return SingleChildScrollView(
+                padding: ResponsiveUtils.responsivePadding(context),
+                child: ResponsiveUtils.constrainedContent(
+                  context: context,
+                  maxWidth: 600,
+                  child: Column(
+                    children: [
+                      _buildModeToggle(colors),
+                      const SizedBox(height: 16),
+                      if (_isTimerMode) _buildTimerSection(colors),
+                      _buildFormSection(colors, constraints),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
     );
   }
 
@@ -333,6 +335,7 @@ class _RecordPageState extends State<RecordPage> {
                     '时间',
                     _timeController,
                     readOnly: true,
+                    showTimePicker: true,
                     colors: colors,
                   ),
                 ],
@@ -360,6 +363,7 @@ class _RecordPageState extends State<RecordPage> {
                       '时间',
                       _timeController,
                       readOnly: true,
+                      showTimePicker: true,
                       colors: colors,
                     ),
                   ),
@@ -405,7 +409,12 @@ class _RecordPageState extends State<RecordPage> {
               colors: colors,
             ),
             const SizedBox(height: 16),
-            _buildTextField('备注', _notesController, maxLines: 2, colors: colors),
+            _buildTextField(
+              '备注',
+              _notesController,
+              maxLines: 2,
+              colors: colors,
+            ),
             if (_message != null) ...[
               const SizedBox(height: 16),
               Container(
@@ -464,6 +473,7 @@ class _RecordPageState extends State<RecordPage> {
     int maxLines = 1,
     bool readOnly = false,
     TextInputType? keyboardType,
+    bool showTimePicker = false,
     required ThemeColors colors,
   }) {
     return Column(
@@ -491,9 +501,46 @@ class _RecordPageState extends State<RecordPage> {
             ),
             filled: true,
             fillColor: colors.surface,
+            suffixIcon:
+                showTimePicker
+                    ? IconButton(
+                      icon: Icon(Icons.access_time, color: colors.primary),
+                      onPressed: () => _selectTime(controller),
+                    )
+                    : null,
           ),
         ),
       ],
     );
+  }
+
+  Future<void> _selectTime(TextEditingController controller) async {
+    final now = DateTime.now();
+    final parts = controller.text.split(':');
+    final initialTime = TimeOfDay(
+      hour: parts.length == 2 ? int.tryParse(parts[0]) ?? now.hour : now.hour,
+      minute:
+          parts.length == 2 ? int.tryParse(parts[1]) ?? now.minute : now.minute,
+    );
+
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: initialTime,
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            timePickerTheme: TimePickerThemeData(
+              backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null) {
+      controller.text =
+          '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
+    }
   }
 }

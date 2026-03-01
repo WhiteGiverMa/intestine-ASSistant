@@ -7,7 +7,7 @@ import '../theme/theme_colors.dart';
 import '../theme/theme_decorations.dart';
 import '../widgets/base_page.dart';
 
-const String appVersion = '1.3.5';
+const String appVersion = '1.3.6';
 
 class AboutPage extends StatefulWidget {
   const AboutPage({super.key});
