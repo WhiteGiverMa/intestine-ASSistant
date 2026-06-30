@@ -1,7 +1,7 @@
 # PROJECT KNOWLEDGE BASE
 
-**Generated:** 2026-04-07
-**Commit:** `8d956d4`
+**Generated:** 2026-06-30
+**Commit:** `3b99e03`
 **Branch:** `master`
 
 ## OVERVIEW
@@ -13,11 +13,18 @@ Intestine-ASSistant/
 ├── frontend_Flutter/      # 当前维护中的 Flutter 应用
 │   ├── lib/pages/         # 页面与功能编排（已拆出子级 AGENTS）
 │   ├── lib/widgets/       # 可复用 UI 组件（已拆出子级 AGENTS）
-│   └── lib/services/      # 数据库、AI、导出/更新等服务层
+│   ├── lib/services/      # 数据库、AI、导出/更新等服务层（已拆出子级 AGENTS）
+│   ├── lib/providers/     # 主题与本地用户状态
+│   ├── lib/theme/         # 颜色、装饰、样式装配
+│   ├── lib/models/        # 数据模型（单文件 barrel）
+│   ├── lib/utils/         # 响应式、动画、平台分流工具
+│   ├── scripts/           # 辅助脚本（图标生成、版本更新、安装）
+│   └── releases/          # 已构建的发布产物（APK 等）
+├── .agents/handoff/       # 跨会话交接文档（不提交）
 ├── .trae/rules/           # 编码规范、架构索引、问题清单
-├── docs/                  # 零散项目文档
+├── docs/                  # 产品/技术需求文档
 ├── frontend_ReactWeb/     # 已弃用，仅保留历史残留
-└── README.md / 产品需求文档.md / 技术需求文档.md
+└── README.md / AGENTS.md / 产品需求文档.md / 技术需求文档.md
 ```
 
 ## WHERE TO LOOK
@@ -27,7 +34,7 @@ Intestine-ASSistant/
 | 主导航结构 | `frontend_Flutter/lib/pages/main_container.dart` | 4 个主 Tab，窄屏底栏/宽屏侧栏 |
 | 页面功能分层 | `frontend_Flutter/lib/pages/AGENTS.md` | 数据、分析、设置、开发工具入口 |
 | 通用组件选型 | `frontend_Flutter/lib/widgets/AGENTS.md` | 导航、图表、表单、弹窗组件 |
-| 服务/数据层 | `frontend_Flutter/lib/services/AGENTS.md` | SQLite、本地设置、AI、更新、URL 打开 |
+| 服务/数据层 | `frontend_Flutter/lib/services/AGENTS.md` | SQLite、本地设置、AI、更新、URL 打开（已拆出子级 AGENTS） |
 | 项目规则 | `.trae/rules/coding_guidelines.md` | 修复后需简要追加记录 |
 | 架构风险/历史债务 | `.trae/rules/architecture_issues.md` | 大文件、缺少模块头等问题清单 |
 
